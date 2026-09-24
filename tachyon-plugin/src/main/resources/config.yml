@@ -1,0 +1,27 @@
+# TachyonScript configuration.
+# Every option has a sensible default; most servers never need to change anything.
+
+reload:
+  # What happens when some scripts fail to compile on load or reload:
+  #   lenient - failed scripts keep their previous working version (or stay disabled);
+  #             all other scripts are updated.
+  #   strict  - any failure cancels the whole load; the previous scripts stay active.
+  mode: lenient
+
+safety:
+  # Maximum nesting of script function calls.
+  recursion-limit: 128
+  # A single script execution running longer than this is stopped (runaway loops).
+  max-execution-time-ms: 1000
+
+performance:
+  # Log executions slower than this (milliseconds). 0 disables the check.
+  slow-execution-warning-ms: 5
+
+runtime:
+  # Execution backend. Only 'interpreter' exists yet; the bytecode backend is planned.
+  backend: interpreter
+
+debug:
+  # Include Java causes in runtime error reports and enable log.debug(...) output.
+  enabled: false

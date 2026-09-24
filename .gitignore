@@ -1,0 +1,25 @@
+# Gradle (anchored: only the output directories of the root project and of the
+# modules, never source packages that happen to be called "build")
+.gradle/
+/build/
+/*/build/
+!gradle/wrapper/gradle-wrapper.jar
+.kotlin/
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+bin/
+out/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local runtime data
+run/
+*.log

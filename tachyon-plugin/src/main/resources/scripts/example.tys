@@ -1,0 +1,6 @@
+// Example script, created on first start. Edit it and run /tys reload.
+// Scripts live in plugins/TachyonScript/scripts/ and end with .tys.
+
+event player.join {
+    player.send("<green>Welcome, {player.name}!")
+}

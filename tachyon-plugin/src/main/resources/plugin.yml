@@ -1,0 +1,32 @@
+name: TachyonScript
+version: '${version}'
+main: dev.tachyonscript.plugin.TachyonPlugin
+api-version: '1.21'
+folia-supported: true
+description: A compiled, strongly typed scripting language for Paper and Folia servers.
+website: https://github.com/auroravnliems/TachyonScript
+commands:
+  tys:
+    description: Manage TachyonScript scripts.
+    usage: /tys help
+permissions:
+  tachyonscript.*:
+    description: All TachyonScript permissions.
+    default: op
+    children:
+      tachyonscript.admin: true
+      tachyonscript.reload: true
+      tachyonscript.profile: true
+      tachyonscript.debug: true
+  tachyonscript.admin:
+    description: Use /tys help, scripts, info, errors and version.
+    default: op
+  tachyonscript.reload:
+    description: Reload scripts.
+    default: op
+  tachyonscript.profile:
+    description: Profile script execution.
+    default: op
+  tachyonscript.debug:
+    description: Use debugging commands such as /tys dump.
+    default: op

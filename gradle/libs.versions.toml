@@ -1,0 +1,16 @@
+# Central dependency versions. Every third-party dependency must be justified
+# in docs/dependencies.md before it is added here.
+[versions]
+junit = "6.1.3"
+jmh = "1.37"
+# Paper API for Minecraft 1.21.x (the last Java 21 line). Only compileOnly: the
+# server provides it (and Adventure) at runtime.
+paper = "1.21.11-R0.1-SNAPSHOT"
+
+[libraries]
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+jmh-core = { module = "org.openjdk.jmh:jmh-core", version.ref = "jmh" }
+jmh-annprocess = { module = "org.openjdk.jmh:jmh-generator-annprocess", version.ref = "jmh" }
+paper-api = { module = "io.papermc.paper:paper-api", version.ref = "paper" }
