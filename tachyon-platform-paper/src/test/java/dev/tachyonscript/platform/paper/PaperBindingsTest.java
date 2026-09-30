@@ -56,6 +56,12 @@ class PaperBindingsTest {
 
     private static final SymbolRegistry REGISTRY = StandardLibrary.registry();
 
+    /** A plugin as far as the bindings need one: a name and a data folder. */
+    private static final org.bukkit.plugin.Plugin TEST_PLUGIN = BukkitFakes.fake(org.bukkit.plugin.Plugin.class,
+            java.util.Map.<String, BukkitFakes.Answer>of(
+                    "getName", args -> "TachyonScript",
+                    "getDataFolder", args -> new java.io.File("build/tmp/test-plugin")));
+
     private final World world = BukkitFakes.world("world");
     private final List<String> logs = new ArrayList<>();
 
@@ -82,10 +88,7 @@ class PaperBindingsTest {
             public void close() {
             }
         });
-        return Bindings.builder()
-                .include(StandardLibrary.coreBindings())
-                .include(new PaperBindings(threading, logger, () -> true).create())
-                .build();
+        return PaperPlatform.builtInBindings(new PaperContext(TEST_PLUGIN, threading), threading, logger, () -> true);
     }
 
     private void load(String script) {
@@ -107,7 +110,16 @@ class PaperBindingsTest {
                 logs.add("SEVERE " + message);
             }
         };
-        EventBridge events = active -> {
+        EventBridge events = new EventBridge() {
+            @Override
+            public void activeEventsChanged(java.util.Map<dev.tachyonscript.api.declaration.EventDeclaration,
+                    java.util.Set<Integer>> priorities) {
+            }
+
+            @Override
+            public boolean isCancelled(Object event) {
+                return event instanceof org.bukkit.event.Cancellable cancellable && cancellable.isCancelled();
+            }
         };
         Platform platform = new Platform() {
             @Override
@@ -128,6 +140,36 @@ class PaperBindingsTest {
             @Override
             public EngineLogger logger() {
                 return logger;
+            }
+
+            @Override
+            public dev.tachyonscript.engine.spi.Scheduler scheduler() {
+                return InlineScheduler.INSTANCE;
+            }
+
+            @Override
+            public dev.tachyonscript.engine.spi.CommandRegistry commands() {
+                return InlineScheduler.NO_COMMANDS;
+            }
+
+            @Override
+            public dev.tachyonscript.engine.spi.ArgumentTypes arguments() {
+                return new PaperArgumentTypes(REGISTRY, bindings);
+            }
+
+            @Override
+            public dev.tachyonscript.engine.spi.PlayerDirectory players() {
+                return new dev.tachyonscript.engine.spi.PlayerDirectory() {
+                    @Override
+                    public java.util.UUID id(Object player) {
+                        return ((org.bukkit.OfflinePlayer) player).getUniqueId();
+                    }
+
+                    @Override
+                    public String name(Object player) {
+                        return ((org.bukkit.OfflinePlayer) player).getName();
+                    }
+                };
             }
         };
         engine = new ScriptEngine(REGISTRY, platform, EngineOptions.DEFAULT, InternalErrorHandler.IGNORE);
@@ -162,14 +204,17 @@ class PaperBindingsTest {
     @Test
     void bindsEveryStandardDeclaration() {
         Bindings bindings = bindings();
+        List<String> engineKeys = StandardLibrary.engineDeclarations().stream().map(NativeDeclaration::key).toList();
         List<String> missingNatives = REGISTRY.natives().stream()
+                .filter(declaration -> !declaration.isIntrinsic() && !engineKeys.contains(declaration.key()))
                 .filter(declaration -> bindings.lookup(declaration).isEmpty())
                 .map(NativeDeclaration::key)
                 .toList();
         assertEquals(List.of(), missingNatives);
         // 'any' is the top type: values of it are never checked against a Java class.
         List<String> missingTypes = REGISTRY.types().stream()
-                .filter(type -> type != Types.ANY && bindings.typeClass(type).isEmpty())
+                .filter(type -> type != Types.ANY && !StandardLibrary.engineTypes().contains(type)
+                        && bindings.typeClass(type).isEmpty())
                 .map(ClassType::name)
                 .toList();
         assertEquals(List.of(), missingTypes);
@@ -178,7 +223,7 @@ class PaperBindingsTest {
     @Test
     void bridgesEveryStandardEvent() {
         List<String> unbridged = REGISTRY.events().stream()
-                .filter(event -> !PaperEventBridge.EVENT_CLASSES.containsKey(event))
+                .filter(event -> !PaperEvents.standard().containsKey(event))
                 .map(event -> event.name())
                 .toList();
         assertEquals(List.of(), unbridged);
@@ -247,7 +292,7 @@ class PaperBindingsTest {
         BlockBreakEvent denied = new BlockBreakEvent(BukkitFakes.block(guest.location, Material.STONE), guestPlayer);
         engine.dispatch(EventApi.BLOCK_BREAK, denied);
         assertTrue(denied.isCancelled());
-        assertEquals("You cannot break minecraft:stone here.", plain(guest.messages.getFirst()));
+        assertEquals("You cannot break stone here.", plain(guest.messages.getFirst()));
 
         BukkitFakes.PlayerState builder = state("Builder");
         builder.permissions.add("build.bypass");

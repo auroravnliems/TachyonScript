@@ -232,7 +232,7 @@ class ParserTest {
     @Test
     void explainsCommonMistakes() {
         assertMessage("function f() { if x = 5 { } }", DiagnosticCode.UNEXPECTED_TOKEN, "==");
-        assertMessage("let x = 5", DiagnosticCode.MISPLACED_DECLARATION, "const");
+        assertMessage("return 5", DiagnosticCode.MISPLACED_DECLARATION, "event player.join");
         assertMessage("player.send(\"hi\")", DiagnosticCode.MISPLACED_DECLARATION, "event player.join");
         assertMessage("evnet player.join {}", DiagnosticCode.EXPECTED_DECLARATION, "event");
         assertMessage("fn greet(p: Player) {}", DiagnosticCode.EXPECTED_DECLARATION, "function");
@@ -250,12 +250,110 @@ class ParserTest {
     }
 
     @Test
-    void reportsPlannedFeaturesAsUnsupported() {
-        assertEquals(List.of(DiagnosticCode.UNSUPPORTED_FEATURE),
-                parse("command heal {\n    permission = \"server.heal\"\n}\nfunction ok() {}").codes());
-        assertEquals(List.of(DiagnosticCode.UNSUPPORTED_FEATURE),
-                parse("function f() {\n    after 5 seconds {\n    }\n}").codes());
-        assertEquals(List.of(DiagnosticCode.UNSUPPORTED_FEATURE), parse("function f() { try { } }").codes());
+    void reportsUnsupportedFeaturesWithAlternatives() {
+        assertMessage("gui shop {\n}\nfunction ok() {}", DiagnosticCode.UNSUPPORTED_FEATURE, "Menu(");
+        assertMessage("function f() {\n    wait 5 seconds\n}", DiagnosticCode.UNSUPPORTED_FEATURE, "after 5 seconds");
+        assertMessage("function f() { try { } }", DiagnosticCode.EXPECTED_TOKEN, "catch");
+    }
+
+    // ------------------------------------------------------------ version 0.2 syntax
+
+    @Test
+    void parsesTopLevelVariables() {
+        assertEquals("(let limit 10)\n(var count:int 0)\n(persistent var total:long 0)\n(playerdata var coins:int 100)",
+                tree("let limit = 10\nvar count: int = 0\npersistent var total: long = 0\nplayerdata var coins: int = 100"));
+        assertMessage("persistent let x = 1", DiagnosticCode.MISPLACED_DECLARATION, "'var'");
+        assertMessage("var x: int", DiagnosticCode.MISSING_INITIALIZER, "var x");
+    }
+
+    @Test
+    void parsesRecords() {
+        assertEquals("(record Warp (name:string cost:int=10))",
+                tree("record Warp(name: string, cost: int = 10)"));
+        assertEquals("(record Warp (name:string) (function label () : string { (return name) }))",
+                tree("record Warp(name: string) {\n    function label(): string {\n        return name\n    }\n}"));
+    }
+
+    @Test
+    void parsesCommandsWithAnnotations() {
+        assertEquals("(@permission \"x.heal\") (@cooldown (duration 5 seconds)) (command heal (target:Player?=null) {})",
+                tree("@permission(\"x.heal\")\n@cooldown(5 seconds)\ncommand heal(target: Player? = null) {\n}"));
+        assertEquals("(command warp.set (name:string) {})", tree("command warp.set(name: string) {}"));
+        assertEquals("(command msg (target:Player message:string...) {})",
+                tree("command msg(target: Player, message: string...) {}"));
+        assertEquals("(command spawn () {})", tree("command spawn {}"));
+    }
+
+    @Test
+    void parsesLifecycleTasksAndPlaceholders() {
+        assertEquals("(on load {})\n(on unload {})", tree("on load {}\non unload {}"));
+        assertEquals("(every (duration 5 minutes) {})\n(at \"20:00\" {})", tree("every 5 minutes {}\nat \"20:00\" {}"));
+        assertEquals("(placeholder coins { (return \"1\") })", tree("placeholder coins { return \"1\" }"));
+        assertEquals("(@priority HIGH) (@ignoreCancelled) (event block.break {})",
+                tree("@priority(HIGH)\n@ignoreCancelled\nevent block.break {}"));
+    }
+
+    @Test
+    void parsesImports() {
+        assertEquals(2, parse("import economy\nimport {pay, balance} from economy.bank").unit().imports().size());
+        assertEquals("(import economy as eco)", tree("import economy as eco"));
+    }
+
+    @Test
+    void parsesLambdasMapsAndConditionals() {
+        assertEquals("(let f (lambda (x) (* x 2)))", expression("let f = x => x * 2"));
+        assertEquals("(let f (lambda (a b:int) (+ a b)))", expression("let f = (a, b: int) => a + b"));
+        assertEquals("(let f (lambda () { (return 1) }))", expression("let f = () => {\n        return 1\n    }"));
+        assertEquals("(let m {\"a\":1 \"b\":2})", expression("let m = {\"a\": 1, \"b\": 2}"));
+        assertEquals("(let e {})", expression("let e: Map<string, int> = {}").replace("e:Map<string,int>", "e"));
+        assertEquals("(let x (? (> a 1) \"big\" \"small\"))", expression("let x = a > 1 ? \"big\" : \"small\""));
+        assertEquals("(let y (? a (? b 1 2) 3))", expression("let y = a ? b ? 1 : 2 : 3"));
+    }
+
+    @Test
+    void parsesNewOperators() {
+        assertEquals("(let x (| (& a b) (^ c d)))", expression("let x = a & b | c ^ d"));
+        assertEquals("(let x (<< a 2))", expression("let x = a << 2"));
+        assertEquals("(let x (>> a 2))", expression("let x = a >> 2"));
+        assertEquals("(let x (>>> a 2))", expression("let x = a >>> 2"));
+        assertEquals("(let x (~ a))", expression("let x = ~a"));
+        assertEquals("(let x (in a list))", expression("let x = a in list"));
+        assertEquals("(let x (!in a list))", expression("let x = a !in list"));
+        assertEquals("(let x (!is a Player))", expression("let x = a !is Player"));
+        assertEquals("(+= count 1)", expression("count++"));
+        assertEquals("(-= count 1)", expression("count--"));
+        assertEquals("(>>= bits 1)", expression("bits >>= 1"));
+        assertEquals("(let n (. (. a b) c))", expression("let n = a.b.c"));
+        assertEquals("(let l List<List<int>>)", expression("let l: List<List<int>> = x").replaceAll(" x\\)$", ")")
+                .replace("l:List<List<int>>", "l List<List<int>>").replace("(let l List<List<int>>", "(let l List<List<int>>"));
+    }
+
+    @Test
+    void parsesSwitchTryAndThrow() {
+        assertEquals("(switch x (case 1 2 -> (call a)) (default -> (call b)))",
+                expression("switch x {\n        case 1, 2 -> a()\n        default -> b()\n    }"));
+        assertEquals("(let y (switch-expr x (case 1 -> \"one\") (default -> \"many\")))",
+                expression("let y = switch x {\n        case 1 -> \"one\"\n        default -> \"many\"\n    }"));
+        assertEquals("(try { (call a) } (catch e { (call b) }) (finally { (call c) }))",
+                expression("try {\n        a()\n    } catch e {\n        b()\n    } finally {\n        c()\n    }"));
+        assertEquals("(throw \"no\")", expression("throw \"no\""));
+    }
+
+    @Test
+    void parsesSchedulingBlocks() {
+        assertEquals("(after (duration 5 seconds) { (call a) })", expression("after 5 seconds {\n        a()\n    }"));
+        assertEquals("(every (duration 1 seconds) for player { (call a) })", expression("every 1 second for player {\n        a()\n    }"));
+        assertEquals("(async { (call a) })", expression("async {\n        a()\n    }"));
+        assertEquals("(sync {})", expression("sync {}"));
+        // The words stay usable as names.
+        assertEquals("(= after 1)", expression("after = 1"));
+    }
+
+    @Test
+    void parsesFunctionTypesAndDefaults() {
+        assertEquals("(function apply (f:function(int):bool x:int=1) : bool { (return (call f x)) })",
+                tree("function apply(f: function(int): bool, x: int = 1): bool {\n    return f(x)\n}"));
+        assertEquals("(for k,v m {})", expression("for k, v in m {}"));
     }
 
     @Test

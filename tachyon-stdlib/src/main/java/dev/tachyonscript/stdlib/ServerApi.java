@@ -40,6 +40,14 @@ public final class ServerApi {
             .parameter("name", Types.STRING).returns(Types.nullable(WORLD))
             .doc("The loaded world with this name, or null.").build();
 
+    public static final FunctionDeclaration OFFLINE_PLAYER_BY_NAME = FunctionDeclaration.global("server.offlinePlayer")
+            .parameter("name", Types.STRING).returns(MinecraftTypes.OFFLINE_PLAYER)
+            .doc("The player with this name, online or not (the server may look the name up).").build();
+
+    public static final FunctionDeclaration OFFLINE_PLAYER_BY_UUID = FunctionDeclaration.global("server.offlinePlayer")
+            .parameter("uuid", MinecraftTypes.UUID).returns(MinecraftTypes.OFFLINE_PLAYER)
+            .doc("The player with this UUID, online or not.").build();
+
     public static final FunctionDeclaration BROADCAST = FunctionDeclaration.global("broadcast")
             .parameter("message", Types.COMPONENT)
             .doc("Sends a message to every online player and the console.").build();
@@ -76,7 +84,8 @@ public final class ServerApi {
 
     public static final List<PropertyDeclaration> PROPERTIES = List.of(PLAYERS, ONLINE_COUNT, MAX_PLAYERS, WORLDS);
 
-    public static final List<FunctionDeclaration> FUNCTIONS = List.of(PLAYER_BY_NAME, WORLD_BY_NAME, BROADCAST);
+    public static final List<FunctionDeclaration> FUNCTIONS = List.of(PLAYER_BY_NAME, WORLD_BY_NAME, BROADCAST,
+            OFFLINE_PLAYER_BY_NAME, OFFLINE_PLAYER_BY_UUID);
 
     private ServerApi() {
     }

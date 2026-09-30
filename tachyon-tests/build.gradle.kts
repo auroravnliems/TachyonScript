@@ -7,4 +7,5 @@ description = "In-memory test platform (testkit) and end-to-end tests of the who
 dependencies {
     api(project(":tachyon-engine"))
     api(project(":tachyon-stdlib"))
+    testRuntimeOnly(libs.sqlite.jdbc)
 }

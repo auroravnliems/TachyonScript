@@ -1,0 +1,430 @@
+# Worlds, locations, vectors, blocks, chunks, colors, potion effects, sounds and particles.
+
+area Worlds
+
+# ------------------------------------------------------------------ World
+
+prop World.fullTime: long rw global : The world's age in ticks (the day count is fullTime / 24000).
+  get: $.getFullTime()
+  set: $.setFullTime(v)
+prop World.isDay: bool : Whether it is day (the sun is up).
+  get: Worlds.isDay($)
+prop World.isNight: bool : Whether it is night.
+  get: !Worlds.isDay($)
+prop World.storm: bool rw global : Whether it rains (or snows).
+  get: $.hasStorm()
+  set: $.setStorm(v)
+prop World.thundering: bool rw global : Whether there is a thunderstorm.
+  get: $.isThundering()
+  set: $.setThundering(v)
+prop World.weatherDuration: Duration rw global : How long the current weather lasts.
+  get: $.getWeatherDuration() * 50L
+  set: $.setWeatherDuration(Ticks.of(v))
+fn World.setClearWeather(duration: Duration) global modifies : Stops rain and thunder for a while.
+  do: Worlds.clearWeather($, duration)
+prop World.difficulty: Difficulty rw global : The world's difficulty.
+  get: $.getDifficulty()
+  set: $.setDifficulty(v)
+prop World.spawnLocation: Location rw global : The world's spawn point.
+  get: $.getSpawnLocation()
+  set: $.setSpawnLocation(v)
+prop World.seed: long : The world's seed.
+  get: $.getSeed()
+prop World.environment: Environment : Whether the world is an overworld, a nether or an end.
+  get: $.getEnvironment()
+prop World.pvp: bool rw global : Whether players can hurt each other in this world.
+  get: $.getPVP()
+  set: $.setPVP(v)
+prop World.entities: List<Entity> : Every loaded entity of the world.
+  get: new ArrayList<Object>($.getEntities())
+prop World.livingEntities: List<LivingEntity> : Every loaded living entity of the world.
+  get: new ArrayList<Object>($.getLivingEntities())
+prop World.minHeight: int : The lowest block height.
+  get: $.getMinHeight()
+prop World.maxHeight: int : The height above the highest block.
+  get: $.getMaxHeight()
+prop World.seaLevel: int : The sea level.
+  get: $.getSeaLevel()
+prop World.borderSize: double rw global : The width of the world border in blocks.
+  get: $.getWorldBorder().getSize()
+  set: $.getWorldBorder().setSize(Math.max(1, v))
+prop World.borderCenter: Location rw global : The center of the world border.
+  get: $.getWorldBorder().getCenter()
+  set: $.getWorldBorder().setCenter(v)
+fn World.gameRule(name: string): string? : The value of a game rule such as 'keepInventory', as text; null if there is no such rule.
+  do: Worlds.gameRule($, name)
+fn World.setGameRule(name: string, value: string): bool global modifies : Changes a game rule; false if the rule or the value is invalid.
+  do: Worlds.setGameRule($, name, value)
+  ex: player.world.setGameRule("keepInventory", "true")
+fn World.blockAt(x: int, y: int, z: int): Block : The block at a position.
+  do: $.getBlockAt(x, y, z)
+fn World.highestBlockAt(x: int, z: int): Block : The highest non-air block of a column.
+  do: $.getHighestBlockAt(x, z)
+fn World.chunkAt(x: int, z: int): Chunk : The chunk at chunk coordinates (loads it if needed).
+  do: $.getChunkAt(x, z)
+fn World.isChunkLoaded(x: int, z: int): bool : Whether the chunk at chunk coordinates is loaded.
+  do: $.isChunkLoaded(x, z)
+fn World.spawn(type: EntityType, location: Location): Entity region(location) modifies : Spawns an entity.
+  do: Worlds.spawn($, type, location)
+fn World.dropItem(location: Location, item: ItemStack): Item region(location) modifies : Drops items at a location.
+  do: $.dropItem(location, item.clone())
+fn World.dropItemNaturally(location: Location, item: ItemStack): Item region(location) modifies : Drops items with a small random offset, like a broken block.
+  do: $.dropItemNaturally(location, item.clone())
+fn World.strikeLightning(location: Location) region(location) modifies : Strikes lightning that can hurt and burn.
+  do: $.strikeLightning(location)
+fn World.strikeLightningEffect(location: Location) region(location) modifies : Shows lightning that does no harm.
+  do: $.strikeLightningEffect(location)
+fn World.createExplosion(location: Location, power: double) region(location) modifies : An explosion (TNT has power 4).
+  do: $.createExplosion(location, (float) power)
+fn World.createExplosion(location: Location, power: double, fire: bool, breakBlocks: bool) region(location) modifies : An explosion that may set fires and break blocks.
+  do: $.createExplosion(location, (float) power, fire, breakBlocks)
+fn World.fill(from: Location, to: Location, material: Material): int region(from) modifies : Sets every block of a box to a material (at most 32768 blocks); returns how many changed.
+  do: Blocks.fill($, from, to, material)
+fn World.save() global modifies : Saves the world to disk.
+  do: $.save()
+fn server.createWorld(name: string): World global modifies : Loads a world, creating it if it does not exist.
+  do: Worlds.create(name, org.bukkit.World.Environment.NORMAL)
+fn server.createWorld(name: string, environment: Environment): World global modifies : Loads or creates a world of a kind.
+  do: Worlds.create(name, environment)
+fn server.unloadWorld(world: World, save: bool): bool global modifies : Unloads a world; false if it cannot be unloaded (for example the main world).
+  do: Bukkit.unloadWorld(world, save)
+
+# ------------------------------------------------------------------ Location
+
+fn Location(world: World, x: double, y: double, z: double): Location pure : A location.
+  do: new Location(world, x, y, z)
+  ex: let spawn = Location(player.world, 0.5, 64, 0.5)
+fn Location(world: World, x: double, y: double, z: double, yaw: double, pitch: double): Location pure : A location with a rotation.
+  do: new Location(world, x, y, z, (float) yaw, (float) pitch)
+prop Location.blockX: int pure : The x coordinate of the block.
+  get: $.getBlockX()
+prop Location.blockY: int pure : The y coordinate of the block.
+  get: $.getBlockY()
+prop Location.blockZ: int pure : The z coordinate of the block.
+  get: $.getBlockZ()
+prop Location.direction: Vector pure : The direction the rotation points to, as a vector of length 1.
+  get: $.getDirection()
+prop Location.center: Location pure : The center of the block at this location.
+  get: $.toCenterLocation()
+prop Location.blockLocation: Location pure : The corner of the block at this location (whole coordinates).
+  get: $.toBlockLocation()
+prop Location.chunk: Chunk : The chunk of the location (loads it if needed).
+  get: $.getChunk()
+prop Location.isChunkLoaded: bool : Whether the chunk of the location is loaded.
+  get: $.isChunkLoaded()
+prop Location.highestBlock: Block : The highest non-air block above or below this location.
+  get: Worlds.world($).getHighestBlockAt($)
+prop Location.lightLevel: int : The light level at the location, 0 to 15.
+  get: $.getBlock().getLightLevel()
+prop Location.biome: Biome : The biome at the location.
+  get: $.getBlock().getBiome()
+prop Location.isSafe: bool : Whether a player can stand here: two free blocks and solid ground below.
+  get: Worlds.isSafe($)
+fn Location.add(vector: Vector): Location pure : A new location moved by a vector.
+  do: $.clone().add(vector)
+fn Location.subtract(x: double, y: double, z: double): Location pure : A new location moved back by some amounts.
+  do: $.clone().subtract(x, y, z)
+fn Location.subtract(vector: Vector): Location pure : A new location moved back by a vector.
+  do: $.clone().subtract(vector)
+fn Location.withX(x: double): Location pure : A copy with another x.
+  do: Worlds.with($, x, $.getY(), $.getZ(), $.getYaw(), $.getPitch())
+fn Location.withY(y: double): Location pure : A copy with another y.
+  do: Worlds.with($, $.getX(), y, $.getZ(), $.getYaw(), $.getPitch())
+fn Location.withZ(z: double): Location pure : A copy with another z.
+  do: Worlds.with($, $.getX(), $.getY(), z, $.getYaw(), $.getPitch())
+fn Location.withYaw(yaw: double): Location pure : A copy with another yaw.
+  do: Worlds.with($, $.getX(), $.getY(), $.getZ(), (float) yaw, $.getPitch())
+fn Location.withPitch(pitch: double): Location pure : A copy with another pitch.
+  do: Worlds.with($, $.getX(), $.getY(), $.getZ(), $.getYaw(), (float) pitch)
+fn Location.withWorld(world: World): Location pure : A copy in another world.
+  do: new Location(world, $.getX(), $.getY(), $.getZ(), $.getYaw(), $.getPitch())
+fn Location.forward(distance: double): Location pure : A new location moved forward along its direction.
+  do: $.clone().add($.getDirection().multiply(distance))
+fn Location.lookAt(target: Location): Location pure : A copy turned to face another location.
+  do: Worlds.lookAt($, target)
+fn Location.toVector(): Vector pure : The coordinates as a vector.
+  do: $.toVector()
+fn Location.distanceSquared(other: Location): double pure : The squared distance (faster than distance, for comparisons).
+  do: Worlds.distanceSquared($, other)
+fn Location.nearbyEntities(radius: double): List<Entity> reads : Entities within a distance of the location.
+  do: Entities.nearby($, radius)
+fn Location.nearbyPlayers(radius: double): List<Player> reads : Players within a distance of the location.
+  do: Entities.nearbyPlayers($, radius)
+fn Location.blocksInRadius(radius: int): List<Block> reads : Blocks within a distance (a sphere; the radius is at most 16).
+  do: Blocks.inRadius($, radius)
+fn Location.playSound(sound: Sound) : Plays a sound at the location for everyone nearby.
+  do: Worlds.world($).playSound($, sound, 1f, 1f)
+fn Location.playSound(sound: Sound, volume: double, pitch: double) : Plays a sound at the location (pitch 0.5 to 2).
+  do: Worlds.world($).playSound($, sound, (float) volume, (float) pitch)
+fn Location.spawnParticle(particle: Particle, count: int) : Shows particles at the location.
+  do: Effects.particle(null, particle, $, count, 0, 0, 0, 0)
+  ex: player.location.add(0, 2, 0).spawnParticle(Particle.HEART, 5)
+fn Location.spawnParticle(particle: Particle, count: int, offsetX: double, offsetY: double, offsetZ: double, speed: double) : Shows particles spread around the location.
+  do: Effects.particle(null, particle, $, count, offsetX, offsetY, offsetZ, speed)
+fn Location.spawnDust(color: Color, size: double, count: int) : Shows colored dust particles.
+  do: Effects.dust(null, color, size, $, count)
+fn Location.spawn(type: EntityType): Entity region modifies : Spawns an entity at the location.
+  do: Worlds.spawn(Worlds.world($), type, $)
+  ex: let zombie = player.location.spawn(EntityType.ZOMBIE) as Mob\nzombie.target = player
+fn Location.dropItem(item: ItemStack): Item region modifies : Drops items at the location.
+  do: Worlds.world($).dropItem($, item.clone())
+fn Location.strikeLightning() region modifies : Strikes lightning at the location.
+  do: Worlds.world($).strikeLightning($)
+fn Location.createExplosion(power: double) region modifies : An explosion at the location.
+  do: Worlds.world($).createExplosion($, (float) power)
+fn Location.spawnText(text: Component): TextDisplay region modifies : A floating text (hologram) at the location.
+  do: Worlds.spawnText($, text)
+  ex: let hologram = player.location.add(0, 2, 0).spawnText("<gold>Welcome!")
+
+# ------------------------------------------------------------------ Vector
+
+fn Vector(x: double, y: double, z: double): Vector pure : A vector.
+  do: new Vector(x, y, z)
+prop Vector.x: double pure : The x component.
+  get: $.getX()
+prop Vector.y: double pure : The y component.
+  get: $.getY()
+prop Vector.z: double pure : The z component.
+  get: $.getZ()
+prop Vector.length: double pure : The vector's length.
+  get: $.length()
+prop Vector.lengthSquared: double pure : The squared length (faster than length, for comparisons).
+  get: $.lengthSquared()
+prop Vector.isZero: bool pure : Whether every component is 0.
+  get: $.isZero()
+fn Vector.normalize(): Vector pure : The vector with length 1 (same direction).
+  do: $.isZero() ? $.clone() : $.clone().normalize()
+fn Vector.add(other: Vector): Vector pure : The sum of two vectors.
+  do: $.clone().add(other)
+fn Vector.subtract(other: Vector): Vector pure : The difference of two vectors.
+  do: $.clone().subtract(other)
+fn Vector.multiply(factor: double): Vector pure : The vector scaled by a factor.
+  do: $.clone().multiply(factor)
+fn Vector.dot(other: Vector): double pure : The dot product.
+  do: $.dot(other)
+fn Vector.cross(other: Vector): Vector pure : The cross product.
+  do: $.clone().crossProduct(other)
+fn Vector.distance(other: Vector): double pure : The distance between the two points.
+  do: $.distance(other)
+fn Vector.angle(other: Vector): double pure : The angle between two vectors, in radians.
+  do: $.angle(other)
+fn Vector.rotateAroundX(angle: double): Vector pure : The vector rotated around the x axis (radians).
+  do: $.clone().rotateAroundX(angle)
+fn Vector.rotateAroundY(angle: double): Vector pure : The vector rotated around the y (vertical) axis (radians).
+  do: $.clone().rotateAroundY(angle)
+fn Vector.rotateAroundZ(angle: double): Vector pure : The vector rotated around the z axis (radians).
+  do: $.clone().rotateAroundZ(angle)
+fn Vector.toLocation(world: World): Location pure : A location at these coordinates.
+  do: $.toLocation(world)
+fn Vector.toString(): string pure : Text such as '(1, 0.5, -2)'.
+  do: Worlds.vectorText($)
+
+# ------------------------------------------------------------------ Block
+
+prop Block.type: Material rw region : The block's material.
+  get: $.getType()
+  set: $.setType(v)
+  ex: event block.break {\n    if block.type == Material.DIAMOND_ORE {\n        player.send("<aqua>Diamonds!")\n    }\n}
+prop Block.x: int : The block's x coordinate.
+  get: $.getX()
+prop Block.y: int : The block's y coordinate.
+  get: $.getY()
+prop Block.z: int : The block's z coordinate.
+  get: $.getZ()
+prop Block.blockData: string rw region : The full block state, e.g. 'minecraft:oak_stairs[facing=north,half=bottom]'.
+  get: $.getBlockData().getAsString()
+  set: Blocks.setData($, v)
+prop Block.lightLevel: int : The light level at the block, 0 to 15.
+  get: $.getLightLevel()
+prop Block.skyLight: int : The light from the sky at the block, 0 to 15.
+  get: $.getLightFromSky()
+prop Block.biome: Biome rw region : The biome at the block.
+  get: $.getBiome()
+  set: $.setBiome(v)
+prop Block.isEmpty: bool : Whether the block is air.
+  get: $.isEmpty()
+prop Block.isLiquid: bool : Whether the block is water or lava.
+  get: $.isLiquid()
+prop Block.isSolid: bool : Whether the block is solid.
+  get: $.isSolid()
+prop Block.isPassable: bool : Whether entities can walk through the block.
+  get: $.isPassable()
+prop Block.hardness: double : How long the block takes to break.
+  get: $.getType().getHardness()
+prop Block.isPowered: bool : Whether the block receives redstone power.
+  get: $.isBlockPowered()
+prop Block.redstonePower: int : The redstone power the block receives, 0 to 15.
+  get: $.getBlockPower()
+prop Block.drops: List<ItemStack> : The items the block drops when broken by hand.
+  get: new ArrayList<Object>($.getDrops())
+prop Block.center: Location : The center of the block.
+  get: $.getLocation().toCenterLocation()
+prop Block.chunk: Chunk : The block's chunk.
+  get: $.getChunk()
+prop Block.inventory: Inventory? : The inventory of a container (chest, barrel, furnace, ...), or null.
+  get: Blocks.inventory($)
+fn Block.relative(face: BlockFace): Block : The neighbouring block in a direction.
+  do: $.getRelative(face)
+fn Block.relative(x: int, y: int, z: int): Block : The block at an offset.
+  do: $.getRelative(x, y, z)
+fn Block.dropsWith(tool: ItemStack): List<ItemStack> : The items the block drops when broken with a tool.
+  do: new ArrayList<Object>($.getDrops(tool))
+fn Block.breakNaturally(): bool region modifies : Breaks the block and drops its items; false if it was air.
+  do: $.breakNaturally()
+fn Block.breakNaturally(tool: ItemStack): bool region modifies : Breaks the block as if with a tool.
+  do: $.breakNaturally(tool)
+fn Block.signLine(index: int): Component? : A line (0 to 3) of the front of a sign, or null if the block is not a sign.
+  do: Blocks.signLine($, index)
+fn Block.setSignLine(index: int, text: Component) region modifies : Changes a line (0 to 3) of the front of a sign.
+  do: Blocks.setSignLine($, index, text)
+fn Block.toString(): string : Text such as 'stone at world 10, 64, -3'.
+  do: Blocks.describe($)
+
+# ------------------------------------------------------------------ Chunk
+
+prop Chunk.x: int : The chunk's x coordinate (block x / 16).
+  get: $.getX()
+prop Chunk.z: int : The chunk's z coordinate (block z / 16).
+  get: $.getZ()
+prop Chunk.world: World : The chunk's world.
+  get: $.getWorld()
+prop Chunk.isLoaded: bool : Whether the chunk is loaded.
+  get: $.isLoaded()
+prop Chunk.entities: List<Entity> : The entities in the chunk.
+  get: new ArrayList<Object>(List.of($.getEntities()))
+prop Chunk.forceLoaded: bool rw global : Whether the chunk stays loaded without players.
+  get: $.isForceLoaded()
+  set: $.setForceLoaded(v)
+fn Chunk.toString(): string : Text such as 'world 3, -7'.
+  do: $.getWorld().getName() + " " + $.getX() + ", " + $.getZ()
+
+# ------------------------------------------------------------------ Color
+
+fn Color(red: int, green: int, blue: int): Color pure : A color from red, green and blue (0 to 255).
+  do: org.bukkit.Color.fromRGB(Math.max(0, Math.min(255, red)), Math.max(0, Math.min(255, green)), Math.max(0, Math.min(255, blue)))
+fn Color.fromHex(hex: string): Color? static pure : A color from text such as '#ff8800'; null if the text is not a color.
+  do: Worlds.color(hex)
+prop Color.red: int pure : The red part, 0 to 255.
+  get: $.getRed()
+prop Color.green: int pure : The green part, 0 to 255.
+  get: $.getGreen()
+prop Color.blue: int pure : The blue part, 0 to 255.
+  get: $.getBlue()
+prop Color.hex: string pure : The color as text, e.g. '#ff8800'.
+  get: String.format("#%06x", $.asRGB())
+fn Color.toString(): string pure : The color as text, e.g. '#ff8800'.
+  do: String.format("#%06x", $.asRGB())
+prop Color.WHITE: Color static pure : White.
+  get: org.bukkit.Color.WHITE
+prop Color.SILVER: Color static pure : Light gray.
+  get: org.bukkit.Color.SILVER
+prop Color.GRAY: Color static pure : Gray.
+  get: org.bukkit.Color.GRAY
+prop Color.BLACK: Color static pure : Black.
+  get: org.bukkit.Color.BLACK
+prop Color.RED: Color static pure : Red.
+  get: org.bukkit.Color.RED
+prop Color.MAROON: Color static pure : Dark red.
+  get: org.bukkit.Color.MAROON
+prop Color.YELLOW: Color static pure : Yellow.
+  get: org.bukkit.Color.YELLOW
+prop Color.OLIVE: Color static pure : Olive.
+  get: org.bukkit.Color.OLIVE
+prop Color.LIME: Color static pure : Lime.
+  get: org.bukkit.Color.LIME
+prop Color.GREEN: Color static pure : Green.
+  get: org.bukkit.Color.GREEN
+prop Color.AQUA: Color static pure : Aqua.
+  get: org.bukkit.Color.AQUA
+prop Color.TEAL: Color static pure : Teal.
+  get: org.bukkit.Color.TEAL
+prop Color.BLUE: Color static pure : Blue.
+  get: org.bukkit.Color.BLUE
+prop Color.NAVY: Color static pure : Navy.
+  get: org.bukkit.Color.NAVY
+prop Color.FUCHSIA: Color static pure : Fuchsia.
+  get: org.bukkit.Color.FUCHSIA
+prop Color.PURPLE: Color static pure : Purple.
+  get: org.bukkit.Color.PURPLE
+prop Color.ORANGE: Color static pure : Orange.
+  get: org.bukkit.Color.ORANGE
+
+# ------------------------------------------------------------------ potion effects
+
+fn PotionEffect(type: PotionEffectType, duration: Duration, level: int): PotionEffect : A potion effect; level 1 is the normal strength, a negative duration lasts forever.
+  do: Effects.of(type, duration, level)
+fn PotionEffect(type: PotionEffectType, duration: Duration, level: int, ambient: bool, particles: bool): PotionEffect : A potion effect with beacon-like (ambient) look and optional particles.
+  do: Effects.of(type, duration, level, ambient, particles)
+prop PotionEffect.type: PotionEffectType : The kind of effect.
+  get: $.getType()
+prop PotionEffect.duration: Duration : How long the effect lasts (negative: forever).
+  get: $.isInfinite() ? -1L : $.getDuration() * 50L
+prop PotionEffect.level: int : The strength, 1 for the normal effect.
+  get: $.getAmplifier() + 1
+prop PotionEffect.ambient: bool : Whether the effect looks like a beacon effect.
+  get: $.isAmbient()
+prop PotionEffect.particles: bool : Whether the effect shows particles.
+  get: $.hasParticles()
+fn PotionEffect.toString(): string : Text such as 'speed 2 (30s)'.
+  do: Effects.describe($)
+
+# ------------------------------------------------------------------ keys and names of keyed types
+
+prop EntityType.key: string : The entity type's key, e.g. 'minecraft:zombie'.
+  get: Texts.key($)
+prop EntityType.isAlive: bool : Whether entities of this type are living entities.
+  get: $.isAlive()
+prop EntityType.isSpawnable: bool : Whether entities of this type can be spawned.
+  get: $.isSpawnable()
+fn EntityType.toString(): string : The key without 'minecraft:', e.g. 'zombie'.
+  do: Texts.keyText($)
+prop Sound.key: string : The sound's key, e.g. 'minecraft:entity.player.levelup'.
+  get: Texts.key($)
+fn Sound.toString(): string : The key without 'minecraft:'.
+  do: Texts.keyText($)
+prop Particle.key: string : The particle's key, e.g. 'minecraft:flame'.
+  get: Texts.key($)
+fn Particle.toString(): string : The key without 'minecraft:'.
+  do: Texts.keyText($)
+prop PotionEffectType.key: string : The effect's key, e.g. 'minecraft:speed'.
+  get: Texts.key($)
+prop PotionEffectType.isInstant: bool : Whether the effect happens at once (instant health, ...).
+  get: $.isInstant()
+fn PotionEffectType.toString(): string : The key without 'minecraft:'.
+  do: Texts.keyText($)
+prop Biome.key: string : The biome's key, e.g. 'minecraft:plains'.
+  get: Texts.key($)
+fn Biome.toString(): string : The key without 'minecraft:'.
+  do: Texts.keyText($)
+prop Attribute.key: string : The attribute's key, e.g. 'minecraft:max_health'.
+  get: Texts.key($)
+fn Attribute.toString(): string : The key without 'minecraft:'.
+  do: Texts.keyText($)
+fn BlockFace.toString(): string : The direction in lower case, e.g. 'north'.
+  do: Texts.enumText($)
+prop BlockFace.opposite: BlockFace : The opposite direction.
+  get: $.getOppositeFace()
+fn ItemFlag.toString(): string : The flag in lower case.
+  do: Texts.enumText($)
+fn EquipmentSlot.toString(): string : The slot in lower case.
+  do: Texts.enumText($)
+fn ClickType.toString(): string : The click type in lower case, e.g. 'shift_left'.
+  do: Texts.enumText($)
+fn InventoryType.toString(): string : The inventory kind in lower case.
+  do: Texts.enumText($)
+fn Action.toString(): string : The action in lower case, e.g. 'right_click_block'.
+  do: Texts.enumText($)
+fn DamageCause.toString(): string : The cause in lower case, e.g. 'fall'.
+  do: Texts.enumText($)
+fn SpawnReason.toString(): string : The reason in lower case, e.g. 'natural'.
+  do: Texts.enumText($)
+fn TeleportCause.toString(): string : The cause in lower case, e.g. 'ender_pearl'.
+  do: Texts.enumText($)
+fn Difficulty.toString(): string : The difficulty in lower case.
+  do: Texts.enumText($)
+fn Environment.toString(): string : The environment in lower case.
+  do: Texts.enumText($)
+fn BarColor.toString(): string : The color in lower case.
+  do: Texts.enumText($)
+fn BarStyle.toString(): string : The style in lower case.
+  do: Texts.enumText($)

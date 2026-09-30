@@ -17,4 +17,11 @@ public sealed interface TypeRef extends Node {
     /** {@code T?} */
     record Nullable(TypeRef inner, Span span) implements TypeRef {
     }
+
+    /** {@code function(int, string): bool}; {@code returnType} is {@code null} for {@code void}. */
+    record Function(List<TypeRef> parameters, TypeRef returnType, Span span) implements TypeRef {
+        public Function {
+            parameters = List.copyOf(parameters);
+        }
+    }
 }

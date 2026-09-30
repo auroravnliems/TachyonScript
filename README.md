@@ -1,13 +1,15 @@
 # TachyonScript
 
 A compiled, statically typed scripting language for Paper and Folia Minecraft
-servers.
+servers: everything Skript does, checked before it runs and many times faster.
 
 ```tys
 const PREFIX = "<gold>[Server]</gold> "
 
+playerdata var coins: int = 100
+
 event player.join {
-    player.send("{PREFIX}<green>Welcome, {player.name}!")
+    player.send("{PREFIX}<green>Welcome, {player.name}! You have {player.coins} coins.")
     if player.health < 10.0 {
         player.health = player.maxHealth
     }
@@ -19,13 +21,26 @@ event block.break {
         player.send("<red>You cannot break {block.type} here.")
     }
 }
+
+@playerOnly
+@cooldown(10 seconds)
+command shop {
+    let menu = Menu(3, "<dark_green>Shop")
+    menu.set(13, ItemStack(Material.DIAMOND, 1, "<aqua>Diamond", ["<gray>100 coins"]), click => {
+        if click.player.coins >= 100 {
+            click.player.coins -= 100
+            click.player.give(ItemStack(Material.DIAMOND))
+        }
+    })
+    menu.open(player)
+}
 ```
 
-> **Status: early development (0.1.0-SNAPSHOT).** The compiler, interpreter, reload
-> engine, Paper/Folia platform, plugin and CLI work and are covered by tests, but the
-> plugin has not yet been run on a live server by CI and the standard library is
-> small. There is no release yet. See [docs/status.md](docs/status.md) for exactly
-> what exists and what is planned.
+> **Status: 0.2.0-SNAPSHOT.** The language, the standard library (menus, items,
+> databases, saved data, boss bars, sidebars, Vault, PlaceholderAPI, ...), the
+> Paper/Folia platform and the plugin work, are covered by tests, and have been run on
+> a live Paper 1.21.11 server. There is no published release yet. See
+> [docs/status.md](docs/status.md) for exactly what exists.
 
 ## Why
 
@@ -44,19 +59,22 @@ event block.break {
       send
   ```
 
-* **Reloads never break a working server.** `/tys reload` compiles in the
-  background and switches atomically; a script with errors keeps its previous
-  working version.
-* **Messages are safe and fast.** MiniMessage templates are parsed once when the
-  script loads. Values are inserted as plain text, so a player named
-  `<click:run_command:/op me>` cannot inject anything, and text typed by players is
-  never parsed as MiniMessage implicitly.
+* **Everything is built in.** Commands with typed arguments and cooldowns, timers,
+  variables saved per server or per player, SQL databases, menus, items, inventories,
+  worlds, boss bars, sidebars, holograms, web requests, JSON, Vault and PlaceholderAPI —
+  more than 900 functions and properties and 111 events, no addons required.
+* **Reloads never break a working server.** `/tys reload` compiles in the background
+  and switches atomically; a script with errors keeps its previous working version, and
+  everything a reloaded script started (timers, menus, boss bars) is cleaned up.
+* **Safe by construction.** Values inserted into messages are plain text, so players
+  cannot inject formatting; SQL can only be written in the script, so SQL injection is a
+  compile error; `null` must be handled before a value is used.
 * **Folia is supported, not emulated.** Handlers run on the region thread that owns
-  the event; changes to entities owned elsewhere are scheduled on their owners.
+  the event; changes to entities and blocks owned elsewhere are scheduled on their owners.
 * **No work that could be done in advance happens at run time.** Names, types,
-  overloads and bindings are resolved when a script loads. The interpreter runs a
-  compact register code with no reflection, no text parsing and no allocation per
-  call.
+  overloads, constants (`Material.DIAMOND`) and bindings are resolved when a script
+  loads. The interpreter runs a compact register code with no reflection, no text
+  parsing and no allocation per call.
 * **Runaway scripts cannot hang the server.** Recursion depth and execution time
   are limited; errors are rate-limited and point at the script line.
 
@@ -86,10 +104,10 @@ There is no published release yet; build the plugin from source:
 ./gradlew build
 ```
 
-Copy `tachyon-plugin/build/libs/TachyonScript-0.1.0-SNAPSHOT.jar` into `plugins/`
+Copy `tachyon-plugin/build/libs/TachyonScript-0.2.0-SNAPSHOT.jar` into `plugins/`
 on a Paper or Folia 1.21.x server (Java 21), start it, and edit scripts in
 `plugins/TachyonScript/scripts/`. See [docs/plugin.md](docs/plugin.md) for commands,
-permissions and configuration.
+permissions and configuration, and the [wiki](wiki/Home.md) for a guided tour.
 
 ### Checking scripts without a server
 
@@ -103,11 +121,15 @@ tachyon-cli/build/install/tys/bin/tys dump code my-script.tys
 
 ## Documentation
 
+* [Wiki](wiki/Home.md) — installation, tutorials, 17 complete recipes, a guide for Skript
+  users and the API reference (the `wiki/` folder is ready to upload as the GitHub wiki)
 * [The language](docs/language/README.md) — variables, types, control flow,
-  functions, events, messages, and the generated
+  functions, modules, events, commands, scheduling, saved data, databases, messages,
+  the world, menus, integrations, errors, coming from Skript, and the generated
   [standard library reference](docs/language/reference.md)
 * [Running the plugin](docs/plugin.md)
 * [Writing addons](docs/addons/getting-started.md)
+* [The standard library generator](docs/stdlib-generator.md)
 * [Architecture](docs/architecture.md) and [decision records](docs/decisions/)
 * Compiler internals: [lexer](docs/compiler/lexer.md),
   [parser](docs/compiler/parser.md), [type system](docs/compiler/type-system.md),
@@ -120,7 +142,7 @@ tachyon-cli/build/install/tys/bin/tys dump code my-script.tys
 
 ```text
 .tys ─► lexer ─► parser ─► type checker ─► typed register IR ─► verifier
-      ─► assembler (packed int[] code) ─► linker (natives, templates) ─► interpreter
+      ─► assembler (packed int[] code) ─► linker (natives, templates, constants) ─► interpreter
 ```
 
 Everything up to the interpreter is independent of Bukkit: the compiler, CLI and
@@ -132,15 +154,16 @@ declarations on the Paper API. Details are in [docs/architecture.md](docs/archit
 | `tachyon-api` | Type model, declarations, native function interfaces, addon API |
 | `tachyon-language` | Source files, diagnostics, lexer, parser, type checker |
 | `tachyon-ir` | Typed register IR, verifier, optimizer |
-| `tachyon-compiler` | Lowering to IR and the compilation driver |
-| `tachyon-runtime` | Assembler, linker, interpreter |
-| `tachyon-engine` | Transactional loading, dispatch, errors, profiler, addon assembly |
-| `tachyon-stdlib` | Standard library declarations and server-independent implementations |
-| `tachyon-platform-paper` | Paper/Folia bindings, event bridge, MiniMessage text service |
-| `tachyon-plugin` | The plugin: `/tys`, configuration, reload |
+| `tachyon-compiler` | Lowering to IR and the compilation driver (module graph) |
+| `tachyon-runtime` | Assembler, linker, interpreter, runtime values |
+| `tachyon-engine` | Transactional loading, dispatch, commands, scheduling, saved data, databases |
+| `tachyon-stdlib` | Standard library declarations (mostly generated) and server-independent implementations |
+| `tachyon-platform-paper` | Paper/Folia bindings (mostly generated), event bridge, menus, text service |
+| `tachyon-plugin` | The plugin: `/tys`, configuration, reload, PlaceholderAPI expansion |
 | `tachyon-cli` | The `tys` command-line tool |
 | `tachyon-tests` | In-memory test platform and end-to-end tests |
 | `tachyon-benchmarks` | JMH benchmarks |
+| `tools/stdlib-gen` | Generator of the standard library from `spec/*.api` |
 
 ## Building
 
@@ -152,8 +175,8 @@ Central and `repo.papermc.io` (for the Paper API).
 ./gradlew :tachyon-benchmarks:jmh   # run the benchmarks
 ```
 
-The build treats compiler warnings as errors. Documentation examples are compiled
-by the tests, and the standard library reference is generated
+The build treats compiler warnings as errors. Documentation and wiki examples are
+compiled by the tests, and the standard library reference is generated
 (`./gradlew -q :tachyon-cli:run --args=docs > docs/language/reference.md`) and
 checked against the declarations.
 

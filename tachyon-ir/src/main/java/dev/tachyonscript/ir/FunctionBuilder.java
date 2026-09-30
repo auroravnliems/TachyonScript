@@ -24,7 +24,9 @@ public final class FunctionBuilder {
     private final List<Register> parameters = new ArrayList<>();
     private final List<List<Instruction>> blockInstructions = new ArrayList<>();
     private final List<Terminator> terminators = new ArrayList<>();
+    private final List<Integer> handlers = new ArrayList<>();
     private int current;
+    private int handler = -1;
 
     public FunctionBuilder(String key, String displayName, IrFunction.Kind kind, Type returnType, long span) {
         this.key = key;
@@ -55,11 +57,32 @@ public final class FunctionBuilder {
         return register(type, "");
     }
 
-    /** Creates an empty block and returns its index (does not move the insertion point). */
+    /**
+     * Creates an empty block and returns its index (does not move the insertion point). The
+     * block gets the current exception handler ({@link #handler()}).
+     */
     public int newBlock() {
         blockInstructions.add(new ArrayList<>());
         terminators.add(null);
+        handlers.add(handler);
         return blockInstructions.size() - 1;
+    }
+
+    /**
+     * The exception handler given to blocks created from now on: the index of a block starting
+     * with {@link Instruction.Catch}, or {@code -1} for none.
+     */
+    public int handler() {
+        return handler;
+    }
+
+    public void setHandler(int block) {
+        this.handler = block;
+    }
+
+    /** The exception handler of an existing block. */
+    public int handlerOf(int block) {
+        return handlers.get(block);
     }
 
     /** Moves the insertion point to the end of {@code block}. */
@@ -104,7 +127,7 @@ public final class FunctionBuilder {
             if (terminator == null) {
                 throw new IllegalStateException("Block " + i + " of " + key + " has no terminator");
             }
-            blocks.add(new IrBlock(i, blockInstructions.get(i), terminator));
+            blocks.add(new IrBlock(i, blockInstructions.get(i), terminator, handlers.get(i)));
         }
         return new IrFunction(key, displayName, kind, parameters, returnType, registers, blocks, span);
     }

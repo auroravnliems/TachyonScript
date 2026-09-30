@@ -55,7 +55,8 @@ public final class Cli {
                                                       plugin's scripts directory (recursively, skipping
                                                       names that start with '-')
               dump tokens|ast|bound|ir|code <file>    Print the output of one compiler stage
-              docs                                    Print the standard library reference (Markdown)
+              docs [--wiki]                           Print the standard library reference (Markdown;
+                                                      --wiki: the API-Reference page of the wiki)
               version                                 Print version information
               help                                    Print this help
 
@@ -94,7 +95,12 @@ public final class Cli {
                 case "check" -> check(rest);
                 case "dump" -> dump(rest);
                 case "docs" -> {
-                    out.print(ReferenceGenerator.generate(registry));
+                    if (rest.size() > 1 || rest.size() == 1 && !rest.getFirst().equals("--wiki")) {
+                        err.println("Usage: tys docs [--wiki]");
+                        yield USAGE;
+                    }
+                    out.print(ReferenceGenerator.generate(registry, rest.isEmpty()
+                            ? ReferenceGenerator.Target.DOCS : ReferenceGenerator.Target.WIKI));
                     yield OK;
                 }
                 case "version", "--version", "-v" -> {

@@ -1,0 +1,9 @@
+HIDE_ENCHANTS minecraft:hide_enchants
+HIDE_ATTRIBUTES minecraft:hide_attributes
+HIDE_UNBREAKABLE minecraft:hide_unbreakable
+HIDE_DESTROYS minecraft:hide_destroys
+HIDE_PLACED_ON minecraft:hide_placed_on
+HIDE_ADDITIONAL_TOOLTIP minecraft:hide_additional_tooltip
+HIDE_DYE minecraft:hide_dye
+HIDE_ARMOR_TRIM minecraft:hide_armor_trim
+HIDE_STORED_ENCHANTS minecraft:hide_stored_enchants

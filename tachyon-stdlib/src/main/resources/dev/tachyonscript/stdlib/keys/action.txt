@@ -1,0 +1,5 @@
+LEFT_CLICK_BLOCK minecraft:left_click_block
+RIGHT_CLICK_BLOCK minecraft:right_click_block
+LEFT_CLICK_AIR minecraft:left_click_air
+RIGHT_CLICK_AIR minecraft:right_click_air
+PHYSICAL minecraft:physical

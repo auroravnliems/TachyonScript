@@ -5,6 +5,8 @@ import dev.tachyonscript.api.declaration.FunctionDeclaration;
 import dev.tachyonscript.api.declaration.NativeDeclaration;
 import dev.tachyonscript.api.declaration.PropertyDeclaration;
 import dev.tachyonscript.api.natives.NativeFunction;
+import dev.tachyonscript.api.storage.Codec;
+import dev.tachyonscript.api.storage.KeyedValues;
 import dev.tachyonscript.api.type.ClassType;
 import dev.tachyonscript.api.type.Representation;
 
@@ -21,6 +23,10 @@ import java.util.Set;
  * <p>Declarations are what the compiler sees; bindings are what the linker installs. A
  * platform (Paper, the test platform), the standard library and addons each contribute
  * bindings, which are merged with {@link Builder#include(Bindings)}.
+ *
+ * <p>Besides operations, bindings give the Java class of each type (for {@code is} and
+ * {@code as}), the {@link Codec} of each storable type (for persistent variables) and the
+ * {@link KeyedValues} of each keyed type (to resolve constants such as {@code Material.DIAMOND}).
  */
 public final class Bindings {
 
@@ -29,10 +35,14 @@ public final class Bindings {
 
     private final Map<String, Entry> functions;
     private final Map<ClassType, Class<?>> typeClasses;
+    private final Map<ClassType, Codec> codecs;
+    private final Map<ClassType, KeyedValues> keyedValues;
 
     private Bindings(Builder builder) {
         this.functions = Collections.unmodifiableMap(new LinkedHashMap<>(builder.functions));
         this.typeClasses = Collections.unmodifiableMap(new LinkedHashMap<>(builder.typeClasses));
+        this.codecs = Collections.unmodifiableMap(new LinkedHashMap<>(builder.codecs));
+        this.keyedValues = Collections.unmodifiableMap(new LinkedHashMap<>(builder.keyedValues));
     }
 
     public static Builder builder() {
@@ -61,6 +71,16 @@ public final class Bindings {
         return Optional.ofNullable(typeClasses.get(type));
     }
 
+    /** How values of a storable type are saved, if the platform supports it. */
+    public Optional<Codec> codec(ClassType type) {
+        return Optional.ofNullable(codecs.get(type));
+    }
+
+    /** How the constants of a keyed type are resolved, if the platform supports it. */
+    public Optional<KeyedValues> keyedValues(ClassType type) {
+        return Optional.ofNullable(keyedValues.get(type));
+    }
+
     public int size() {
         return functions.size();
     }
@@ -73,6 +93,16 @@ public final class Bindings {
     /** Every type with a Java class, in binding order. */
     public Set<ClassType> boundTypes() {
         return typeClasses.keySet();
+    }
+
+    /** Every storable type with a codec, in binding order. */
+    public Set<ClassType> codecTypes() {
+        return codecs.keySet();
+    }
+
+    /** Every keyed type with a resolver, in binding order. */
+    public Set<ClassType> keyedTypes() {
+        return keyedValues.keySet();
     }
 
     private static boolean sameSignature(NativeDeclaration a, NativeDeclaration b) {
@@ -107,6 +137,8 @@ public final class Bindings {
     public static final class Builder {
         private final Map<String, Entry> functions = new LinkedHashMap<>();
         private final Map<ClassType, Class<?>> typeClasses = new LinkedHashMap<>();
+        private final Map<ClassType, Codec> codecs = new LinkedHashMap<>();
+        private final Map<ClassType, KeyedValues> keyedValues = new LinkedHashMap<>();
 
         private Builder() {
         }
@@ -155,6 +187,39 @@ public final class Bindings {
             return this;
         }
 
+        /** Declares how values of a storable type are saved. */
+        public Builder bindCodec(ClassType type, Codec codec) {
+            Objects.requireNonNull(type, "type");
+            Objects.requireNonNull(codec, "codec");
+            if (!type.isStorable()) {
+                throw new RegistrationException("Type " + type.name() + " is not declared storable");
+            }
+            if (codecs.containsKey(type)) {
+                throw new RegistrationException("Duplicate codec for type " + type.name());
+            }
+            codecs.put(type, codec);
+            return this;
+        }
+
+        /** Declares how the constants of a keyed type resolve to platform objects. */
+        public Builder bindKeys(ClassType type, KeyedValues values) {
+            Objects.requireNonNull(type, "type");
+            Objects.requireNonNull(values, "values");
+            if (!type.isKeyed()) {
+                throw new RegistrationException("Type " + type.name() + " is not declared keyed");
+            }
+            if (keyedValues.containsKey(type)) {
+                throw new RegistrationException("Duplicate key resolver for type " + type.name());
+            }
+            keyedValues.put(type, values);
+            return this;
+        }
+
+        /** Whether an implementation is already bound for {@code declaration}'s key. */
+        public boolean isBound(NativeDeclaration declaration) {
+            return functions.containsKey(declaration.key());
+        }
+
         /** Adds all bindings of {@code other}; fails without changes on any duplicate. */
         public Builder include(Bindings other) {
             for (String key : other.functions.keySet()) {
@@ -167,8 +232,20 @@ public final class Bindings {
                     throw new RegistrationException("Duplicate class binding for type " + type.name());
                 }
             }
+            for (ClassType type : other.codecs.keySet()) {
+                if (codecs.containsKey(type)) {
+                    throw new RegistrationException("Duplicate codec for type " + type.name());
+                }
+            }
+            for (ClassType type : other.keyedValues.keySet()) {
+                if (keyedValues.containsKey(type)) {
+                    throw new RegistrationException("Duplicate key resolver for type " + type.name());
+                }
+            }
             functions.putAll(other.functions);
             typeClasses.putAll(other.typeClasses);
+            codecs.putAll(other.codecs);
+            keyedValues.putAll(other.keyedValues);
             return this;
         }
 

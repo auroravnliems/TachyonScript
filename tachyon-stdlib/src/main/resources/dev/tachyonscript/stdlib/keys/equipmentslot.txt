@@ -1,0 +1,8 @@
+HAND minecraft:hand
+OFF_HAND minecraft:off_hand
+FEET minecraft:feet
+LEGS minecraft:legs
+CHEST minecraft:chest
+HEAD minecraft:head
+BODY minecraft:body
+SADDLE minecraft:saddle

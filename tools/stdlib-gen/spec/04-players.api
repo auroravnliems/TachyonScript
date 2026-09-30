@@ -1,0 +1,195 @@
+# Players, offline players and command senders.
+
+area Players
+
+# ------------------------------------------------------------------ CommandSender
+
+prop CommandSender.isConsole: bool : Whether the sender is the server console.
+  get: $ instanceof org.bukkit.command.ConsoleCommandSender
+fn CommandSender.dispatch(command: string): bool global modifies : Runs a command as this sender (without the leading /); false if it does not exist.
+  do: Bukkit.dispatchCommand($, Players.stripSlash(command))
+
+# ------------------------------------------------------------------ experience, food and movement
+
+prop Player.exp: double rw entity : Progress towards the next level, from 0 to 1.
+  get: $.getExp()
+  set: $.setExp((float) Math.max(0, Math.min(1, v)))
+prop Player.totalExperience: int rw entity : All experience points of the player; setting it recomputes level and progress.
+  get: $.calculateTotalExperiencePoints()
+  set: $.setExperienceLevelAndProgress(Math.max(0, v))
+prop Player.expToLevel: int : Experience points needed to reach the next level.
+  get: $.getExpToLevel()
+fn Player.giveExp(amount: int) entity modifies : Gives experience points (like picking up orbs).
+  do: $.giveExp(amount)
+fn Player.giveLevels(amount: int) entity modifies : Gives (or takes, if negative) experience levels.
+  do: $.giveExpLevels(amount)
+prop Player.saturation: double rw entity : Saturation: extra food that is used before the food level drops.
+  get: $.getSaturation()
+  set: $.setSaturation((float) Math.max(0, v))
+prop Player.exhaustion: double rw entity : Exhaustion: when it reaches 4, saturation or food goes down.
+  get: $.getExhaustion()
+  set: $.setExhaustion((float) Math.max(0, v))
+prop Player.flying: bool rw entity : Whether the player is flying; setting it to true also allows flight.
+  get: $.isFlying()
+  set: Players.setFlying($, v)
+prop Player.allowFlight: bool rw entity : Whether the player may fly (like in creative mode).
+  get: $.getAllowFlight()
+  set: $.setAllowFlight(v)
+prop Player.flySpeed: double rw entity : Flying speed, from -1 to 1 (0.1 is normal).
+  get: $.getFlySpeed()
+  set: $.setFlySpeed((float) Math.max(-1, Math.min(1, v)))
+prop Player.walkSpeed: double rw entity : Walking speed, from -1 to 1 (0.2 is normal).
+  get: $.getWalkSpeed()
+  set: $.setWalkSpeed((float) Math.max(-1, Math.min(1, v)))
+prop Player.sneaking: bool : Whether the player is sneaking.
+  get: $.isSneaking()
+prop Player.sprinting: bool rw entity : Whether the player is sprinting.
+  get: $.isSprinting()
+  set: $.setSprinting(v)
+prop Player.sleepingIgnored: bool rw entity : Whether the player is ignored when counting sleeping players.
+  get: $.isSleepingIgnored()
+  set: $.setSleepingIgnored(v)
+prop Player.spectatorTarget: Entity? rw entity : The entity a spectator is looking through, or null.
+  get: $.getSpectatorTarget()
+  set: $.setSpectatorTarget(v)
+
+# ------------------------------------------------------------------ connection
+
+prop Player.ping: int : The player's latency in milliseconds.
+  get: $.getPing()
+prop Player.address: string? : The player's IP address.
+  get: Players.address($)
+prop Player.locale: string : The language of the player's client, e.g. 'en_us' or 'vi_vn'.
+  get: $.locale().toString().toLowerCase(java.util.Locale.ROOT)
+prop Player.clientBrand: string? : The client brand ('vanilla', 'fabric', ...), when the client sent it.
+  get: $.getClientBrandName()
+
+# ------------------------------------------------------------------ messages, titles and sounds
+
+fn Player.title(title: Component, subtitle: Component) : Shows a title and a subtitle.
+  do: $.showTitle(net.kyori.adventure.title.Title.title(title, subtitle))
+  ex: player.title("<gold>Welcome", "<gray>to the server")
+fn Player.title(title: Component, subtitle: Component, fadeIn: Duration, stay: Duration, fadeOut: Duration) : Shows a title with custom timing.
+  do: Players.title($, title, subtitle, fadeIn, stay, fadeOut)
+fn Player.clearTitle() : Removes the title.
+  do: $.clearTitle()
+fn Player.actionBar(message: Component) : Shows a message above the hotbar.
+  do: $.sendActionBar(message)
+  ex: every 1 second {\n    for player in server.players {\n        player.actionBar("<yellow>Level: {player.level}")\n    }\n}
+prop Player.playerListName: Component rw entity : The name shown in the tab list.
+  get: $.playerListName()
+  set: $.playerListName(v)
+prop Player.tabHeader: Component? rw : The text above the tab list.
+  get: $.playerListHeader()
+  set: $.sendPlayerListHeader(v == null ? Component.empty() : v)
+prop Player.tabFooter: Component? rw : The text below the tab list.
+  get: $.playerListFooter()
+  set: $.sendPlayerListFooter(v == null ? Component.empty() : v)
+fn Player.playSound(sound: Sound) : Plays a sound only this player hears.
+  do: $.playSound($.getLocation(), sound, 1f, 1f)
+  ex: player.playSound(Sound.ENTITY_EXPERIENCE_ORB_PICKUP)
+fn Player.playSound(sound: Sound, volume: double, pitch: double) : Plays a sound only this player hears (pitch 0.5 to 2).
+  do: $.playSound($.getLocation(), sound, (float) volume, (float) pitch)
+fn Player.playSound(sound: Sound, location: Location, volume: double, pitch: double) : Plays a sound at a location that only this player hears.
+  do: $.playSound(location, sound, (float) volume, (float) pitch)
+fn Player.stopSound(sound: Sound) : Stops a sound for this player.
+  do: $.stopSound(sound)
+fn Player.stopAllSounds() : Stops every sound for this player.
+  do: $.stopAllSounds()
+fn Player.spawnParticle(particle: Particle, location: Location, count: int) : Shows particles only this player sees.
+  do: Effects.particle($, particle, location, count, 0, 0, 0, 0)
+fn Player.spawnParticle(particle: Particle, location: Location, count: int, offsetX: double, offsetY: double, offsetZ: double, speed: double) : Shows spread-out particles only this player sees.
+  do: Effects.particle($, particle, location, count, offsetX, offsetY, offsetZ, speed)
+fn Player.sendBlockChange(location: Location, material: Material) : Makes a block look different for this player only (until it updates).
+  do: $.sendBlockChange(location, material.createBlockData())
+fn Player.setPlayerTime(time: long, relative: bool) : Changes the time of day this player sees (relative: keeps moving with the world).
+  do: $.setPlayerTime(time, relative)
+fn Player.resetPlayerTime() : Shows the world's real time again.
+  do: $.resetPlayerTime()
+fn Player.setPlayerWeather(raining: bool) : Changes the weather this player sees.
+  do: $.setPlayerWeather(raining ? org.bukkit.WeatherType.DOWNFALL : org.bukkit.WeatherType.CLEAR)
+fn Player.resetPlayerWeather() : Shows the world's real weather again.
+  do: $.resetPlayerWeather()
+
+# ------------------------------------------------------------------ items and inventories
+
+prop Player.inventory: PlayerInventory : The player's inventory.
+  get: $.getInventory()
+prop Player.enderChest: Inventory : The player's ender chest.
+  get: $.getEnderChest()
+prop Player.openedInventory: Inventory : The inventory the player looks at (their own when nothing is open).
+  get: $.getOpenInventory().getTopInventory()
+prop Player.cursor: ItemStack? rw entity : The item held by the mouse cursor in an open inventory.
+  get: Items.orNull($.getItemOnCursor())
+  set: $.setItemOnCursor(v)
+fn Player.give(item: ItemStack) entity modifies : Gives items; what does not fit drops at the player's feet.
+  do: Items.give($, item)
+  ex: player.give(ItemStack(Material.BREAD, 16))
+fn Player.give(material: Material, amount: int) entity modifies : Gives items of a material; what does not fit drops at the player's feet.
+  do: Items.give($, Items.of(material, amount))
+fn Player.openInventory(inventory: Inventory) entity modifies : Opens an inventory (a chest, another player's inventory, ...).
+  do: Screens.change(ctx.plugin(), $, () -> $.openInventory(inventory))
+fn Player.openEnderChest() entity modifies : Opens the player's ender chest.
+  do: Screens.change(ctx.plugin(), $, () -> $.openInventory($.getEnderChest()))
+fn Player.openWorkbench() entity modifies : Opens a crafting table anywhere.
+  do: Screens.change(ctx.plugin(), $, () -> $.openWorkbench(null, true))
+fn Player.closeInventory() entity modifies : Closes the open inventory.
+  do: Screens.change(ctx.plugin(), $, () -> $.closeInventory())
+fn Player.updateInventory() entity modifies : Sends the whole inventory to the client again.
+  do: $.updateInventory()
+fn Player.setCooldown(material: Material, duration: Duration) entity modifies : Puts every item of a material on cooldown (like ender pearls).
+  do: $.setCooldown(material, Ticks.of(duration))
+fn Player.cooldown(material: Material): Duration : The cooldown left for a material.
+  do: $.getCooldown(material) * 50L
+fn Player.hasCooldown(material: Material): bool : Whether a material is on cooldown.
+  do: $.hasCooldown(material)
+
+# ------------------------------------------------------------------ actions
+
+fn Player.chat(message: string) entity modifies : Makes the player send a chat message (or a command, if it starts with /).
+  do: $.chat(message)
+fn Player.performCommand(command: string): bool entity modifies : Makes the player run a command (without the leading /); false if it failed.
+  do: $.performCommand(Players.stripSlash(command))
+fn Player.canSee(other: Player): bool : Whether the player can see another player.
+  do: $.canSee(other)
+fn Player.hidePlayer(other: Player) entity modifies : Hides another player from this player.
+  do: $.hidePlayer(ctx.plugin(), other)
+fn Player.showPlayer(other: Player) entity modifies : Shows a hidden player again.
+  do: $.showPlayer(ctx.plugin(), other)
+fn Player.addPermission(permission: string) entity modifies : Gives a permission until the player leaves (or the scripts reload).
+  do: Players.addPermission(ctx, $, permission)
+fn Player.removePermission(permission: string) entity modifies : Removes a permission given with addPermission.
+  do: Players.removePermission($, permission)
+prop Player.respawnLocation: Location? rw entity : Where the player respawns (bed or anchor), or null for the world spawn.
+  get: $.getRespawnLocation()
+  set: $.setRespawnLocation(v, true)
+prop Player.compassTarget: Location rw entity : Where the player's compass points.
+  get: $.getCompassTarget()
+  set: $.setCompassTarget(v)
+
+# ------------------------------------------------------------------ OfflinePlayer
+
+prop OfflinePlayer.firstPlayed: Instant : When the player first joined (0 if never).
+  get: $.getFirstPlayed()
+prop OfflinePlayer.lastSeen: Instant : When the player was last online (0 if never).
+  get: $.getLastSeen()
+prop OfflinePlayer.lastLogin: Instant : When the player last joined (0 if never).
+  get: $.getLastLogin()
+prop OfflinePlayer.banned: bool : Whether the player is banned.
+  get: $.isBanned()
+prop OfflinePlayer.whitelisted: bool rw global : Whether the player is on the whitelist.
+  get: $.isWhitelisted()
+  set: $.setWhitelisted(v)
+prop OfflinePlayer.lastLocation: Location? : Where the player was when they last left (read from their saved data).
+  get: $.getLocation()
+fn OfflinePlayer.isOp(): bool : Whether the player is a server operator.
+  do: $.isOp()
+fn OfflinePlayer.setOp(value: bool) global modifies : Makes the player a server operator, or not.
+  do: $.setOp(value)
+fn OfflinePlayer.ban(reason: string) global modifies : Bans the player (and kicks them if online).
+  do: Players.ban(ctx, $, reason, 0)
+fn OfflinePlayer.ban(reason: string, duration: Duration) global modifies : Bans the player for a while (and kicks them if online).
+  do: Players.ban(ctx, $, reason, duration)
+  ex: let target = server.offlinePlayer("Griefer")\ntarget.ban("Griefing", 3 days)
+fn OfflinePlayer.pardon() global modifies : Removes the player's ban.
+  do: Players.pardon($)

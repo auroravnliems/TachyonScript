@@ -219,6 +219,9 @@ class InterpreterTest {
                 () -> ScriptHarness.run(source, "forever(int)", 0));
         assertEquals(ScriptRuntimeException.Kind.RECURSION, error.kind());
         assertEquals(0, ExecutionStack.current().depth(), "the stack is reset after an error");
+        String rendered = error.render(false);
+        assertEquals(1, rendered.split("\n  at ", -1).length - 1, "repeated frames are collapsed:\n" + rendered);
+        assertTrue(rendered.contains("more calls at the same place"), rendered);
     }
 
     @Test

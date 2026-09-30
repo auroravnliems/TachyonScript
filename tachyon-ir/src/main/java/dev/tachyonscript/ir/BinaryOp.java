@@ -13,7 +13,8 @@ import static dev.tachyonscript.api.type.Representation.REF;
  * Binary operations, specialised by operand representation so that no instruction needs to
  * inspect value types at runtime. Integer arithmetic wraps (Java semantics); integer
  * division and remainder by zero raise a runtime error. {@code EQ_REF}/{@code NE_REF} use
- * value equality ({@code Objects.equals}).
+ * value equality ({@code Objects.equals}). Shifts use the low 5 (int) or 6 (long) bits of the
+ * shift distance, like Java.
  */
 public enum BinaryOp {
     ADD_I32(INT, INT), SUB_I32(INT, INT), MUL_I32(INT, INT), DIV_I32(INT, INT), REM_I32(INT, INT),
@@ -28,7 +29,10 @@ public enum BinaryOp {
     EQ_F64(DOUBLE, BOOL), NE_F64(DOUBLE, BOOL), LT_F64(DOUBLE, BOOL), LE_F64(DOUBLE, BOOL), GT_F64(DOUBLE, BOOL),
     GE_F64(DOUBLE, BOOL),
     EQ_BOOL(BOOL, BOOL), NE_BOOL(BOOL, BOOL),
-    EQ_REF(REF, BOOL), NE_REF(REF, BOOL);
+    EQ_REF(REF, BOOL), NE_REF(REF, BOOL),
+    AND_I32(INT, INT), OR_I32(INT, INT), XOR_I32(INT, INT), SHL_I32(INT, INT), SHR_I32(INT, INT), USHR_I32(INT, INT),
+    AND_I64(LONG, LONG), OR_I64(LONG, LONG), XOR_I64(LONG, LONG), SHL_I64(LONG, LONG), SHR_I64(LONG, LONG),
+    USHR_I64(LONG, LONG);
 
     private final Representation operand;
     private final Representation result;

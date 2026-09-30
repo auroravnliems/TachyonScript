@@ -1,0 +1,142 @@
+# The server, text helpers, boss bars, sidebars, files and the web.
+
+area ServerUi
+
+# ------------------------------------------------------------------ server
+
+prop server.console: CommandSender : The server console.
+  get: Bukkit.getConsoleSender()
+fn server.dispatch(command: string): bool global modifies : Runs a command as the console (without the leading /); false if it does not exist.
+  do: Bukkit.dispatchCommand(Bukkit.getConsoleSender(), Players.stripSlash(command))
+  ex: server.dispatch("give {player.name} diamond 1")
+fn server.player(uuid: UUID): Player? : The online player with a UUID, or null.
+  do: Bukkit.getPlayer(uuid)
+fn broadcast(message: Component, permission: string) : Sends a message to every player with a permission (and the console).
+  do: Bukkit.broadcast(message, permission)
+prop server.tps: double : Ticks per second over the last minute (20 is perfect).
+  get: ServerInfo.tps()
+prop server.mspt: double : Average milliseconds per tick (below 50 keeps 20 TPS).
+  get: ServerInfo.mspt()
+prop server.ticks: int : Ticks since the server started.
+  get: Bukkit.getCurrentTick()
+prop server.uptime: Duration : How long the server has been running.
+  get: ServerInfo.uptime()
+prop server.version: string : The Minecraft version, e.g. '1.21.11'.
+  get: Bukkit.getMinecraftVersion()
+prop server.software: string : The server software and its version.
+  get: Bukkit.getName() + " " + Bukkit.getVersion()
+prop server.folia: bool : Whether the server runs regions in parallel (Folia).
+  get: ctx.folia()
+prop server.motd: Component rw global : The message of the day shown in the server list.
+  get: Bukkit.motd()
+  set: Bukkit.motd(v)
+fn server.setMaxPlayers(count: int) global modifies : Changes the player limit.
+  do: Bukkit.setMaxPlayers(Math.max(0, count))
+prop server.whitelist: bool rw global : Whether only whitelisted players may join.
+  get: Bukkit.hasWhitelist()
+  set: Bukkit.setWhitelist(v)
+prop server.whitelistedPlayers: List<OfflinePlayer> : The whitelisted players.
+  get: new ArrayList<Object>(Bukkit.getWhitelistedPlayers())
+prop server.operators: List<OfflinePlayer> : The server operators.
+  get: new ArrayList<Object>(Bukkit.getOperators())
+prop server.bannedPlayers: List<OfflinePlayer> : The banned players.
+  get: new ArrayList<Object>(Bukkit.getBannedPlayers())
+prop server.onlineMode: bool : Whether the server checks accounts with Mojang.
+  get: Bukkit.getOnlineMode()
+prop server.port: int : The port the server listens on.
+  get: Bukkit.getPort()
+prop server.defaultWorld: World : The main world.
+  get: Bukkit.getWorlds().get(0)
+prop server.usedMemory: long : Memory in use, in bytes.
+  get: Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()
+prop server.maxMemory: long : The most memory the server may use, in bytes.
+  get: Runtime.getRuntime().maxMemory()
+prop server.plugins: List<string> : The names of the installed plugins.
+  get: ServerInfo.plugins()
+fn server.isPluginEnabled(name: string): bool : Whether a plugin is installed and enabled.
+  do: Bukkit.getPluginManager().isPluginEnabled(name)
+fn server.shutdown() global modifies : Stops the server.
+  do: Bukkit.shutdown()
+
+# ------------------------------------------------------------------ text
+
+fn text.legacy(text: string): Component pure : Reads text with legacy color codes such as '&aHello' or '§aHello'.
+  do: Texts.legacy(text)
+fn text.toLegacy(component: Component): string pure : A component as text with '&' color codes.
+  do: Texts.toLegacy(component)
+fn text.json(component: Component): string pure : A component as JSON (the format of /tellraw).
+  do: net.kyori.adventure.text.serializer.gson.GsonComponentSerializer.gson().serialize(component)
+fn text.fromJson(json: string): Component? pure : A component read from JSON, or null if the JSON is invalid.
+  do: Texts.fromJson(json)
+fn text.stripTags(miniMessage: string): string pure : MiniMessage text without its tags.
+  do: net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().stripTags(miniMessage)
+fn text.join(parts: List<Component>, separator: Component): Component pure : Components joined with a separator.
+  do: Texts.join(parts, separator)
+fn text.translatable(key: string): Component pure : A text each player sees in their own language, e.g. 'block.minecraft.diamond_block'.
+  do: Component.translatable(key)
+fn text.link(text: Component, url: string): Component pure : Text that opens a web page when clicked.
+  do: text.clickEvent(net.kyori.adventure.text.event.ClickEvent.openUrl(url))
+fn text.command(text: Component, command: string): Component pure : Text that runs a command when clicked.
+  do: text.clickEvent(net.kyori.adventure.text.event.ClickEvent.runCommand(Players.withSlash(command)))
+  ex: player.send(text.command("<green>[Accept]", "/tpaccept {player.name}"))
+fn text.suggest(text: Component, command: string): Component pure : Text that puts a command in the chat box when clicked.
+  do: text.clickEvent(net.kyori.adventure.text.event.ClickEvent.suggestCommand(Players.withSlash(command)))
+fn text.copy(text: Component, value: string): Component pure : Text that copies a value to the clipboard when clicked.
+  do: text.clickEvent(net.kyori.adventure.text.event.ClickEvent.copyToClipboard(value))
+fn text.hover(text: Component, hover: Component): Component pure : Text that shows another text when the mouse is over it.
+  do: text.hoverEvent(net.kyori.adventure.text.event.HoverEvent.showText(hover))
+
+# ------------------------------------------------------------------ boss bars
+
+fn BossBar(title: Component): BossBar : A full white boss bar. It belongs to the script: reloading the script hides it.
+  do: Bars.create(ctx, title, 1, net.kyori.adventure.bossbar.BossBar.Color.WHITE, net.kyori.adventure.bossbar.BossBar.Overlay.PROGRESS)
+fn BossBar(title: Component, progress: double, color: BarColor, style: BarStyle): BossBar : A boss bar; progress goes from 0 (empty) to 1 (full).
+  do: Bars.create(ctx, title, progress, color, style)
+  ex: let bar = BossBar("<red>Boss", 1.0, BarColor.RED, BarStyle.NOTCHED_10)\nbar.show(player)
+prop BossBar.title: Component rw : The text of the bar.
+  get: $.name()
+  set: $.name(v)
+prop BossBar.progress: double rw : How full the bar is, from 0 to 1.
+  get: $.progress()
+  set: $.progress((float) Math.max(0, Math.min(1, v)))
+prop BossBar.color: BarColor rw : The bar's color.
+  get: $.color()
+  set: $.color(v)
+prop BossBar.style: BarStyle rw : How the bar is divided.
+  get: $.overlay()
+  set: $.overlay(v)
+prop BossBar.darkenScreen: bool rw : Whether the sky darkens while the bar is shown.
+  get: $.hasFlag(net.kyori.adventure.bossbar.BossBar.Flag.DARKEN_SCREEN)
+  set: Bars.flag($, net.kyori.adventure.bossbar.BossBar.Flag.DARKEN_SCREEN, v)
+prop BossBar.viewers: List<Player> : The players who see the bar.
+  get: Bars.viewers($)
+fn BossBar.show(player: Player) : Shows the bar to a player.
+  do: player.showBossBar($)
+fn BossBar.hide(player: Player) : Hides the bar from a player.
+  do: player.hideBossBar($)
+fn BossBar.hideAll() : Hides the bar from everyone.
+  do: Bars.hideAll($)
+
+# ------------------------------------------------------------------ sidebars
+
+fn Sidebar(title: Component): Sidebar : A scoreboard sidebar (up to 15 lines). It belongs to the script: reloading the script removes it.
+  do: Sidebar.create(ctx, title)
+  ex: let board = Sidebar("<gold><bold>My Server")\nboard.lines = ["<gray>Level: <yellow>{player.level}", "", "<gray>play.example.com"]\nboard.show(player)
+prop Sidebar.title: Component rw : The title above the lines.
+  get: $.title()
+  set: $.title(v)
+prop Sidebar.lines: List<Component> rw : The lines, from top to bottom.
+  get: $.lines()
+  set: $.lines(v)
+prop Sidebar.viewers: List<Player> : The players who see the sidebar.
+  get: $.viewers()
+fn Sidebar.line(index: int, text: Component) : Changes one line (0 is the top line), adding empty lines before it if needed.
+  do: $.line(index, text)
+fn Sidebar.removeLine(index: int) : Removes a line.
+  do: $.removeLine(index)
+fn Sidebar.clear() : Removes every line.
+  do: $.clear()
+fn Sidebar.show(player: Player) entity(player) modifies : Shows the sidebar to a player (replacing their current one).
+  do: $.show(player)
+fn Sidebar.hide(player: Player) entity(player) modifies : Hides the sidebar from a player.
+  do: $.hide(player)

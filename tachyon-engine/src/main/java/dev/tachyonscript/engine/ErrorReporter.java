@@ -58,7 +58,15 @@ public final class ErrorReporter {
     }
 
     public void report(CompiledHandler handler, ScriptRuntimeException error) {
-        String location = location(error, handler);
+        report(handler.module(), error);
+    }
+
+    /**
+     * Reports an error of any script execution (a command, task, scheduled block or hook);
+     * {@code fallback} names where it ran when the error has no script location.
+     */
+    public void report(String fallback, ScriptRuntimeException error) {
+        String location = error.frames().isEmpty() ? fallback : location(error, null);
         String key = location + "|" + error.kind();
         Site site = sites.get(key);
         if (site == null) {
@@ -100,6 +108,6 @@ public final class ErrorReporter {
             ScriptFrame frame = error.frames().getFirst();
             return frame.path() + ":" + frame.line();
         }
-        return handler.module();
+        return handler == null ? "" : handler.module();
     }
 }

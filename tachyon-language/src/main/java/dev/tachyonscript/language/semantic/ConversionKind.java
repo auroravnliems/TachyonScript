@@ -14,5 +14,11 @@ public enum ConversionKind {
     /** Any value to its canonical text form (see {@code dev.tachyonscript.api.value.Values}). */
     TO_STRING,
     /** A MiniMessage string to a component, parsed at runtime (or once at link time when constant). */
-    STRING_TO_COMPONENT
+    STRING_TO_COMPONENT,
+    /**
+     * A value whose static type the compiler knows better than the operation producing it (the
+     * result of an intrinsic, which is typed {@code any?}). References need no operation;
+     * primitives are unboxed.
+     */
+    REINTERPRET
 }

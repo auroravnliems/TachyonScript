@@ -4,12 +4,12 @@ package dev.tachyonscript.api.type;
  * A TachyonScript type as seen by the compiler.
  *
  * <p>Types are immutable. {@link ClassType}s are canonical objects (compared by identity);
- * structural types ({@link NullableType}, {@link ListType}, {@link MapType}) are records
+ * structural types ({@link NullableType}, {@link ListType}, {@link MapType}, {@link FunctionType}) are records
  * compared by value. Types never reference Bukkit or Java classes: the mapping from a type
  * to a runtime class is a platform binding.
  */
 public sealed interface Type
-        permits PrimitiveType, ClassType, NullableType, ListType, MapType, NullType, ErrorType {
+        permits PrimitiveType, ClassType, NullableType, ListType, MapType, FunctionType, NullType, ErrorType {
 
     /** The type as it would be written in TachyonScript source, for example {@code Player?}. */
     String displayName();

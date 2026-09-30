@@ -18,6 +18,20 @@ import java.util.Set;
  *
  * <p>Members are not stored here. They are registered separately in the symbol registry so
  * that addons can add members to types they do not own.
+ *
+ * <p>Three optional traits change how the compiler treats a type:
+ * <ul>
+ *   <li><b>keyed</b>: the type has a table of named constants (for example
+ *       {@code Material.DIAMOND}) registered with
+ *       {@link dev.tachyonscript.api.registry.SymbolRegistry.Builder#keys}. The compiler checks
+ *       the name when the script loads and the linker resolves it to the platform object, so
+ *       using a constant costs nothing at run time.</li>
+ *   <li><b>storable</b>: values can be saved in {@code persistent} and {@code playerdata}
+ *       variables; the platform binds a codec for the type.</li>
+ *   <li><b>constant text</b>: a string converts implicitly to the type only when it is known
+ *       when the script loads (used for SQL, so that values are always passed as parameters
+ *       and can never be spliced into the statement text).</li>
+ * </ul>
  */
 public final class ClassType implements Type {
 
@@ -25,11 +39,21 @@ public final class ClassType implements Type {
     private final List<ClassType> supertypes;
     private final Documentation documentation;
     private final List<ClassType> linearization;
+    private final boolean keyed;
+    private final boolean storable;
+    private final boolean constantText;
+    private final boolean scriptDefined;
+    private final String origin;
 
     private ClassType(Builder builder) {
         this.name = builder.name;
         this.supertypes = List.copyOf(builder.supertypes);
         this.documentation = builder.documentation;
+        this.keyed = builder.keyed;
+        this.storable = builder.storable;
+        this.constantText = builder.constantText;
+        this.scriptDefined = builder.scriptDefined;
+        this.origin = builder.origin;
         this.linearization = computeLinearization();
     }
 
@@ -50,6 +74,36 @@ public final class ClassType implements Type {
 
     public Documentation documentation() {
         return documentation;
+    }
+
+    /** Whether the type has named constants ({@code Material.DIAMOND}). */
+    public boolean isKeyed() {
+        return keyed;
+    }
+
+    /** Whether values of the type can be stored in persistent variables. */
+    public boolean isStorable() {
+        return storable;
+    }
+
+    /** Whether only compile-time constant strings convert implicitly to this type. */
+    public boolean isConstantText() {
+        return constantText;
+    }
+
+    /** Whether the type was declared by a script (a {@code record}) rather than registered by a library. */
+    public boolean isScriptDefined() {
+        return scriptDefined;
+    }
+
+    /** For a type declared by a script: the name of the declaring module; otherwise an empty string. */
+    public String origin() {
+        return origin;
+    }
+
+    /** For a type declared by a script: {@code module::Name}; otherwise the name. */
+    public String qualifiedName() {
+        return scriptDefined ? origin + "::" + name : name;
     }
 
     /**
@@ -95,6 +149,11 @@ public final class ClassType implements Type {
         private final String name;
         private final List<ClassType> supertypes = new ArrayList<>();
         private Documentation documentation = Documentation.NONE;
+        private boolean keyed;
+        private boolean storable;
+        private boolean constantText;
+        private boolean scriptDefined;
+        private String origin = "";
 
         private Builder(String name) {
             this.name = Objects.requireNonNull(name, "name");
@@ -122,6 +181,37 @@ public final class ClassType implements Type {
 
         public Builder doc(String summary) {
             return documentation(Documentation.of(summary));
+        }
+
+        /** The type has named constants, registered with {@code SymbolRegistry.Builder.keys}. */
+        public Builder keyed() {
+            this.keyed = true;
+            return this;
+        }
+
+        /** Values can be saved in persistent variables; the platform must bind a codec. */
+        public Builder storable() {
+            this.storable = true;
+            return this;
+        }
+
+        /** Only compile-time constant strings convert implicitly to the type. */
+        public Builder constantText() {
+            this.constantText = true;
+            return this;
+        }
+
+        /** Marks a type declared by a script ({@code record}); used by the compiler only. */
+        public Builder scriptDefined() {
+            this.scriptDefined = true;
+            return this;
+        }
+
+        /** Marks a type declared by the script module {@code module} ({@code record}); used by the compiler only. */
+        public Builder scriptDefined(String module) {
+            this.scriptDefined = true;
+            this.origin = java.util.Objects.requireNonNull(module, "module");
+            return this;
         }
 
         public ClassType build() {

@@ -240,6 +240,23 @@ class BinderTest {
     }
 
     @Test
+    void choicesBetweenScriptTextsAreMessages() {
+        // Every possible value is text written in the script, so the choice can be formatted.
+        Bound choices = bindBody("""
+                let high = player.name.length > 3
+                player.send(high ? "<green>Long name" : "<red>Short name, {player.name}")
+                player.send(switch player.name.length {
+                    case 1, 2 -> "<red>tiny"
+                    case 3 -> high ? "<gold>odd" : "<yellow>three"
+                    default -> "<gray>{player.name}"
+                })""");
+        assertEquals(List.of(), choices.errors(), choices::rendered);
+        // A choice that includes runtime text is still refused.
+        Bound unsafe = bindBody("let name = player.name\nplayer.send(name.length > 3 ? name : \"<red>short\")");
+        assertEquals(List.of(DiagnosticCode.UNSAFE_TEXT_FORMATTING), unsafe.errors(), unsafe::rendered);
+    }
+
+    @Test
     void hintsWhenInterpolatedTextContainsTags() {
         Bound bound = bindBody("let prefix = \"<red>[VIP]\"\nplayer.send(\"{prefix} hi\")");
         assertEquals(List.of(DiagnosticCode.INTERPOLATION_NOT_FORMATTED), bound.codes(), bound::rendered);
@@ -305,8 +322,9 @@ class BinderTest {
 
     @Test
     void checksLoops() {
-        assertEquals("(for p:Player (call server.players:get) { (call CommandSender.send(Component) p (template \"hi\")) })",
-                body("for p in server.players {\n    p.send(\"hi\")\n}"));
+        assertEquals("(for p:Player (reinterpret:List<Player> (call $list.snapshot (call server.players:get))) "
+                        + "{ (call CommandSender.send(Component) p (template \"hi\")) })",
+                body("for p in server.players {\n    p.send(\"hi\")\n}"), "a list loop walks a snapshot");
         assertEquals("(for i:int 1:int .. 10:int { (call log(string) (to-string:string i)) })",
                 body("for i in 1..10 {\n    log(\"{i}\")\n}"));
         assertEquals(List.of(DiagnosticCode.JUMP_OUTSIDE_LOOP), bindBody("break").errors());
@@ -342,6 +360,12 @@ class BinderTest {
         assertError("let x = player.send\nlog(\"{x}\")", DiagnosticCode.NOT_A_VALUE, "method");
         assertError("let x = player.send(\"a\")", DiagnosticCode.VOID_VALUE);
         assertError("player.health()", DiagnosticCode.NOT_CALLABLE, "property");
+        assertError("let n = 5\nn()", DiagnosticCode.NOT_CALLABLE, "'n' is a variable of type int, not a function.");
+        assertError("let actions: Map<string, function(): void> = {}\nlet run = actions[\"x\"]\nrun()",
+                DiagnosticCode.NULLABLE_ACCESS, "'run' may be null", "if run != null");
+        assertError("let m: Map<string, Map<string, int>> = {}\nm[\"a\"][\"b\"] = 1", DiagnosticCode.NULLABLE_ACCESS,
+                "let inner = m[\"a\"]");
+        assertError("let m = {\"a\": 1, 2: 3}\nlog(\"{m}\")", DiagnosticCode.TYPE_MISMATCH, "Map<string, any>");
     }
 
     @Test

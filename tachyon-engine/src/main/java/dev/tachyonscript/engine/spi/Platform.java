@@ -5,7 +5,7 @@ import dev.tachyonscript.runtime.spi.TextService;
 
 /**
  * What the engine needs from a server platform: implementations of the declarations, text
- * support, an event bridge and a logger.
+ * support, an event bridge, threads, commands, player identities and a logger.
  */
 public interface Platform {
 
@@ -17,4 +17,12 @@ public interface Platform {
     EventBridge events();
 
     EngineLogger logger();
+
+    Scheduler scheduler();
+
+    CommandRegistry commands();
+
+    ArgumentTypes arguments();
+
+    PlayerDirectory players();
 }

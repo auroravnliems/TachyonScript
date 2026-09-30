@@ -9,7 +9,7 @@ public sealed interface Terminator {
 
     List<Register> operands();
 
-    /** Indices of successor blocks. */
+    /** Indices of successor blocks (exception handlers are not successors; see {@link IrBlock#handler()}). */
     List<Integer> successors();
 
     /**
@@ -40,6 +40,20 @@ public sealed interface Terminator {
     record Return(Register value, long span) implements Terminator {
         public List<Register> operands() {
             return value == null ? List.of() : List.of(value);
+        }
+
+        public List<Integer> successors() {
+            return List.of();
+        }
+    }
+
+    /**
+     * Raises an error: {@code value} is a {@code string} (a new error with that message) or a
+     * caught {@code Error} (thrown again, keeping its original location).
+     */
+    record Throw(Register value, long span) implements Terminator {
+        public List<Register> operands() {
+            return List.of(value);
         }
 
         public List<Integer> successors() {

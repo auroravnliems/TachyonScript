@@ -16,10 +16,11 @@ application {
     applicationName = "tys"
 }
 
-// The tests compile every example in the documentation and check that the generated
-// reference is current, so the documentation is an input of the test task.
+// The tests compile every example in the documentation and the wiki and check that the
+// generated reference is current, so the documentation is an input of the test task.
 tasks.test {
-    inputs.files(rootProject.fileTree("docs") { include("**/*.md") }, rootProject.files("README.md"))
+    inputs.files(rootProject.fileTree("docs") { include("**/*.md") }, rootProject.fileTree("wiki") { include("**/*.md") },
+        rootProject.files("README.md"))
         .withPropertyName("documentation")
         .withPathSensitivity(PathSensitivity.RELATIVE)
 }

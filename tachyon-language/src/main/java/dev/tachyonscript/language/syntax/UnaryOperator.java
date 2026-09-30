@@ -3,7 +3,9 @@ package dev.tachyonscript.language.syntax;
 /** Prefix operators. */
 public enum UnaryOperator {
     NEGATE("-"),
-    NOT("!");
+    NOT("!"),
+    /** Bitwise complement of an int or long. */
+    BIT_NOT("~");
 
     private final String symbol;
 

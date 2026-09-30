@@ -22,8 +22,22 @@ public final class IrPrinter {
 
     public static String print(IrModule module) {
         StringBuilder out = new StringBuilder("module ").append(module.name()).append('\n');
+        for (GlobalRef global : module.globals()) {
+            out.append("  ").append(global.storage().name().toLowerCase(java.util.Locale.ROOT)).append(" global ")
+                    .append(global.name()).append(": ").append(global.type().displayName()).append('\n');
+        }
+        for (RecordRef record : module.records()) {
+            out.append("  record ").append(record.name()).append(record.fieldNames()).append('\n');
+        }
         for (IrModule.EventHandler handler : module.handlers()) {
-            out.append("  on ").append(handler.event().name()).append(" -> ").append(handler.function()).append('\n');
+            out.append("  on ").append(handler.event().name()).append(" -> ").append(handler.function());
+            if (handler.priority() != IrModule.EventHandler.NORMAL_PRIORITY) {
+                out.append(" priority ").append(handler.priority());
+            }
+            if (handler.ignoreCancelled()) {
+                out.append(" ignoring cancelled");
+            }
+            out.append('\n');
         }
         for (IrFunction function : module.functions()) {
             out.append('\n').append(print(function));
@@ -42,7 +56,11 @@ public final class IrPrinter {
             out.append('\n');
         }
         for (IrBlock block : function.blocks()) {
-            out.append("  B").append(block.index()).append(":\n");
+            out.append("  B").append(block.index()).append(':');
+            if (block.hasHandler()) {
+                out.append("  (errors -> B").append(block.handler()).append(')');
+            }
+            out.append('\n');
             for (Instruction instruction : block.instructions()) {
                 out.append("    ").append(print(instruction)).append('\n');
             }
@@ -54,6 +72,7 @@ public final class IrPrinter {
     public static String print(Instruction instruction) {
         String body = switch (instruction) {
             case Instruction.Const c -> constant(c.value());
+            case Instruction.KeyedConst k -> k.type().name() + "[" + k.key() + "]";
             case Instruction.Move m -> m.source().toString();
             case Instruction.Unary u -> u.op().name().toLowerCase() + " " + u.operand();
             case Instruction.Binary b -> b.op().name().toLowerCase() + " " + b.left() + ", " + b.right();
@@ -61,7 +80,9 @@ public final class IrPrinter {
             case Instruction.InstanceOf i -> "instanceof " + i.operand() + " " + i.type().name();
             case Instruction.CheckCast c -> (c.safe() ? "safe_cast " : "cast ") + c.operand() + " " + c.type().name();
             case Instruction.CallNative c -> "call " + c.function().key() + args(c.arguments());
-            case Instruction.Call c -> "call_script " + c.function() + args(c.arguments());
+            case Instruction.Call c -> "call_script " + c.function().qualifiedKey() + args(c.arguments());
+            case Instruction.NewClosure n -> "closure " + n.function().qualifiedKey() + args(n.captures());
+            case Instruction.CallClosure c -> "call_value " + c.closure() + args(c.arguments());
             case Instruction.Concat c -> "concat" + args(c.parts());
             case Instruction.RenderTemplate t -> {
                 StringBuilder out = new StringBuilder("template ").append(constant(t.segments().getFirst()));
@@ -76,6 +97,20 @@ public final class IrPrinter {
             case Instruction.ListSize s -> "list_size " + s.list();
             case Instruction.ListAdd a -> "list_add " + a.list() + ", " + a.value();
             case Instruction.ListContains c -> "list_contains " + c.list() + ", " + c.value();
+            case Instruction.NewMap n -> "new_map" + args(n.operands());
+            case Instruction.NewRecord n -> "new_record " + n.record().key() + args(n.fields());
+            case Instruction.RecordGet g -> "record_get " + g.record() + "." + g.index();
+            case Instruction.RecordTest t -> "record_test " + t.operand() + " " + t.record().key();
+            case Instruction.RecordCast c -> (c.safe() ? "record_safe_cast " : "record_cast ") + c.operand() + " "
+                    + c.record().key();
+            case Instruction.GlobalGet g -> "global_get " + g.global().key();
+            case Instruction.GlobalSet g -> "global_set " + g.global().key() + ", " + g.value();
+            case Instruction.GlobalAdd g -> "global_add " + g.global().key() + ", " + g.delta();
+            case Instruction.GlobalRestore r -> "global_restore " + r.global().key();
+            case Instruction.PlayerDataGet g -> "playerdata_get " + g.data().key() + "(" + g.owner() + ")";
+            case Instruction.PlayerDataSet g -> "playerdata_set " + g.data().key() + "(" + g.owner() + "), " + g.value();
+            case Instruction.PlayerDataAdd g -> "playerdata_add " + g.data().key() + "(" + g.owner() + "), " + g.delta();
+            case Instruction.Catch ignored -> "catch";
         };
         Register target = instruction.target();
         return target == null ? body : declare(target) + " = " + body;
@@ -86,6 +121,7 @@ public final class IrPrinter {
             case Terminator.Jump j -> (j.backEdge() ? "loop B" : "jump B") + j.target();
             case Terminator.Branch b -> "branch " + b.condition() + " ? B" + b.ifTrue() + " : B" + b.ifFalse();
             case Terminator.Return r -> r.value() == null ? "return" : "return " + r.value();
+            case Terminator.Throw t -> "throw " + t.value();
             case Terminator.Unreachable ignored -> "unreachable";
         };
     }

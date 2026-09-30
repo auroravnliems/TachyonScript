@@ -118,16 +118,19 @@ final class ConstantEvaluator {
         return switch (conversion.kind()) {
             case NUMERIC -> Conversions.convertNumber(operand, (PrimitiveType) conversion.type());
             case BOX, UNBOX -> operand;
-            case TO_STRING -> toText(operand, conversion.operand().type() == PrimitiveType.DURATION);
+            case TO_STRING -> toText(operand, conversion.operand().type());
             case STRING_TO_COMPONENT -> NOT_CONSTANT;
+            case REINTERPRET -> conversion.type() instanceof dev.tachyonscript.api.type.ClassType type
+                    && type.isConstantText() ? operand : NOT_CONSTANT;
         };
     }
 
-    /** Canonical text of a constant value. */
-    static String toText(Object value, boolean duration) {
+    /** Canonical text of a constant value of the given type. */
+    static String toText(Object value, dev.tachyonscript.api.type.Type type) {
         return switch (value) {
             case null -> "null";
-            case Long l when duration -> Values.durationToString(l);
+            case Long l when type.nonNullable() == PrimitiveType.DURATION -> Values.durationToString(l);
+            case Long l when type.nonNullable() == PrimitiveType.INSTANT -> Values.instantToString(l);
             case Integer i -> Values.toString((int) i);
             case Long l -> Values.toString((long) l);
             case Float f -> Values.toString((float) f);
@@ -168,6 +171,12 @@ final class ConstantEvaluator {
                         }
                         yield a % b;
                     }
+                    case BIT_AND -> a & b;
+                    case BIT_OR -> a | b;
+                    case BIT_XOR -> a ^ b;
+                    case SHIFT_LEFT -> a << b;
+                    case SHIFT_RIGHT -> a >> b;
+                    case UNSIGNED_SHIFT_RIGHT -> a >>> b;
                 };
             }
             case LONG -> {
@@ -194,6 +203,12 @@ final class ConstantEvaluator {
                         }
                         yield a % b;
                     }
+                    case BIT_AND -> a & b;
+                    case BIT_OR -> a | b;
+                    case BIT_XOR -> a ^ b;
+                    case SHIFT_LEFT -> a << b;
+                    case SHIFT_RIGHT -> a >> b;
+                    case UNSIGNED_SHIFT_RIGHT -> a >>> b;
                 };
             }
             case FLOAT -> {
@@ -205,6 +220,7 @@ final class ConstantEvaluator {
                     case MULTIPLY -> a * b;
                     case DIVIDE -> a / b;
                     case REMAINDER -> a % b;
+                    default -> NOT_CONSTANT;
                 };
             }
             case DOUBLE -> {
@@ -216,6 +232,7 @@ final class ConstantEvaluator {
                     case MULTIPLY -> a * b;
                     case DIVIDE -> a / b;
                     case REMAINDER -> a % b;
+                    default -> NOT_CONSTANT;
                 };
             }
             default -> NOT_CONSTANT;
@@ -300,6 +317,7 @@ final class ConstantEvaluator {
 
     /** Whether {@code value} may be used as the value of a {@code const}. */
     static boolean isConstantType(dev.tachyonscript.api.type.Type type) {
-        return type instanceof PrimitiveType primitive && primitive != PrimitiveType.VOID || type == Types.STRING;
+        return type instanceof PrimitiveType primitive && primitive != PrimitiveType.VOID && primitive != PrimitiveType.INSTANT
+                || type == Types.STRING;
     }
 }

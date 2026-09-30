@@ -1,5 +1,6 @@
 package dev.tachyonscript.platform.paper;
 
+import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 
 /**
@@ -18,6 +19,24 @@ interface Threading {
     /** Runs {@code action} on the thread owning {@code entity}; skipped if the entity is removed first. */
     void forEntity(Entity entity, Runnable action);
 
+    /** Runs {@code action} on the thread owning {@code location} (the main thread on Paper). */
+    void forRegion(Location location, Runnable action);
+
     /** Runs {@code action} on the global region (the main thread on Paper). */
     void global(Runnable action);
+
+    /** Whether the calling thread owns {@code entity} (may read and change it right now). */
+    boolean ownsEntity(Entity entity);
+
+    /** Whether the calling thread owns {@code location}. */
+    boolean ownsRegion(Location location);
+
+    /** Whether the calling thread is the global region thread (the main thread on Paper). */
+    boolean ownsGlobal();
+
+    /**
+     * Whether the calling thread ticks the server. Such a thread must never block waiting for
+     * another tick thread; asynchronous threads may.
+     */
+    boolean onTickThread();
 }

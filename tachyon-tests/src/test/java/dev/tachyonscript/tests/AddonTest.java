@@ -132,6 +132,26 @@ class AddonTest {
             public EngineLogger logger() {
                 return base.logger();
             }
+
+            @Override
+            public dev.tachyonscript.engine.spi.Scheduler scheduler() {
+                return base.scheduler();
+            }
+
+            @Override
+            public dev.tachyonscript.engine.spi.CommandRegistry commands() {
+                return base.commands();
+            }
+
+            @Override
+            public dev.tachyonscript.engine.spi.ArgumentTypes arguments() {
+                return base.arguments();
+            }
+
+            @Override
+            public dev.tachyonscript.engine.spi.PlayerDirectory players() {
+                return base.players();
+            }
         };
         return new ScriptEngine(result.registry(), platform, EngineOptions.DEFAULT, InternalErrorHandler.IGNORE);
     }

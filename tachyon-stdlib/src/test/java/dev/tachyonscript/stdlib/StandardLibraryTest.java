@@ -71,7 +71,9 @@ class StandardLibraryTest {
         assertFalse(platform.contains(MathApi.ABS_INT.invocable()));
         assertFalse(platform.contains(StringApi.UPPER.invocable()));
         assertTrue(platform.contains(EntityApi.SEND.invocable()));
-        assertEquals(StandardLibrary.registry().natives().size(), platform.size() + CORE.size());
+        assertFalse(platform.contains(DatabaseApi.QUERY.invocable()));
+        assertEquals(StandardLibrary.registry().natives().size(),
+                platform.size() + CORE.size() + StandardLibrary.engineDeclarations().size());
     }
 
     @Test

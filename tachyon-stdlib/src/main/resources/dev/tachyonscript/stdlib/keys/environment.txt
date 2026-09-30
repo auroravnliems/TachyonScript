@@ -1,0 +1,4 @@
+NORMAL minecraft:normal
+NETHER minecraft:nether
+THE_END minecraft:the_end
+CUSTOM minecraft:custom

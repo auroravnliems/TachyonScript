@@ -170,12 +170,12 @@ class LexerTest {
 
     @Test
     void reportsUnexpectedCharactersWithHints() {
-        Lexed lexed = lex("a @ b & c \u201Chi\u201D caf\u00e9");
+        Lexed lexed = lex("a $ b ' c \u201Chi\u201D caf\u00e9");
         assertEquals(5, lexed.codes().size(), () -> lexed.diagnostics.diagnostics().toString());
         assertTrue(lexed.codes().stream().allMatch(code -> code == DiagnosticCode.UNEXPECTED_CHARACTER));
         String notes = lexed.diagnostics.diagnostics().stream().flatMap(d -> d.notes().stream())
                 .collect(Collectors.joining("\n"));
-        assertTrue(notes.contains("&&"), notes);
+        assertTrue(notes.contains("double quotes"), notes);
         assertTrue(notes.contains("Typographic quotes"), notes);
         assertEquals(EOF, lexed.kinds().getLast());
     }

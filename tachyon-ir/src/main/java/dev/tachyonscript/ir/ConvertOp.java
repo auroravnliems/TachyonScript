@@ -23,7 +23,9 @@ public enum ConvertOp {
     UNBOX_I32(REF, INT), UNBOX_I64(REF, LONG), UNBOX_F32(REF, FLOAT), UNBOX_F64(REF, DOUBLE), UNBOX_BOOL(REF, BOOL),
     I32_TO_STRING(INT, REF), I64_TO_STRING(LONG, REF), F32_TO_STRING(FLOAT, REF), F64_TO_STRING(DOUBLE, REF),
     BOOL_TO_STRING(BOOL, REF), DURATION_TO_STRING(LONG, REF), REF_TO_STRING(REF, REF),
-    STRING_TO_COMPONENT(REF, REF);
+    STRING_TO_COMPONENT(REF, REF),
+    /** Formats milliseconds since the epoch as a local date and time. */
+    INSTANT_TO_STRING(LONG, REF);
 
     private final Representation operand;
     private final Representation result;

@@ -81,10 +81,6 @@ public final class EntityApi {
             .setterEffects(Effect.MODIFIES_WORLD)
             .doc("Current health, between 0 and maxHealth.").build();
 
-    public static final PropertyDeclaration MAX_HEALTH = PropertyDeclaration.member(LIVING_ENTITY, "maxHealth", Types.DOUBLE)
-            .getterThreading(ThreadingRequirement.ENTITY)
-            .doc("Maximum health.").build();
-
     // ---------------------------------------------------------------- Player
 
     public static final FunctionDeclaration PLAYER_TO_STRING = FunctionDeclaration.method(PLAYER, "toString")
@@ -120,16 +116,37 @@ public final class EntityApi {
             .effects(Effect.MODIFIES_WORLD)
             .doc("Disconnects the player with a reason.").build();
 
+    // ---------------------------------------------------------------- OfflinePlayer
+
+    public static final PropertyDeclaration OFFLINE_NAME = PropertyDeclaration.member(MinecraftTypes.OFFLINE_PLAYER, "name",
+            Types.nullable(Types.STRING)).doc("The player's last known name, or null if the server never saw them.").build();
+
+    public static final PropertyDeclaration OFFLINE_UUID = PropertyDeclaration.member(MinecraftTypes.OFFLINE_PLAYER, "uuid", UUID)
+            .doc("The player's unique id.").build();
+
+    public static final PropertyDeclaration OFFLINE_ONLINE = PropertyDeclaration.member(MinecraftTypes.OFFLINE_PLAYER, "online",
+            Types.BOOL).doc("Whether the player is online now.").build();
+
+    public static final PropertyDeclaration OFFLINE_PLAYER_ONLINE = PropertyDeclaration.member(MinecraftTypes.OFFLINE_PLAYER,
+            "player", Types.nullable(PLAYER)).doc("The online player, or null if they are offline.").build();
+
+    public static final PropertyDeclaration OFFLINE_PLAYED_BEFORE = PropertyDeclaration.member(MinecraftTypes.OFFLINE_PLAYER,
+            "playedBefore", Types.BOOL).doc("Whether the player has joined this server before.").build();
+
+    public static final FunctionDeclaration OFFLINE_TO_STRING = FunctionDeclaration.method(MinecraftTypes.OFFLINE_PLAYER,
+            "toString").returns(Types.STRING).doc("The player's name (or UUID if unknown).").build();
+
     // ---------------------------------------------------------------- UUID
 
     public static final FunctionDeclaration UUID_TO_STRING = FunctionDeclaration.method(UUID, "toString")
             .returns(Types.STRING).effects(Effect.PURE).doc("The canonical text form of the UUID.").build();
 
     public static final List<PropertyDeclaration> PROPERTIES = List.of(SENDER_NAME, OP, ENTITY_NAME, ENTITY_UUID,
-            ENTITY_LOCATION, ENTITY_WORLD, ENTITY_VALID, HEALTH, MAX_HEALTH, FOOD, LEVEL, GAME_MODE_PROPERTY, DISPLAY_NAME);
+            ENTITY_LOCATION, ENTITY_WORLD, ENTITY_VALID, HEALTH, FOOD, LEVEL, GAME_MODE_PROPERTY, DISPLAY_NAME,
+            OFFLINE_NAME, OFFLINE_UUID, OFFLINE_ONLINE, OFFLINE_PLAYER_ONLINE, OFFLINE_PLAYED_BEFORE);
 
     public static final List<FunctionDeclaration> FUNCTIONS = List.of(SEND, HAS_PERMISSION, TELEPORT, TELEPORT_TO_ENTITY,
-            PLAYER_TO_STRING, KICK, UUID_TO_STRING);
+            PLAYER_TO_STRING, KICK, UUID_TO_STRING, OFFLINE_TO_STRING);
 
     private EntityApi() {
     }

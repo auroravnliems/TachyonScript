@@ -2,6 +2,7 @@ package dev.tachyonscript.runtime.code;
 
 import dev.tachyonscript.api.declaration.NativeDeclaration;
 import dev.tachyonscript.api.type.Representation;
+import dev.tachyonscript.ir.FunctionRef;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -60,6 +61,20 @@ public final class Disassembler {
         shape("RPR", Opcodes.LIST_SET);
         shape("T", Opcodes.JMP, Opcodes.LOOP);
         shape("PT", Opcodes.BR_T, Opcodes.BR_F);
+        for (int op = Opcodes.AND_I; op <= Opcodes.USHR_L; op++) {
+            SHAPES[op] = "PPP";
+        }
+        shape("RP", Opcodes.INST2S);
+        shape("RRI", Opcodes.RECORD_GET);
+        shape("PRK", Opcodes.RECORD_TEST);
+        shape("RRK", Opcodes.RECORD_CAST, Opcodes.SAFE_RECORD_CAST);
+        shape("PG", Opcodes.GLOBAL_GET_P, Opcodes.GLOBAL_RESTORE);
+        shape("RG", Opcodes.GLOBAL_GET_R);
+        shape("GP", Opcodes.GLOBAL_SET_P, Opcodes.GLOBAL_ADD);
+        shape("GR", Opcodes.GLOBAL_SET_R);
+        shape("RRG", Opcodes.PDATA_GET, Opcodes.PDATA_SET);
+        shape("RPG", Opcodes.PDATA_ADD);
+        shape("R", Opcodes.THROW);
     }
 
     private final Map<String, CodeUnit> units;
@@ -113,6 +128,11 @@ public final class Disassembler {
         }
         out.append(") -> ").append(unit.returnKind().name().toLowerCase(Locale.ROOT))
                 .append("  [p: ").append(unit.primitiveSlots()).append(", r: ").append(unit.referenceSlots()).append("]\n");
+        int[] handlers = unit.handlers();
+        for (int i = 0; i < handlers.length; i += 4) {
+            out.append(String.format(Locale.ROOT, "  catch %d..%d -> %d (error in r%d)%n", handlers[i], handlers[i + 1],
+                    handlers[i + 2], handlers[i + 3]));
+        }
         int[] code = unit.code();
         int pc = 0;
         while (pc < code.length) {
@@ -158,6 +178,34 @@ public final class Disassembler {
                         .append(' ').append(quote(String.join("{}", unit.templates().get(code[pc + 2]))));
                 references(code, pc + 4, code[pc + 3], out);
             }
+            case Opcodes.NEW_MAP -> {
+                out.append(slot(true, code[pc + 1])).append(" = map");
+                references(code, pc + 3, 2 * code[pc + 2], out);
+            }
+            case Opcodes.NEW_RECORD -> {
+                out.append(slot(true, code[pc + 1])).append(" = new ").append(unit.records().get(code[pc + 2]).name());
+                references(code, pc + 4, code[pc + 3], out);
+            }
+            case Opcodes.NEW_CLOSURE -> {
+                FunctionRef function = unit.functions().get(code[pc + 2]);
+                out.append(slot(true, code[pc + 1])).append(" = closure ").append(function.qualifiedKey()).append(" [");
+                for (int i = 0; i < code[pc + 3]; i++) {
+                    if (i > 0) {
+                        out.append(", ");
+                    }
+                    boolean reference = function.parameters().get(i).representation() == Representation.REF;
+                    out.append(slot(reference, code[pc + 4 + i]));
+                }
+                out.append(']');
+            }
+            case Opcodes.CALL_CLOSURE_V -> {
+                out.append("call r").append(code[pc + 1]);
+                slots(code, pc + 3, code[pc + 2], out);
+            }
+            case Opcodes.CALL_CLOSURE_P, Opcodes.CALL_CLOSURE_R -> {
+                out.append(slot(op == Opcodes.CALL_CLOSURE_R, code[pc + 1])).append(" = call r").append(code[pc + 2]);
+                slots(code, pc + 4, code[pc + 3], out);
+            }
             default -> out.append("<unknown opcode ").append(op).append('>');
         }
     }
@@ -175,6 +223,8 @@ public final class Disassembler {
             case 'O' -> out.append(constant(unit.referencePool()[value]));
             case 'C' -> out.append(unit.classes().get(value).name());
             case 'T' -> out.append("-> ").append(value);
+            case 'K' -> out.append(unit.records().get(value).name());
+            case 'G' -> out.append(unit.globals().get(value).key());
             default -> throw new IllegalStateException("Unknown operand kind " + kind);
         }
     }
@@ -198,7 +248,8 @@ public final class Disassembler {
     }
 
     private void scriptCall(CodeUnit unit, int[] code, int at, String target, StringBuilder out) {
-        String key = unit.functions().get(code[at]);
+        FunctionRef function = unit.functions().get(code[at]);
+        String key = function.key();
         CodeUnit callee = units.get(key);
         int count = code[at + 1];
         if (target != null) {
@@ -215,6 +266,18 @@ public final class Disassembler {
             } else {
                 out.append('s').append(slot);
             }
+        }
+        out.append(')');
+    }
+
+    /** Slots of unknown kind (arguments of a function value). */
+    private static void slots(int[] code, int at, int count, StringBuilder out) {
+        out.append('(');
+        for (int i = 0; i < count; i++) {
+            if (i > 0) {
+                out.append(", ");
+            }
+            out.append('s').append(code[at + i]);
         }
         out.append(')');
     }
@@ -238,6 +301,7 @@ public final class Disassembler {
         return switch (value) {
             case String text -> quote(text);
             case TemplateConstant template -> "template " + quote(String.join("{}", template.segments()));
+            case KeyedConstant keyed -> keyed.type().name() + "[" + keyed.key() + "]";
             case null -> "null";
             default -> String.valueOf(value);
         };

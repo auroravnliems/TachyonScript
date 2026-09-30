@@ -102,11 +102,24 @@ class CliTest {
     void referenceDocumentationIsUpToDate() throws IOException {
         Path reference = Path.of("../docs/language/reference.md");
         String generated = ReferenceGenerator.generate(StandardLibrary.registry());
-        assertEquals(generated, Files.readString(reference),
+        // Git may check the file out with CRLF line endings on Windows; the content is what matters.
+        assertEquals(generated, Files.readString(reference).replace("\r\n", "\n"),
                 "docs/language/reference.md is out of date; regenerate it with "
                         + "./gradlew -q :tachyon-cli:run --args=docs > docs/language/reference.md");
         assertEquals(Cli.OK, run("docs"));
         assertEquals(generated, out());
+    }
+
+    @Test
+    void wikiReferenceIsUpToDate() throws IOException {
+        Path reference = Path.of("../wiki/API-Reference.md");
+        String generated = ReferenceGenerator.generate(StandardLibrary.registry(), ReferenceGenerator.Target.WIKI);
+        assertEquals(generated, Files.readString(reference).replace("\r\n", "\n"),
+                "wiki/API-Reference.md is out of date; regenerate it with "
+                        + "./gradlew -q :tachyon-cli:run --args=\"docs --wiki\" > wiki/API-Reference.md");
+        assertEquals(Cli.OK, run("docs", "--wiki"));
+        assertEquals(generated, out());
+        assertEquals(Cli.USAGE, run("docs", "--html"));
     }
 
     @Test

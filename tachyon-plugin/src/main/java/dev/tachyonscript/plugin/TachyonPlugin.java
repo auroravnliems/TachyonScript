@@ -50,6 +50,8 @@ public final class TachyonPlugin extends JavaPlugin {
     private volatile List<String> addons = List.of();
     private volatile String startFailure;
     private volatile LoadReport lastReport;
+    /** The PlaceholderAPI expansion (an Object so this class loads without PlaceholderAPI). */
+    private Object expansion;
 
     @Override
     public void onEnable() {
@@ -76,15 +78,20 @@ public final class TachyonPlugin extends JavaPlugin {
         try {
             PlatformCapabilities capabilities = PlatformCapabilities.detect();
             TachyonSettings active = settings;
-            AddonAssembly.Result assembly = AddonAssembly.assemble(StandardLibrary::register,
-                    PaperPlatform.builtInBindings(this, capabilities, active::debug), pendingAddons.close(),
+            // The constant tables (Material.X, Sound.X, ...) come from the server's registries, so
+            // constants added by data packs and newer versions work too.
+            AddonAssembly.Result assembly = AddonAssembly.assemble(builder -> {
+                StandardLibrary.register(builder);
+                PaperPlatform.useServerKeys(builder);
+            }, PaperPlatform.builtInBindings(this, capabilities, active::debug), pendingAddons.close(),
                     PaperPlatform::isEventClass);
             for (AddonAssembly.Rejected rejected : assembly.rejected()) {
                 getLogger().severe("Addon '" + rejected.addon() + "' was not loaded: " + rejected.reason());
             }
             PaperPlatform created = new PaperPlatform(this, capabilities, assembly.registry(), assembly.bindings(),
                     assembly.eventClasses());
-            ScriptEngine started = new ScriptEngine(assembly.registry(), created, settings.engineOptions(),
+            ScriptEngine started = new ScriptEngine(assembly.registry(), created,
+                    settings.engineOptions(getDataFolder().toPath()),
                     new CrashReports(getDataFolder().toPath().resolve("logs"), getLogger(), Bukkit.getVersion()));
             created.attach(started);
             platform = created;
@@ -98,14 +105,38 @@ public final class TachyonPlugin extends JavaPlugin {
             LoadReport report = started.load(scripts);
             lastReport = report;
             logReport(report);
+            registerPlaceholders();
         } catch (RuntimeException | LinkageError e) {
             startFailure = e.toString();
             getLogger().log(Level.SEVERE, "TachyonScript failed to start; no scripts are active.", e);
         }
     }
 
+    /** Registers %tys_...% with PlaceholderAPI when it is installed. */
+    private void registerPlaceholders() {
+        if (!getServer().getPluginManager().isPluginEnabled("PlaceholderAPI")) {
+            return;
+        }
+        try {
+            TachyonExpansion created = new TachyonExpansion(this);
+            if (created.register()) {
+                expansion = created;
+                getLogger().info("Registered the PlaceholderAPI expansion: %tys_<placeholder>%");
+            }
+        } catch (RuntimeException | LinkageError e) {
+            getLogger().log(Level.WARNING, "Cannot register the PlaceholderAPI expansion.", e);
+        }
+    }
+
     @Override
     public void onDisable() {
+        if (expansion != null) {
+            try {
+                ((TachyonExpansion) expansion).unregister();
+            } catch (RuntimeException | LinkageError ignored) {
+                // PlaceholderAPI is shutting down too.
+            }
+        }
         if (engine != null) {
             engine.shutdown();
         }

@@ -11,7 +11,9 @@ public enum PrimitiveType implements Type {
     BOOL("bool", Representation.BOOL, false),
     VOID("void", Representation.VOID, false),
     /** A span of time, stored as a {@code long} number of milliseconds. */
-    DURATION("Duration", Representation.LONG, false);
+    DURATION("Duration", Representation.LONG, false),
+    /** A moment in time, stored as a {@code long} number of milliseconds since 1970-01-01 UTC. */
+    INSTANT("Instant", Representation.LONG, false);
 
     private final String displayName;
     private final Representation representation;

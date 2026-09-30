@@ -1,0 +1,14 @@
+LEFT minecraft:left
+SHIFT_LEFT minecraft:shift_left
+RIGHT minecraft:right
+SHIFT_RIGHT minecraft:shift_right
+WINDOW_BORDER_LEFT minecraft:window_border_left
+WINDOW_BORDER_RIGHT minecraft:window_border_right
+MIDDLE minecraft:middle
+NUMBER_KEY minecraft:number_key
+DOUBLE_CLICK minecraft:double_click
+DROP minecraft:drop
+CONTROL_DROP minecraft:control_drop
+CREATIVE minecraft:creative
+SWAP_OFFHAND minecraft:swap_offhand
+UNKNOWN minecraft:unknown

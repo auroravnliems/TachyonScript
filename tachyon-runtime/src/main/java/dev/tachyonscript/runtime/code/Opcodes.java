@@ -23,7 +23,17 @@ package dev.tachyonscript.runtime.code;
  * LIST_ADD  Rl Rv             LIST_CONTAINS Pd Rl Rv
  * JMP t     LOOP t (back edge, checks the execution budget)
  * BR_T Pc t BR_F Pc t         RET_V   RET_P Ps   RET_R Rs   UNREACHABLE
+ * AND_*... Pd Pa Pb           INST2S Rd Pa
+ * NEW_CLOSURE Rd kf n Pcaps   CALL_CLOSURE_V Rc n args   CALL_CLOSURE_P Pd Rc n args   CALL_CLOSURE_R Rd Rc n args
+ * NEW_MAP   Rd n (Rk Rv)*     NEW_RECORD Rd kr n Rfields  RECORD_GET Rd Rrec index
+ * RECORD_TEST Pd Ra kr        RECORD_CAST/SAFE_RECORD_CAST Rd Ra kr
+ * GLOBAL_GET_P Pd kg  GLOBAL_GET_R Rd kg  GLOBAL_SET_P kg Ps  GLOBAL_SET_R kg Rs  GLOBAL_ADD kg Pd
+ * GLOBAL_RESTORE Pd kg        PDATA_GET Rd Rowner kp  PDATA_SET Rowner Rv kp  PDATA_ADD Rowner Pd kp
+ * THROW Rv
  * </pre>
+ *
+ * <p>Exception handlers are not instructions: each code unit has a table mapping pc ranges to
+ * a handler pc and the reference slot that receives the caught error.
  */
 public final class Opcodes {
 
@@ -156,8 +166,42 @@ public final class Opcodes {
     public static final int RET_R = 119;
     public static final int UNREACHABLE = 120;
 
+    public static final int AND_I = 121;
+    public static final int OR_I = 122;
+    public static final int XOR_I = 123;
+    public static final int SHL_I = 124;
+    public static final int SHR_I = 125;
+    public static final int USHR_I = 126;
+    public static final int AND_L = 127;
+    public static final int OR_L = 128;
+    public static final int XOR_L = 129;
+    public static final int SHL_L = 130;
+    public static final int SHR_L = 131;
+    public static final int USHR_L = 132;
+    public static final int INST2S = 133;
+    public static final int NEW_CLOSURE = 134;
+    public static final int CALL_CLOSURE_V = 135;
+    public static final int CALL_CLOSURE_P = 136;
+    public static final int CALL_CLOSURE_R = 137;
+    public static final int NEW_MAP = 138;
+    public static final int NEW_RECORD = 139;
+    public static final int RECORD_GET = 140;
+    public static final int RECORD_TEST = 141;
+    public static final int RECORD_CAST = 142;
+    public static final int SAFE_RECORD_CAST = 143;
+    public static final int GLOBAL_GET_P = 144;
+    public static final int GLOBAL_GET_R = 145;
+    public static final int GLOBAL_SET_P = 146;
+    public static final int GLOBAL_SET_R = 147;
+    public static final int GLOBAL_ADD = 148;
+    public static final int GLOBAL_RESTORE = 149;
+    public static final int PDATA_GET = 150;
+    public static final int PDATA_SET = 151;
+    public static final int PDATA_ADD = 152;
+    public static final int THROW = 153;
+
     /** Number of opcodes. */
-    public static final int COUNT = 121;
+    public static final int COUNT = 154;
 
     /** Opcode names, indexed by opcode (for disassembly and diagnostics). */
     private static final String[] NAMES = {
@@ -172,7 +216,11 @@ public final class Opcodes {
             "SAFECAST", "CALL_NATIVE_V", "CALL_NATIVE_I", "CALL_NATIVE_L", "CALL_NATIVE_F", "CALL_NATIVE_D",
             "CALL_NATIVE_Z", "CALL_NATIVE_R", "CALL_V", "CALL_P", "CALL_R", "CONCAT", "TEMPLATE", "NEW_LIST",
             "LIST_GET", "LIST_SET", "LIST_SIZE", "LIST_ADD", "LIST_CONTAINS", "JMP", "LOOP", "BR_T", "BR_F", "RET_V",
-            "RET_P", "RET_R", "UNREACHABLE"
+            "RET_P", "RET_R", "UNREACHABLE", "AND_I", "OR_I", "XOR_I", "SHL_I", "SHR_I", "USHR_I", "AND_L", "OR_L",
+            "XOR_L", "SHL_L", "SHR_L", "USHR_L", "INST2S", "NEW_CLOSURE", "CALL_CLOSURE_V", "CALL_CLOSURE_P",
+            "CALL_CLOSURE_R", "NEW_MAP", "NEW_RECORD", "RECORD_GET", "RECORD_TEST", "RECORD_CAST", "SAFE_RECORD_CAST",
+            "GLOBAL_GET_P", "GLOBAL_GET_R", "GLOBAL_SET_P", "GLOBAL_SET_R", "GLOBAL_ADD", "GLOBAL_RESTORE", "PDATA_GET",
+            "PDATA_SET", "PDATA_ADD", "THROW"
     };
     /** Fixed instruction lengths (opcode included), or 0 for variadic instructions. */
     private static final int[] LENGTHS = new int[COUNT];
@@ -182,7 +230,7 @@ public final class Opcodes {
             throw new ExceptionInInitializerError("Opcode name table is out of date");
         }
         setLength(1, NOP, RET_V, UNREACHABLE);
-        setLength(2, CONST_NULL, JMP, LOOP, RET_P, RET_R);
+        setLength(2, CONST_NULL, JMP, LOOP, RET_P, RET_R, THROW);
         setLength(3, CONST_I, CONST_L, CONST_R, MOV_P, MOV_R, NEG_I, NEG_L, NEG_F, NEG_D, NOT, IS_NULL, IS_NOT_NULL,
                 BR_T, BR_F, LIST_SIZE, LIST_ADD);
         for (int op = I2L; op <= S2C; op++) {
@@ -192,6 +240,11 @@ public final class Opcodes {
             LENGTHS[op] = 4;
         }
         setLength(4, INSTANCEOF, CHECKCAST, SAFECAST, LIST_GET, LIST_SET, LIST_CONTAINS);
+        for (int op = AND_I; op <= USHR_L; op++) {
+            LENGTHS[op] = 4;
+        }
+        setLength(3, INST2S, GLOBAL_GET_P, GLOBAL_GET_R, GLOBAL_SET_P, GLOBAL_SET_R, GLOBAL_ADD, GLOBAL_RESTORE);
+        setLength(4, RECORD_GET, RECORD_TEST, RECORD_CAST, SAFE_RECORD_CAST, PDATA_GET, PDATA_SET, PDATA_ADD);
     }
 
     private Opcodes() {
@@ -219,6 +272,9 @@ public final class Opcodes {
             case CALL_NATIVE_I, CALL_NATIVE_L, CALL_NATIVE_F, CALL_NATIVE_D, CALL_NATIVE_Z, CALL_NATIVE_R,
                  CALL_P, CALL_R, TEMPLATE -> 4 + code[pc + 3];
             case CONCAT, NEW_LIST -> 3 + code[pc + 2];
+            case NEW_CLOSURE, NEW_RECORD, CALL_CLOSURE_P, CALL_CLOSURE_R -> 4 + code[pc + 3];
+            case CALL_CLOSURE_V -> 3 + code[pc + 2];
+            case NEW_MAP -> 3 + 2 * code[pc + 2];
             default -> throw new IllegalArgumentException("Unknown opcode " + op + " at " + pc);
         };
     }

@@ -10,13 +10,13 @@ package dev.tachyonscript.api;
 public final class TachyonVersion {
 
     /** Runtime (implementation) version. */
-    public static final String RUNTIME = "0.1.0-SNAPSHOT";
+    public static final String RUNTIME = "0.2.0-SNAPSHOT";
 
     /** Language level accepted by this compiler. Incremented on incompatible language changes. */
-    public static final int LANGUAGE_LEVEL = 1;
+    public static final int LANGUAGE_LEVEL = 2;
 
     /** Version of the IR format. Incremented whenever serialized or cached IR would change meaning. */
-    public static final int IR_FORMAT = 1;
+    public static final int IR_FORMAT = 2;
 
     private TachyonVersion() {
     }

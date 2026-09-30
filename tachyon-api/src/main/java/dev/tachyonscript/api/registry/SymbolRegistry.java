@@ -36,9 +36,11 @@ public final class SymbolRegistry {
 
     /** Type names reserved by the language itself. */
     private static final Set<String> RESERVED_TYPE_NAMES =
-            Set.of("int", "long", "float", "double", "bool", "void", "Duration", "List", "Map", "null");
+            Set.of("int", "long", "float", "double", "bool", "void", "Duration", "Instant", "List", "Map", "null",
+                    "function");
 
     private final Map<String, ClassType> types;
+    private final Map<ClassType, KeyTable> keyTables;
     private final Map<String, List<FunctionDeclaration>> functions;
     private final Map<String, PropertyDeclaration> globalProperties;
     private final Map<String, Set<String>> namespaceMembers;
@@ -50,6 +52,7 @@ public final class SymbolRegistry {
 
     private SymbolRegistry(Builder builder) {
         this.types = Collections.unmodifiableMap(new LinkedHashMap<>(builder.types));
+        this.keyTables = Collections.unmodifiableMap(new LinkedHashMap<>(builder.keyTables));
         Map<String, List<FunctionDeclaration>> functionCopy = new LinkedHashMap<>();
         builder.functions.forEach((name, overloads) -> functionCopy.put(name, List.copyOf(overloads)));
         this.functions = Collections.unmodifiableMap(functionCopy);
@@ -93,6 +96,19 @@ public final class SymbolRegistry {
     /** Whether {@code name} is reserved for a language-level type ({@code int}, {@code List}, ...). */
     public static boolean isReservedTypeName(String name) {
         return RESERVED_TYPE_NAMES.contains(name);
+    }
+
+    /**
+     * The named constants of a keyed type ({@code Material.DIAMOND}); an empty table if the
+     * type is not keyed or has no constants registered.
+     */
+    public KeyTable keys(ClassType type) {
+        return keyTables.getOrDefault(type, KeyTable.EMPTY);
+    }
+
+    /** Every keyed type with a constant table, in registration order. */
+    public Set<ClassType> keyedTypes() {
+        return keyTables.keySet();
     }
 
     // ------------------------------------------------------------- globals
@@ -210,11 +226,13 @@ public final class SymbolRegistry {
         private final Map<ClassType, Map<String, PropertyDeclaration>> properties = new LinkedHashMap<>();
         private final Map<String, EventDeclaration> events = new LinkedHashMap<>();
         private final Map<String, NativeDeclaration> natives = new LinkedHashMap<>();
+        private final Map<ClassType, KeyTable> keyTables = new LinkedHashMap<>();
 
         private Builder() {
             types.put(Types.ANY.name(), Types.ANY);
             types.put(Types.STRING.name(), Types.STRING);
             types.put(Types.COMPONENT.name(), Types.COMPONENT);
+            types.put(Types.EXCEPTION.name(), Types.EXCEPTION);
         }
 
         /** Registers a class type. Its supertypes must already be registered. */
@@ -328,6 +346,25 @@ public final class SymbolRegistry {
             return this;
         }
 
+        /**
+         * Registers (or replaces) the named constants of a keyed type. Platforms replace the
+         * built-in tables with the live contents of the server's registries, so scripts are
+         * checked against exactly what the running server knows.
+         */
+        public Builder keys(ClassType type, KeyTable table) {
+            requireRegistered(type, "key table");
+            if (!type.isKeyed()) {
+                throw new RegistrationException("Type '" + type.name() + "' is not keyed");
+            }
+            keyTables.put(type, java.util.Objects.requireNonNull(table, "table"));
+            return this;
+        }
+
+        /** The constants currently registered for a keyed type. */
+        public KeyTable keys(ClassType type) {
+            return keyTables.getOrDefault(type, KeyTable.EMPTY);
+        }
+
         public SymbolRegistry build() {
             return new SymbolRegistry(this);
         }
@@ -359,6 +396,12 @@ public final class SymbolRegistry {
                 case MapType map -> {
                     requireRegistered(map.key(), owner);
                     requireRegistered(map.value(), owner);
+                }
+                case dev.tachyonscript.api.type.FunctionType function -> {
+                    for (Type parameter : function.parameters()) {
+                        requireRegistered(parameter, owner);
+                    }
+                    requireRegistered(function.returnType(), owner);
                 }
                 default -> {
                     // Primitive, null and error types need no registration.

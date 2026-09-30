@@ -72,10 +72,6 @@ public final class WorldApi {
 
     // ---------------------------------------------------------------- Block
 
-    public static final PropertyDeclaration BLOCK_TYPE = PropertyDeclaration.member(BLOCK, "type", Types.STRING)
-            .getterThreading(ThreadingRequirement.REGION)
-            .doc("The block's material key, e.g. 'minecraft:stone'.").build();
-
     public static final PropertyDeclaration BLOCK_LOCATION = PropertyDeclaration.member(BLOCK, "location", LOCATION)
             .getterEffects(Effect.PURE).doc("The block's location.").build();
 
@@ -93,7 +89,7 @@ public final class WorldApi {
             .returns(Types.STRING).effects(Effect.PURE).doc("Lower-case name, e.g. 'creative'.").build();
 
     public static final List<PropertyDeclaration> PROPERTIES = List.of(WORLD_NAME, WORLD_PLAYERS, WORLD_TIME, LOCATION_X,
-            LOCATION_Y, LOCATION_Z, LOCATION_YAW, LOCATION_PITCH, LOCATION_WORLD, LOCATION_BLOCK, BLOCK_TYPE, BLOCK_LOCATION,
+            LOCATION_Y, LOCATION_Z, LOCATION_YAW, LOCATION_PITCH, LOCATION_WORLD, LOCATION_BLOCK, BLOCK_LOCATION,
             BLOCK_WORLD, SURVIVAL, CREATIVE, ADVENTURE, SPECTATOR);
 
     public static final List<FunctionDeclaration> FUNCTIONS = List.of(WORLD_TO_STRING, LOCATION_ADD, LOCATION_DISTANCE,

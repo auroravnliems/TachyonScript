@@ -1,0 +1,265 @@
+# Core: time, random numbers, formatting, text and math helpers. Implemented without a server
+# (JDK only), so they also run in the CLI and in tests. Helpers live in dev.tachyonscript.stdlib.support.Core.
+
+area Core core
+
+# ------------------------------------------------------------------ time
+
+prop time.now: Instant : The current time.
+  get: System.currentTimeMillis()
+  ex: persistent var lastRestart: Instant = time.now
+prop time.millis: long : Milliseconds since 1970-01-01 UTC (the Unix epoch).
+  get: System.currentTimeMillis()
+prop time.nanos: long : A high-resolution clock in nanoseconds, for measuring how long code takes.
+  get: System.nanoTime()
+  ex: let start = time.nanos\n// ... work ...\nlog("took {(time.nanos - start) / 1000} µs")
+prop time.zone: string : The server's time zone, e.g. 'Europe/Paris'.
+  get: java.time.ZoneId.systemDefault().getId()
+prop time.year: int : The current year (server time zone).
+  get: Core.now().getYear()
+prop time.month: int : The current month, 1 (January) to 12.
+  get: Core.now().getMonthValue()
+prop time.day: int : The current day of the month, 1 to 31.
+  get: Core.now().getDayOfMonth()
+prop time.dayOfWeek: int : The current day of the week, 1 (Monday) to 7 (Sunday).
+  get: Core.now().getDayOfWeek().getValue()
+prop time.hour: int : The current hour, 0 to 23.
+  get: Core.now().getHour()
+prop time.minute: int : The current minute, 0 to 59.
+  get: Core.now().getMinute()
+prop time.second: int : The current second, 0 to 59.
+  get: Core.now().getSecond()
+fn time.format(instant: Instant, pattern: string): string : Formats a time with a pattern (server time zone).
+  do: Core.format(instant, pattern, null)
+  details: Patterns use letters like yyyy (year), MM (month), dd (day), HH (hour), mm (minute), ss (second), EEEE (weekday name).
+  ex: let clock = time.format(time.now, "HH:mm")\nplayer.send("It is {clock}")
+fn time.format(instant: Instant, pattern: string, zone: string): string : Formats a time in a time zone such as 'Asia/Ho_Chi_Minh'.
+  do: Core.format(instant, pattern, zone)
+fn time.parse(text: string, pattern: string): Instant? : Reads a time written with a pattern; null if the text does not match.
+  do: Core.parse(text, pattern)
+  ex: let deadline = time.parse("2026-12-31 23:59", "yyyy-MM-dd HH:mm")
+fn time.date(instant: Instant): string : The date of a time, e.g. 2026-09-30.
+  do: Core.format(instant, "yyyy-MM-dd", null)
+fn time.clock(instant: Instant): string : The time of day, e.g. 14:05.
+  do: Core.format(instant, "HH:mm", null)
+fn time.since(instant: Instant): Duration : How long ago a time was.
+  do: System.currentTimeMillis() - instant
+  ex: playerdata var lastReward: Instant? = null\n\nevent player.join {\n    let last = player.lastReward\n    if last == null || time.since(last) >= 1 day {\n        player.lastReward = time.now\n        player.give(ItemStack(Material.DIAMOND))\n    }\n}
+fn time.until(instant: Instant): Duration : How long until a time.
+  do: instant - System.currentTimeMillis()
+fn time.of(year: int, month: int, day: int, hour: int, minute: int): Instant : The time at a date and hour (server time zone).
+  do: Core.of(year, month, day, hour, minute)
+fn time.startOfDay(instant: Instant): Instant : Midnight at the start of the day of a time (server time zone).
+  do: Core.startOfDay(instant)
+fn time.nextDaily(hour: int, minute: int): Instant : The next time the clock shows hour:minute (today or tomorrow).
+  do: Core.nextDaily(hour, minute)
+
+# ------------------------------------------------------------------ formatting
+
+fn format.number(value: long): string pure : A whole number with thousands separators, e.g. 1,234,567.
+  do: Core.number(value)
+fn format.number(value: double, decimals: int): string pure : A number rounded to some decimals, with thousands separators: format.number(1234.5, 1) = '1,234.5'.
+  do: Core.number(value, decimals)
+fn format.decimal(value: double, decimals: int): string pure : A number with exactly some decimals and no separators: format.decimal(2.5, 2) = '2.50'.
+  do: Core.decimal(value, decimals)
+fn format.money(value: double): string pure : An amount with two decimals and separators, e.g. 1,234.50.
+  do: Core.number(value, 2)
+fn format.compact(value: double): string pure : A short form for large numbers: 1.5K, 2.3M, 7B.
+  do: Core.compact(value)
+fn format.percent(value: double): string pure : A fraction as a percentage: format.percent(0.256) = '25.6%'.
+  do: Core.percent(value)
+fn format.roman(value: int): string pure : A number in Roman numerals (1 to 3999), e.g. 14 = 'XIV'.
+  do: Core.roman(value)
+fn format.ordinal(value: int): string pure : An English ordinal: 1st, 2nd, 3rd, 4th.
+  do: Core.ordinal(value)
+fn format.duration(duration: Duration): string pure : A duration in words: '1 hour, 30 minutes'.
+  do: Core.durationWords(duration)
+fn format.timer(duration: Duration): string pure : A duration like a clock: '05:09' or '1:02:03'.
+  do: Core.timer(duration)
+  ex: player.actionBar("Time left: {format.timer(90 seconds)}")
+fn format.bytes(value: long): string pure : A size in bytes: '512 B', '1.5 MB'.
+  do: Core.bytes(value)
+fn format.plural(count: long, singular: string, plural: string): string pure : '1 apple' or '3 apples'.
+  do: count + " " + (count == 1 ? singular : plural)
+
+# ------------------------------------------------------------------ random numbers
+
+fn random.int(min: int, max: int): int : A random whole number from min to max, both included.
+  do: Core.randomInt(min, max)
+  ex: let roll = random.int(1, 6)
+fn random.long(min: long, max: long): long : A random long from min to max, both included.
+  do: Core.randomLong(min, max)
+fn random.double(): double : A random number from 0 (included) to 1 (excluded).
+  do: java.util.concurrent.ThreadLocalRandom.current().nextDouble()
+fn random.double(min: double, max: double): double : A random number from min (included) to max (excluded).
+  do: Core.randomDouble(min, max)
+fn random.bool(): bool : true or false with equal chance.
+  do: java.util.concurrent.ThreadLocalRandom.current().nextBoolean()
+fn random.chance(percent: double): bool : true with a chance in percent: random.chance(25) is true about 1 time in 4.
+  do: java.util.concurrent.ThreadLocalRandom.current().nextDouble() * 100 < percent
+  ex: if random.chance(5) {\n    player.give(ItemStack(Material.DIAMOND))\n}
+fn random.gaussian(): double : A normally distributed number (mean 0, standard deviation 1).
+  do: java.util.concurrent.ThreadLocalRandom.current().nextGaussian()
+fn random.uuid(): UUID : A new random UUID.
+  do: java.util.UUID.randomUUID()
+fn random.string(length: int): string : Random letters and digits, e.g. for codes.
+  do: Core.randomString(length)
+fn random.weighted(weights: List<double>): int : A random index, each chosen with a chance proportional to its weight.
+  do: Core.weighted(weights)
+  ex: let rewards = ["coal", "iron", "diamond"]\nlet reward = rewards[random.weighted([70.0, 25.0, 5.0])]
+
+# ------------------------------------------------------------------ UUID
+
+fn UUID.fromString(text: string): UUID? pure static : Reads a UUID; null if the text is not one.
+  do: Core.uuid(text)
+fn UUID.randomUUID(): UUID static : A new random UUID.
+  do: java.util.UUID.randomUUID()
+fn UUID.nameUUIDFromBytes(text: string): UUID pure static : The same UUID for the same text, e.g. the offline-mode UUID of 'OfflinePlayer:Steve'.
+  do: java.util.UUID.nameUUIDFromBytes(text.getBytes(java.nio.charset.StandardCharsets.UTF_8))
+
+# ------------------------------------------------------------------ math
+
+prop math.e: double pure : Euler's number e.
+  get: Math.E
+prop math.maxInt: int pure : The largest int, 2147483647.
+  get: Integer.MAX_VALUE
+prop math.minInt: int pure : The smallest int, -2147483648.
+  get: Integer.MIN_VALUE
+prop math.maxLong: long pure : The largest long.
+  get: Long.MAX_VALUE
+prop math.minLong: long pure : The smallest long.
+  get: Long.MIN_VALUE
+prop math.infinity: double pure : Positive infinity.
+  get: Double.POSITIVE_INFINITY
+fn math.asin(value: double): double pure : Arc sine in radians.
+  do: Math.asin(value)
+fn math.acos(value: double): double pure : Arc cosine in radians.
+  do: Math.acos(value)
+fn math.atan(value: double): double pure : Arc tangent in radians.
+  do: Math.atan(value)
+fn math.atan2(y: double, x: double): double pure : The angle of the point (x, y) in radians.
+  do: Math.atan2(y, x)
+fn math.log(value: double): double pure : Natural logarithm.
+  do: Math.log(value)
+fn math.log(value: double, base: double): double pure : Logarithm in a base: math.log(8, 2) = 3.
+  do: Math.log(value) / Math.log(base)
+fn math.log10(value: double): double pure : Base-10 logarithm.
+  do: Math.log10(value)
+fn math.exp(value: double): double pure : e raised to a power.
+  do: Math.exp(value)
+fn math.cbrt(value: double): double pure : Cube root.
+  do: Math.cbrt(value)
+fn math.hypot(x: double, y: double): double pure : sqrt(x² + y²) without overflow.
+  do: Math.hypot(x, y)
+fn math.toRadians(degrees: double): double pure : Degrees to radians.
+  do: Math.toRadians(degrees)
+fn math.toDegrees(radians: double): double pure : Radians to degrees.
+  do: Math.toDegrees(radians)
+fn math.sign(value: double): int pure : -1, 0 or 1.
+  do: (int) Math.signum(value)
+fn math.lerp(from: double, to: double, t: double): double pure : The value a fraction t of the way from 'from' to 'to'.
+  do: from + (to - from) * t
+fn math.roundTo(value: double, decimals: int): double pure : Rounds to some decimals: math.roundTo(3.14159, 2) = 3.14.
+  do: Core.roundTo(value, decimals)
+fn math.floorMod(value: int, divisor: int): int pure : The remainder with the sign of the divisor: math.floorMod(-1, 5) = 4.
+  do: Core.floorMod(value, divisor)
+fn math.floorMod(value: long, divisor: long): long pure : The remainder with the sign of the divisor.
+  do: Core.floorMod(value, divisor)
+fn math.clamp(value: long, min: long, max: long): long pure : The value limited to the range min..max.
+  do: Math.max(min, Math.min(max, value))
+fn math.isNaN(value: double): bool pure : Whether a number is 'not a number' (0.0 / 0.0).
+  do: Double.isNaN(value)
+fn math.distance(x1: double, y1: double, z1: double, x2: double, y2: double, z2: double): double pure : The distance between two points.
+  do: Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1) + (z2 - z1) * (z2 - z1))
+
+# ------------------------------------------------------------------ text
+
+fn string.split(separator: string): List<string> pure : The parts between the separators (the separator is plain text, not a pattern).
+  do: Core.split(self, separator, -1)
+  ex: let parts = "a,b,c".split(",")   // ["a", "b", "c"]
+fn string.split(separator: string, limit: int): List<string> pure : At most 'limit' parts; the last part holds the rest.
+  do: Core.split(self, separator, limit)
+fn string.substring(start: int): string pure : The text from an index to the end.
+  do: Core.substring(self, start, self.length())
+fn string.substring(start: int, end: int): string pure : The text from start (included) to end (excluded).
+  do: Core.substring(self, start, end)
+fn string.indexOf(text: string): int pure : Index of the first occurrence, or -1.
+  do: self.indexOf(text)
+fn string.lastIndexOf(text: string): int pure : Index of the last occurrence, or -1.
+  do: self.lastIndexOf(text)
+fn string.charAt(index: int): string pure : The character at an index, as text.
+  do: Core.charAt(self, index)
+fn string.chars(): List<string> pure : Every character, as a list of one-character texts.
+  do: Core.chars(self)
+fn string.repeat(count: int): string pure : The text repeated: "ab".repeat(3) = "ababab".
+  do: Core.repeat(self, count)
+fn string.padLeft(length: int): string pure : Adds spaces in front up to a length.
+  do: Core.pad(self, length, " ", true)
+fn string.padLeft(length: int, fill: string): string pure : Adds a fill character in front up to a length: "7".padLeft(3, "0") = "007".
+  do: Core.pad(self, length, fill, true)
+fn string.padRight(length: int): string pure : Adds spaces after up to a length.
+  do: Core.pad(self, length, " ", false)
+fn string.padRight(length: int, fill: string): string pure : Adds a fill character after up to a length.
+  do: Core.pad(self, length, fill, false)
+fn string.capitalize(): string pure : The text with its first letter in upper case.
+  do: Core.capitalize(self)
+fn string.titleCase(): string pure : Every word capitalized, underscores as spaces: "diamond_sword" -> "Diamond Sword".
+  do: Core.titleCase(self)
+fn string.reversed(): string pure : The text backwards.
+  do: new StringBuilder(self).reverse().toString()
+prop string.isBlank: bool pure : Whether the text is empty or only spaces.
+  get: self.isBlank()
+fn string.toLong(): long? pure : The text as a long, or null if it is not a whole number.
+  do: Core.toLong(self)
+fn string.toBool(): bool? pure : true for "true"/"yes"/"on", false for "false"/"no"/"off", otherwise null.
+  do: Core.toBool(self)
+fn string.equalsIgnoreCase(other: string): bool pure : Whether two texts are equal, ignoring upper/lower case.
+  do: self.equalsIgnoreCase(other)
+fn string.containsIgnoreCase(text: string): bool pure : Whether the text contains another, ignoring upper/lower case.
+  do: Core.containsIgnoreCase(self, text)
+fn string.startsWithIgnoreCase(prefix: string): bool pure : Whether the text starts with a prefix, ignoring case.
+  do: self.regionMatches(true, 0, prefix, 0, prefix.length())
+fn string.count(text: string): int pure : How many times a text occurs (without overlaps).
+  do: Core.count(self, text)
+fn string.lines(): List<string> pure : The lines of the text.
+  do: Core.lines(self)
+fn string.truncate(length: int): string pure : The text cut to a length, ending with '...' when it was longer.
+  do: Core.truncate(self, length)
+fn string.matches(regex: string): bool pure : Whether the whole text matches a regular expression.
+  do: Core.pattern(regex).matcher(self).matches()
+  ex: let name = player.name\nif name.length < 3 || name.length > 16 || !name.matches("[a-zA-Z0-9_]+") {\n    player.send("<red>Invalid name")\n}
+fn string.find(regex: string): string? pure : The first part matching a regular expression, or null.
+  do: Core.find(self, regex)
+fn string.findAll(regex: string): List<string> pure : Every part matching a regular expression.
+  do: Core.findAll(self, regex)
+fn string.replaceAll(regex: string, replacement: string): string pure : Replaces every match of a regular expression ($1 refers to a group).
+  do: Core.pattern(regex).matcher(self).replaceAll(replacement)
+fn string.replaceFirst(regex: string, replacement: string): string pure : Replaces the first match of a regular expression.
+  do: Core.pattern(regex).matcher(self).replaceFirst(replacement)
+fn string.toUUID(): UUID? pure : The text as a UUID, or null.
+  do: Core.uuid(self)
+
+# ------------------------------------------------------------------ JSON
+
+fn json.parse(text: string): any? : Reads JSON: objects become maps, arrays become lists, numbers become long or double. Invalid JSON is an error.
+  do: Core.parseJson(text)
+  ex: web.get("https://api.example.com/players", (status, body) => {\n    let data = json.parse(body)\n    log("received {json.stringify(data)}")\n})
+fn json.stringify(value: any?): string : Writes a value as JSON (maps, lists, text, numbers, booleans and null; other values as text).
+  do: Core.writeJson(value, false)
+fn json.pretty(value: any?): string : Writes a value as indented JSON.
+  do: Core.writeJson(value, true)
+fn json.parseMap(text: string): Map<string, any?> : Reads a JSON object as a map (an error if the text is not an object).
+  do: Core.jsonMap(Core.parseJson(text), true)
+  ex: let data = json.parseMap("\{\"online\": 5}")\nlet online = json.asNumber(data["online"]) ?? 0.0\nplayer.send("{online} players online")
+fn json.parseList(text: string): List<any?> : Reads a JSON array as a list (an error if the text is not an array).
+  do: Core.jsonList(Core.parseJson(text), true)
+fn json.asMap(value: any?): Map<string, any?>? : A JSON value as an object, or null if it is not one.
+  do: Core.jsonMap(value, false)
+fn json.asList(value: any?): List<any?>? : A JSON value as an array, or null if it is not one.
+  do: Core.jsonList(value, false)
+fn json.asString(value: any?): string? : A JSON value as text, or null if it is not text.
+  do: value instanceof String text ? text : null
+fn json.asNumber(value: any?): double? : A JSON value as a number, or null if it is not a number.
+  do: value instanceof Number number ? (Double) number.doubleValue() : null
+fn json.asBool(value: any?): bool? : A JSON value as a bool, or null if it is not one.
+  do: value instanceof Boolean bool ? bool : null

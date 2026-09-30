@@ -1,0 +1,11 @@
+ENDER_PEARL minecraft:ender_pearl
+COMMAND minecraft:command
+PLUGIN minecraft:plugin
+NETHER_PORTAL minecraft:nether_portal
+END_PORTAL minecraft:end_portal
+SPECTATE minecraft:spectate
+END_GATEWAY minecraft:end_gateway
+CONSUMABLE_EFFECT minecraft:consumable_effect
+DISMOUNT minecraft:dismount
+EXIT_BED minecraft:exit_bed
+UNKNOWN minecraft:unknown

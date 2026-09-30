@@ -4,7 +4,114 @@ All notable changes are listed here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/) once 1.0 is released.
 
-## [Unreleased] — 0.1.0-SNAPSHOT
+## [Unreleased] — 0.2.0-SNAPSHOT
+
+Language level 2: everything a server usually scripts, without addons.
+
+### Language
+
+- Commands: `command name(args) { }` with typed arguments (numbers, `bool`,
+  `Duration`, players, offline players, worlds, game modes, materials and other keyed
+  types), default values, optional (`T?`) and rest (`string...`) arguments,
+  sub-commands (`command warp.set(...)`), Tab completion, and the annotations
+  `@permission`, `@permissionMessage`, `@aliases`, `@description`, `@usage`,
+  `@cooldown`, `@cooldownMessage`, `@cooldownBypass`, `@playerOnly`.
+- Scheduling: `after <duration> [for <entity>] { }`, `every <duration> [for <entity>] { }`
+  with `task` (`task.runs`, `task.cancel()`), `async { }`, `sync { }`; top-level
+  `every` tasks (optionally `@async`), `at "HH:mm"` daily tasks, `on load` and
+  `on unload` hooks.
+- Variables: script variables (`let`/`var` at the top of a file), `persistent var`
+  (saved for the server) and `playerdata var` (saved per player, used as
+  `player.name`), with atomic `+=` and `++`.
+- Records (`record Warp(name: string, cost: int = 0) { functions }`), maps
+  (`Map<K, V>`, literals, indexing, `for key, value in map`), lambdas and function
+  values (`function(A): R`), `switch` statements and expressions, `try`/`catch`/
+  `finally`/`throw`, `c ? a : b`, bitwise operators, `in`/`!in`, `!is`, `++`/`--`,
+  compound assignments `&= |= ^= <<= >>=`, `Instant`, casts to `List<T>`/`Map<K, V>`.
+- Event handlers: `@priority(LOWEST..MONITOR)` and `@ignoreCancelled`.
+- Modules: `module name`, `import x`, `import x as y`, `import {a, b} from x`, with a
+  module graph (importers are recompiled when a module changes) and cycle detection.
+- `placeholder name { }` declares PlaceholderAPI placeholders (`%tys_name%`).
+- A choice between texts written in the script is a message, like a single literal:
+  `player.send(ok ? "<green>Yes" : "<red>No {player.name}")`, and `switch` expressions
+  whose values are all such texts.
+- Constants of keyed types are checked at compile time: `Material.DIAMOND`,
+  `Sound.ENTITY_PLAYER_LEVELUP`, `EntityType.ZOMBIE`, `PotionEffectType.SPEED`, ...
+- A list or map literal passed to a function is typed by the parameter when every
+  overload agrees (`[player.uuid, "bread", 2.5]` for a `List<any?>`).
+- **Breaking:** `Block.type` is a `Material` (it was a text key such as
+  `minecraft:stone`; in text it now shows `stone`).
+- `for x in list` walks a snapshot taken when the loop starts, like map loops: the body
+  (or a handler on another thread) may add or remove elements without the loop skipping,
+  repeating or running past them. (Before, a loop that added to its own list could run
+  until the time limit stopped it.)
+- Lists and maps inserted into text show their elements the way the elements show on
+  their own: `"{[1 second, 90 seconds]}"` is `[1s, 1m 30s]` (was `[1000, 90000]`), a list of
+  players shows their names. Records do the same for their fields
+  (`Visit(who=Steve, where=world 0.5, 64, 0.5, stay=1m 30s)`), and so do `log(value)` and
+  `json.stringify` for players, locations, materials and other server objects.
+- A runtime error of a function calling itself shows the repeated call once
+  (`... 127 more calls at the same place`) instead of one line per call.
+- Compiler hints no longer suggest functions that do not exist (`cooldown(...)` for a
+  `cooldown` declaration, `compareTo` for comparing text) or syntax that does not exist
+  (`?.[...]` for indexing a value that may be `null`); a map literal with mixed types suggests
+  `Map<string, any>`. Calling a function value that may be `null` (for example one looked up
+  in a map) reports TYS0216 with a null check to add.
+
+### Standard library
+
+- Generated from compact specifications (`tools/stdlib-gen`): about 150 types, more
+  than 900 functions and properties and 111 events, covering players (experience,
+  food, flight, speeds, titles, action bars, tab list, sounds, particles, cooldowns,
+  permissions, bans), entities (types, names, equipment, potion effects, attributes,
+  AI, targets, passengers, nearby entities, projectiles), items (`ItemStack`: names,
+  lore, enchantments, durability, flags, model data, colors, skulls), inventories,
+  menus (GUIs with click handlers), blocks (type, data, light, biome, signs,
+  containers, drops), locations, vectors, worlds (time, weather, game rules, borders,
+  spawning, explosions, lightning, fills), chunks, colors, boss bars, sidebars, text
+  displays (holograms), server information, formatting (`format.*`), time
+  (`time.*`), random numbers, text helpers, JSON, files, web requests, persistent data
+  tags on items, entities, blocks, chunks and worlds, Vault economy, chat and groups,
+  and PlaceholderAPI.
+- Databases in scripts: `Database("name")` (configured) and `Database.sqlite(file)`,
+  with asynchronous `execute`, `update`, `query`, `queryFirst` and synchronous variants
+  for `async` blocks. SQL has the type `Sql`, which only accepts text written in the
+  script, so SQL injection is a compile error (`TYS0235`).
+- Everything a script creates (timers, menus, boss bars, sidebars, permission
+  attachments) belongs to it and is cleaned up when it is reloaded.
+
+### Engine, platform and plugin
+
+- Saved variables are cached in memory, player data is loaded while players connect,
+  and changes are written in the background (SQLite by default, MySQL/MariaDB or memory).
+- Command registry with live updates of players' command lists; event dispatch by
+  priority with `ignoreCancelled`; per-script resources and callbacks.
+- Paper platform: region-aware threading for entities, blocks and inventories;
+  constant tables from the server's live registries (data packs included); codecs for
+  saving locations, worlds, players, items, vectors, colors and potion effects.
+- Plugin configuration for storage, databases and command messages; `/tys status`;
+  PlaceholderAPI expansion; soft dependencies on Vault and PlaceholderAPI.
+- Script commands have `/help` pages (description, usage, aliases and sub-commands) that
+  follow reloads; Paper builds its help index only at startup, so they are added by
+  TachyonScript.
+- Opening or closing a player's inventory screen while an inventory event of that player is
+  handled (a menu click, `onOpen`/`onClose`, `player.inventory*` handlers) happens right after
+  the event, as the server requires, instead of during it.
+- The unused `commands.messages.usage` entry was removed from the default configuration
+  (it is still accepted).
+- Verified on a live Paper 1.21.11 server with a self-test script and the wiki's recipes.
+
+### Documentation
+
+- New pages: commands, scheduling, saved data, databases, modules, the world, menus,
+  integrations, errors and a migration guide from Skript; every example is compiled by
+  the tests. The reference now shows details and examples of members.
+- A GitHub wiki in `wiki/`: 32 pages (installation, tutorials, the language, the server
+  API, 17 complete recipes, a guide for Skript users, configuration, administration,
+  performance and Folia, addons, FAQ) and the API reference generated by
+  `tys docs --wiki`. Tests compile every example and keep the reference current.
+
+## 0.1.0-SNAPSHOT
 
 First development version.
 
@@ -19,7 +126,7 @@ First development version.
 - String templates; MiniMessage templates compiled once with values inserted as
   plain text. Runtime text is never parsed as MiniMessage implicitly (`TYS0234`).
 - Diagnostics with stable codes, source excerpts, expected/received types and
-  "did you mean" suggestions; planned features are reported as "not supported yet".
+  "did you mean" suggestions.
 
 ### Compiler and runtime
 

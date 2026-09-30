@@ -28,6 +28,8 @@ public final class ExecutionStack {
     int referenceHighWater;
     /** Number of active script frames on this thread. */
     int depth;
+    /** The owner of the function the outermost execution started with (see {@link #owner()}). */
+    Object owner;
     int maxDepth = RuntimeLimits.DEFAULT.maxCallDepth();
     long returnPrimitive;
     Object returnReference;
@@ -117,5 +119,14 @@ public final class ExecutionStack {
     /** Number of active script frames on this thread (0 when no script is running). */
     public int depth() {
         return depth;
+    }
+
+    /**
+     * The owner (for the engine: the loaded script) of the function the outermost running
+     * execution on this thread started with, or {@code null} when no script is running. Natives
+     * use it to tie resources such as menus to the script that created them.
+     */
+    public Object owner() {
+        return depth == 0 ? null : owner;
     }
 }

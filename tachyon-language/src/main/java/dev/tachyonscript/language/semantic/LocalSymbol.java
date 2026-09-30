@@ -5,8 +5,9 @@ import dev.tachyonscript.api.type.Type;
 import dev.tachyonscript.language.source.Span;
 
 /**
- * A local value: variable, parameter, loop variable, event variable, the event object, or
- * a compiler-generated temporary. Compared by identity.
+ * A local value: variable, parameter, loop variable, event variable, the event object, a
+ * value captured by a lambda, the receiver of a record method, or a compiler-generated
+ * temporary. Compared by identity.
  */
 public final class LocalSymbol {
 
@@ -19,6 +20,12 @@ public final class LocalSymbol {
         EVENT_VARIABLE,
         /** The {@code event} object of a handler. */
         EVENT_OBJECT,
+        /** A value copied into a lambda or scheduled block when it was created. */
+        CAPTURE,
+        /** The record a method was called on ({@code this}). */
+        THIS,
+        /** A variable provided by the language (command {@code sender}, a caught error, {@code task}). */
+        IMPLICIT,
         /** A compiler-generated temporary. */
         TEMPORARY
     }
@@ -31,6 +38,7 @@ public final class LocalSymbol {
     private final EventVariable eventVariable;
     private boolean read;
     private String knownString;
+    private LocalSymbol capturedFrom;
 
     LocalSymbol(String name, Type type, boolean mutable, Kind kind, Span declaration, EventVariable eventVariable) {
         this.name = name;
@@ -67,6 +75,24 @@ public final class LocalSymbol {
         return eventVariable;
     }
 
+    /** For captures: the local of the enclosing function whose value was copied. */
+    public LocalSymbol capturedFrom() {
+        return capturedFrom;
+    }
+
+    void capturedFrom(LocalSymbol outer) {
+        this.capturedFrom = outer;
+    }
+
+    /** The local this one ultimately copies (itself unless it is a capture). */
+    LocalSymbol origin() {
+        LocalSymbol current = this;
+        while (current.capturedFrom != null) {
+            current = current.capturedFrom;
+        }
+        return current;
+    }
+
     /** Whether the local is read anywhere. */
     public boolean isRead() {
         return read;
@@ -74,6 +100,9 @@ public final class LocalSymbol {
 
     void markRead() {
         read = true;
+        if (capturedFrom != null) {
+            capturedFrom.markRead();
+        }
     }
 
     /** For {@code let} locals initialized with a string literal: that string (used for hints). */

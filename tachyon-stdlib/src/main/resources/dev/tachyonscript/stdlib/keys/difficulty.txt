@@ -1,0 +1,4 @@
+PEACEFUL minecraft:peaceful
+EASY minecraft:easy
+NORMAL minecraft:normal
+HARD minecraft:hard

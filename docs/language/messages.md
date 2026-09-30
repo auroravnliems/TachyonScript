@@ -39,6 +39,10 @@ allowed, e.g. "<gray>{message}").
 If the text is trusted MiniMessage, format it explicitly: text.mini(message)
 ```
 
+Text written in the script is formatted: literals, constants, literals joined with `+`,
+and choices between such texts (`player.flying ? "<green>Flying" : "<gray>Walking"`, or a
+`switch` whose values are all such texts).
+
 ```tys
 event player.chat {
     broadcast("<gray>[Chat] {player.name}: {message}")    // shown as plain text
@@ -50,7 +54,63 @@ event player.join {
 }
 ```
 
-`text.escape(...)` escapes tags in a string, for MiniMessage you assemble yourself.
+Other conversions: `text.escape(...)` escapes tags, `text.plain(component)` gives the
+plain text, `text.legacy("&aHi")` reads `&` color codes, `text.json(...)` and
+`text.fromJson(...)` convert to and from the JSON of `/tellraw`.
+
+Clickable text built from values stays safe with the `text` helpers:
+
+```tys-body
+let accept = text.command("<green>[Accept]", "/tpaccept {player.name}")
+let info = text.hover("<gray>[?]", "<yellow>Requests expire after 60 seconds")
+player.send(text.join([accept, info], " "))
+```
+
+## Titles, action bars and the tab list
+
+```tys-body
+player.title("<gold>Welcome", "<gray>to the server")
+player.title("<red>3", "", 0 seconds, 1 second, 250 milliseconds)  // fade in, stay, fade out
+player.actionBar("<yellow>Level {player.level}")
+player.tabHeader = "<aqua>My Server"
+player.tabFooter = "<gray>{server.onlineCount} online"
+player.playerListName = "<red>[Admin] <white>{player.name}"
+```
+
+## Boss bars
+
+```tys
+let bar = BossBar("<red>Boss fight", 1.0, BarColor.RED, BarStyle.NOTCHED_10)
+
+event player.join {
+    bar.show(player)
+}
+
+every 1 second {
+    bar.progress = math.max(0.0, bar.progress - 0.05)
+    bar.title = "<red>Boss fight <gray>({math.round(bar.progress * 100)}%)"
+}
+```
+
+Boss bars are shown per player (`show`, `hide`, `hideAll`, `viewers`). A boss bar
+belongs to the script that created it: when that script reloads, it is hidden from
+everyone.
+
+## Sidebars
+
+```tys
+playerdata var coins: int = 0
+
+event player.join {
+    let board = Sidebar("<gold><bold>My Server")
+    board.lines = ["<gray>Coins: <yellow>{player.coins}", "", "<gray>play.example.com"]
+    board.show(player)
+}
+```
+
+A sidebar has a title and up to 15 lines (`lines`, `line(index, text)`,
+`removeLine(index)`, `clear()`), and is shown to chosen players. It is removed when its
+script reloads. Folia has no scoreboards, so sidebars are not available there.
 
 ## Performance
 

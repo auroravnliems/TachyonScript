@@ -209,14 +209,45 @@ public final class Lexer {
             case ',' -> kind = TokenKind.COMMA;
             case ':' -> kind = TokenKind.COLON;
             case ';' -> kind = TokenKind.SEMICOLON;
-            case '+' -> kind = next('=') ? TokenKind.PLUS_EQ : TokenKind.PLUS;
-            case '-' -> kind = next('=') ? TokenKind.MINUS_EQ : TokenKind.MINUS;
+            case '+' -> {
+                if (next('=')) {
+                    kind = TokenKind.PLUS_EQ;
+                } else if (next('+')) {
+                    kind = TokenKind.PLUS_PLUS;
+                } else {
+                    kind = TokenKind.PLUS;
+                }
+            }
+            case '-' -> {
+                if (next('=')) {
+                    kind = TokenKind.MINUS_EQ;
+                } else if (next('-')) {
+                    kind = TokenKind.MINUS_MINUS;
+                } else if (next('>')) {
+                    kind = TokenKind.THIN_ARROW;
+                } else {
+                    kind = TokenKind.MINUS;
+                }
+            }
             case '*' -> kind = next('=') ? TokenKind.STAR_EQ : TokenKind.STAR;
             case '/' -> kind = next('=') ? TokenKind.SLASH_EQ : TokenKind.SLASH;
             case '%' -> kind = next('=') ? TokenKind.PERCENT_EQ : TokenKind.PERCENT;
             case '!' -> kind = next('=') ? TokenKind.BANG_EQ : TokenKind.BANG;
-            case '<' -> kind = next('=') ? TokenKind.LT_EQ : TokenKind.LT;
+            case '<' -> {
+                if (next('=')) {
+                    kind = TokenKind.LT_EQ;
+                } else if (next('<')) {
+                    kind = next('=') ? TokenKind.LT_LT_EQ : TokenKind.LT_LT;
+                } else {
+                    kind = TokenKind.LT;
+                }
+            }
+            // '>>' is never one token: the parser joins adjacent '>' tokens into shifts, so that
+            // nested type arguments such as List<List<int>> close correctly.
             case '>' -> kind = next('=') ? TokenKind.GT_EQ : TokenKind.GT;
+            case '^' -> kind = next('=') ? TokenKind.CARET_EQ : TokenKind.CARET;
+            case '~' -> kind = TokenKind.TILDE;
+            case '@' -> kind = TokenKind.AT;
             case '=' -> {
                 if (next('=')) {
                     kind = TokenKind.EQ_EQ;
@@ -237,24 +268,34 @@ public final class Lexer {
             }
             case '.' -> {
                 if (next('.')) {
-                    kind = next('<') ? TokenKind.DOT_DOT_LT : TokenKind.DOT_DOT;
+                    if (next('<')) {
+                        kind = TokenKind.DOT_DOT_LT;
+                    } else if (next('.')) {
+                        kind = TokenKind.ELLIPSIS;
+                    } else {
+                        kind = TokenKind.DOT_DOT;
+                    }
                 } else {
                     kind = TokenKind.DOT;
                 }
             }
             case '&' -> {
-                if (!next('&')) {
-                    unexpected(start, "Unexpected character '&'.", "Did you mean '&&' (logical and)?");
-                    return;
+                if (next('&')) {
+                    kind = TokenKind.AMP_AMP;
+                } else if (next('=')) {
+                    kind = TokenKind.AMP_EQ;
+                } else {
+                    kind = TokenKind.AMP;
                 }
-                kind = TokenKind.AMP_AMP;
             }
             case '|' -> {
-                if (!next('|')) {
-                    unexpected(start, "Unexpected character '|'.", "Did you mean '||' (logical or)?");
-                    return;
+                if (next('|')) {
+                    kind = TokenKind.PIPE_PIPE;
+                } else if (next('=')) {
+                    kind = TokenKind.PIPE_EQ;
+                } else {
+                    kind = TokenKind.PIPE;
                 }
-                kind = TokenKind.PIPE_PIPE;
             }
             default -> {
                 unexpectedCharacter(start);

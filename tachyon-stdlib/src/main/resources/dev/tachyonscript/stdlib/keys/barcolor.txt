@@ -1,0 +1,7 @@
+PINK minecraft:pink
+BLUE minecraft:blue
+RED minecraft:red
+GREEN minecraft:green
+YELLOW minecraft:yellow
+PURPLE minecraft:purple
+WHITE minecraft:white

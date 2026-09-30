@@ -75,7 +75,23 @@ public final class Fakes {
         }
     }
 
+    /** A block; {@code type} is its material key, e.g. {@code minecraft:stone}. */
     public record Block(Location location, String type) {
+    }
+
+    /**
+     * The value of a constant of a keyed type ({@code Material.DIAMOND}): the type name and the
+     * key. Text of it is the key without {@code minecraft:}, like on a server.
+     */
+    public record Keyed(String type, String key) {
+        public String text() {
+            return key.startsWith("minecraft:") ? key.substring("minecraft:".length()) : key;
+        }
+
+        @Override
+        public String toString() {
+            return text();
+        }
     }
 
     public static class Entity {

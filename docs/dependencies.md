@@ -24,13 +24,22 @@ engine, standard library, CLI) has **no third-party dependency** at all.
 | JUnit Jupiter 6 (`org.junit:junit-bom`) | all tests | Test framework. |
 | JMH 1.37 (`jmh-core`, `jmh-generator-annprocess`) | `tachyon-benchmarks` | The standard harness for trustworthy JVM micro-benchmarks. |
 | `paper-api` | tests of the Paper platform and plugin, benchmarks | Real Bukkit event classes and Adventure in tests; MiniMessage in the template benchmark. |
+| `org.xerial:sqlite-jdbc` (3.49.1.0) | `tachyon-tests` (test runtime only) | Runs the database tests against real SQLite files. On a server, Paper provides the same driver. |
 
 The build uses the Gradle wrapper and a small convention plugin in `build-logic/`
 written in Java (no Kotlin DSL plugin toolchain).
+
+## Provided by the server at run time (not compiled against)
+
+| Library | Used for | How |
+|---------|----------|-----|
+| SQLite JDBC (`org.sqlite.JDBC`) | saved variables (default storage), `Database.sqlite(...)` | Paper ships it; loaded by class name. |
+| MySQL Connector/J (`com.mysql.cj.jdbc.Driver`) | MySQL storage and databases | Paper ships it; loaded by class name. |
+| Vault | `economy.*`, `chat.*`, `permissions.*` | Optional plugin; found through Bukkit's services manager and called reflectively. |
+| PlaceholderAPI | `papi.parse`, the `%tys_...%` expansion | Optional plugin. `papi.parse` is called reflectively; the expansion class is compiled against small stand-ins in `tachyon-plugin/src/stubs` that are not packaged. |
 
 ## Planned
 
 | Dependency | For | Notes |
 |------------|-----|-------|
 | ASM (`org.ow2.asm`) | the bytecode backend | Will be shaded and relocated into the plugin jar, because other plugins ship their own ASM versions. |
-| A JDBC driver pool / SQLite driver | persistent storage | To be decided with the storage design; likely provided through Paper's library loader instead of shading. |

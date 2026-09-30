@@ -7,7 +7,12 @@ public enum AssignmentOperator {
     SUBTRACT("-=", BinaryOperator.SUBTRACT),
     MULTIPLY("*=", BinaryOperator.MULTIPLY),
     DIVIDE("/=", BinaryOperator.DIVIDE),
-    REMAINDER("%=", BinaryOperator.REMAINDER);
+    REMAINDER("%=", BinaryOperator.REMAINDER),
+    BIT_AND("&=", BinaryOperator.BIT_AND),
+    BIT_OR("|=", BinaryOperator.BIT_OR),
+    BIT_XOR("^=", BinaryOperator.BIT_XOR),
+    SHIFT_LEFT("<<=", BinaryOperator.SHIFT_LEFT),
+    SHIFT_RIGHT(">>=", BinaryOperator.SHIFT_RIGHT);
 
     private final String symbol;
     private final BinaryOperator binary;
@@ -21,7 +26,7 @@ public enum AssignmentOperator {
         return symbol;
     }
 
-    /** The arithmetic operator of a compound assignment, or {@code null} for plain {@code =}. */
+    /** The operator of a compound assignment, or {@code null} for plain {@code =}. */
     public BinaryOperator binary() {
         return binary;
     }

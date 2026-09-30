@@ -1,15 +1,22 @@
 package dev.tachyonscript.testkit;
 
 import dev.tachyonscript.api.declaration.EventDeclaration;
+import dev.tachyonscript.api.declaration.NativeDeclaration;
 import dev.tachyonscript.api.natives.NativeFunction;
+import dev.tachyonscript.api.natives.ScriptError;
+import dev.tachyonscript.api.storage.KeyedValues;
 import dev.tachyonscript.api.registry.Bindings;
 import dev.tachyonscript.api.registry.SymbolRegistry;
 import dev.tachyonscript.api.value.Values;
 import dev.tachyonscript.engine.EngineOptions;
 import dev.tachyonscript.engine.ScriptEngine;
+import dev.tachyonscript.api.type.ClassType;
+import dev.tachyonscript.engine.spi.ArgumentTypes;
+import dev.tachyonscript.engine.spi.CommandRegistry;
 import dev.tachyonscript.engine.spi.EngineLogger;
 import dev.tachyonscript.engine.spi.EventBridge;
 import dev.tachyonscript.engine.spi.Platform;
+import dev.tachyonscript.engine.spi.PlayerDirectory;
 import dev.tachyonscript.compiler.InternalErrorHandler;
 import dev.tachyonscript.runtime.spi.SimpleTextService;
 import dev.tachyonscript.runtime.spi.TextService;
@@ -20,12 +27,17 @@ import dev.tachyonscript.stdlib.ServerApi;
 import dev.tachyonscript.stdlib.StandardLibrary;
 import dev.tachyonscript.stdlib.TextApi;
 import dev.tachyonscript.stdlib.WorldApi;
+import dev.tachyonscript.stdlib.generated.EntitiesApi;
+import dev.tachyonscript.stdlib.generated.WorldsApi;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -37,10 +49,15 @@ public final class TestPlatform implements Platform {
 
     private final Fakes.World world = new Fakes.World("world");
     private final List<Fakes.Player> players = new ArrayList<>();
+    /** Every player that ever joined (for offline player lookups). */
+    private final List<Fakes.Player> known = new ArrayList<>();
     private final Fakes.Console console = new Fakes.Console();
     private final List<Object> broadcasts = new CopyOnWriteArrayList<>();
     private final List<String> logs = new CopyOnWriteArrayList<>();
     private volatile Set<EventDeclaration> activeEvents = Set.of();
+    private volatile Map<EventDeclaration, Set<Integer>> activePriorities = Map.of();
+    private final Map<String, CommandRegistry.Command> commands = new LinkedHashMap<>();
+    private final TestScheduler scheduler = new TestScheduler();
     private final Bindings bindings;
     private final SymbolRegistry registry = StandardLibrary.registry();
     private final EngineLogger logger = new EngineLogger() {
@@ -60,8 +77,54 @@ public final class TestPlatform implements Platform {
         }
     };
 
+    /** Keys of the declarations bound to a stub that fails when called. */
+    private final Set<String> stubbed = new java.util.TreeSet<>();
+
     public TestPlatform() {
-        this.bindings = Bindings.builder().include(StandardLibrary.coreBindings()).include(platformBindings()).build();
+        Bindings.Builder all = Bindings.builder().include(StandardLibrary.coreBindings()).include(platformBindings());
+        // Everything without a fake still links: calling it fails with a clear message. The engine
+        // implements databases itself, so those are left to it.
+        Set<String> engine = new java.util.HashSet<>();
+        StandardLibrary.engineDeclarations().forEach(declaration -> engine.add(declaration.key()));
+        for (NativeDeclaration declaration : registry.natives()) {
+            if (!declaration.isIntrinsic() && !all.isBound(declaration) && !engine.contains(declaration.key())) {
+                all.bind(declaration, stub(declaration));
+                stubbed.add(declaration.key());
+            }
+        }
+        this.bindings = all.build();
+    }
+
+    /** Keys of the declarations this platform does not fake (calling them is an error). */
+    public Set<String> stubbed() {
+        return Collections.unmodifiableSet(stubbed);
+    }
+
+    private static NativeFunction stub(NativeDeclaration declaration) {
+        String message = declaration.key() + " is not available in the test platform.";
+        return switch (declaration.returnRepresentation()) {
+            case VOID -> (NativeFunction.OfVoid) a -> {
+                throw new ScriptError(message);
+            };
+            case INT -> (NativeFunction.OfInt) a -> {
+                throw new ScriptError(message);
+            };
+            case LONG -> (NativeFunction.OfLong) a -> {
+                throw new ScriptError(message);
+            };
+            case FLOAT -> (NativeFunction.OfFloat) a -> {
+                throw new ScriptError(message);
+            };
+            case DOUBLE -> (NativeFunction.OfDouble) a -> {
+                throw new ScriptError(message);
+            };
+            case BOOL -> (NativeFunction.OfBool) a -> {
+                throw new ScriptError(message);
+            };
+            case REF -> (NativeFunction.OfRef) a -> {
+                throw new ScriptError(message);
+            };
+        };
     }
 
     /** An engine running on this platform. */
@@ -86,6 +149,7 @@ public final class TestPlatform implements Platform {
     public Fakes.Player join(String name) {
         Fakes.Player player = new Fakes.Player(name, new Fakes.Location(world, 0.5, 64, 0.5, 0, 0));
         players.add(player);
+        known.add(player);
         world.players().add(player);
         return player;
     }
@@ -96,7 +160,7 @@ public final class TestPlatform implements Platform {
         player.invalidate();
     }
 
-    public List<Fakes.Player> players() {
+    public List<Fakes.Player> onlinePlayers() {
         return Collections.unmodifiableList(players);
     }
 
@@ -121,6 +185,52 @@ public final class TestPlatform implements Platform {
         engine.dispatch(event, eventObject);
     }
 
+    /** Priorities used by the handlers of each active event. */
+    public Map<EventDeclaration, Set<Integer>> activePriorities() {
+        return activePriorities;
+    }
+
+    /** Runs a command line such as {@code "warp set home"} as {@code sender}, like a player typing it. */
+    public void command(Object sender, String line) {
+        String[] words = line.strip().split(" +");
+        CommandRegistry.Command command = commands.get(words[0].toLowerCase(Locale.ROOT));
+        if (command == null) {
+            for (CommandRegistry.Command candidate : commands.values()) {
+                if (candidate.aliases().contains(words[0])) {
+                    command = candidate;
+                }
+            }
+        }
+        if (command == null) {
+            throw new IllegalArgumentException("Unknown command /" + words[0] + "; registered: " + commands.keySet());
+        }
+        command.execute(sender, words[0], java.util.Arrays.copyOfRange(words, 1, words.length));
+    }
+
+    /** Tab completion of a partial command line (a trailing space starts a new word). */
+    public List<String> complete(Object sender, String line) {
+        String[] words = line.split(" ", -1);
+        CommandRegistry.Command command = commands.get(words[0]);
+        if (command == null) {
+            return List.of();
+        }
+        return command.complete(sender, words[0], java.util.Arrays.copyOfRange(words, 1, words.length));
+    }
+
+    /** Names of the commands scripts registered. */
+    public Set<String> commandNames() {
+        return Set.copyOf(commands.keySet());
+    }
+
+    /** What a help page shows for a registered root command. */
+    public List<CommandRegistry.HelpEntry> helpEntries(String command) {
+        CommandRegistry.Command registered = commands.get(command);
+        if (registered == null) {
+            throw new IllegalArgumentException("Unknown command /" + command + "; registered: " + commands.keySet());
+        }
+        return registered.helpEntries();
+    }
+
     // ------------------------------------------------------------------ Platform
 
     @Override
@@ -135,12 +245,133 @@ public final class TestPlatform implements Platform {
 
     @Override
     public EventBridge events() {
-        return events -> activeEvents = Set.copyOf(events);
+        return new EventBridge() {
+            @Override
+            public void activeEventsChanged(Map<EventDeclaration, Set<Integer>> priorities) {
+                activePriorities = Map.copyOf(priorities);
+                activeEvents = Set.copyOf(priorities.keySet());
+            }
+
+            @Override
+            public boolean isCancelled(Object event) {
+                return event instanceof Fakes.Cancellable cancellable && cancellable.isCancelled();
+            }
+        };
     }
 
     @Override
     public EngineLogger logger() {
         return logger;
+    }
+
+    /** The deterministic scheduler; advance time with {@code scheduler().tick(n)}. */
+    @Override
+    public TestScheduler scheduler() {
+        return scheduler;
+    }
+
+    @Override
+    public CommandRegistry commands() {
+        return new CommandRegistry() {
+            @Override
+            public void update(List<Command> updated) {
+                synchronized (commands) {
+                    commands.clear();
+                    updated.forEach(command -> commands.put(command.name(), command));
+                }
+            }
+
+            @Override
+            public boolean hasPermission(Object sender, String permission) {
+                return ((Fakes.Sender) sender).hasPermission(permission);
+            }
+
+            @Override
+            public Object asPlayer(Object sender) {
+                return sender instanceof Fakes.Player player ? player : null;
+            }
+
+            @Override
+            public String id(Object sender) {
+                return sender instanceof Fakes.Player player ? player.uuid().toString() : ((Fakes.Sender) sender).name();
+            }
+
+            @Override
+            public void send(Object sender, Object component) {
+                ((Fakes.Sender) sender).send(component);
+            }
+        };
+    }
+
+    @Override
+    public ArgumentTypes arguments() {
+        return new ArgumentTypes() {
+            @Override
+            public boolean supports(ClassType type) {
+                return type == MinecraftTypes.PLAYER || type == MinecraftTypes.WORLD || type == MinecraftTypes.GAME_MODE
+                        || bindings.keyedValues(type).isPresent();
+            }
+
+            @Override
+            public Object parse(ClassType type, String text, Object sender) throws InvalidArgument {
+                if (type == MinecraftTypes.PLAYER) {
+                    for (Fakes.Player player : players) {
+                        if (player.name().equalsIgnoreCase(text)) {
+                            return player;
+                        }
+                    }
+                    throw new InvalidArgument("Player '" + text + "' is not online.");
+                }
+                if (type == MinecraftTypes.WORLD) {
+                    if (world.name().equals(text)) {
+                        return world;
+                    }
+                    throw new InvalidArgument("World '" + text + "' is not loaded.");
+                }
+                if (type == MinecraftTypes.GAME_MODE) {
+                    try {
+                        return Fakes.GameMode.valueOf(text.toUpperCase(Locale.ROOT));
+                    } catch (IllegalArgumentException e) {
+                        throw new InvalidArgument("'" + text + "' is not a game mode.");
+                    }
+                }
+                var values = bindings.keyedValues(type).orElseThrow(() -> new InvalidArgument("Unsupported " + type.name()));
+                String key = text.contains(":") ? text.toLowerCase(Locale.ROOT) : "minecraft:" + text.toLowerCase(Locale.ROOT);
+                Object value = values.resolve(key);
+                if (value == null) {
+                    throw new InvalidArgument("Unknown " + type.name() + " '" + text + "'.");
+                }
+                return value;
+            }
+
+            @Override
+            public List<String> suggest(ClassType type, String prefix, Object sender) {
+                if (type == MinecraftTypes.PLAYER) {
+                    return players.stream().map(Fakes.Player::name)
+                            .filter(name -> name.toLowerCase(Locale.ROOT).startsWith(prefix.toLowerCase(Locale.ROOT))).toList();
+                }
+                if (type == MinecraftTypes.GAME_MODE) {
+                    return java.util.Arrays.stream(Fakes.GameMode.values()).map(mode -> mode.name().toLowerCase(Locale.ROOT))
+                            .filter(name -> name.startsWith(prefix)).toList();
+                }
+                return List.of();
+            }
+        };
+    }
+
+    @Override
+    public PlayerDirectory players() {
+        return new PlayerDirectory() {
+            @Override
+            public UUID id(Object player) {
+                return ((Fakes.Entity) player).uuid();
+            }
+
+            @Override
+            public String name(Object player) {
+                return ((Fakes.Entity) player).name();
+            }
+        };
     }
 
     // ------------------------------------------------------------------ bindings
@@ -155,8 +386,30 @@ public final class TestPlatform implements Platform {
                 .bindType(MinecraftTypes.LOCATION, Fakes.Location.class)
                 .bindType(MinecraftTypes.BLOCK, Fakes.Block.class)
                 .bindType(MinecraftTypes.GAME_MODE, Fakes.GameMode.class)
-                .bindType(MinecraftTypes.UUID, java.util.UUID.class)
                 .bindType(MinecraftTypes.CANCELLABLE, Fakes.Cancellable.class);
+        // Constants of keyed types (Material.DIAMOND, ...) are Fakes.Keyed values.
+        for (ClassType type : registry.keyedTypes()) {
+            String name = type.name();
+            b.bindType(type, Fakes.Keyed.class);
+            b.bindKeys(type, new KeyedValues() {
+                @Override
+                public Object resolve(String key) {
+                    return registry.keys(type).name(key).isPresent() ? new Fakes.Keyed(name, key) : null;
+                }
+
+                @Override
+                public String keyOf(Object value) {
+                    return ((Fakes.Keyed) value).key();
+                }
+            });
+            for (var method : registry.declaredMethods(type, "toString")) {
+                if (method.parameters().isEmpty()) {
+                    b.bind(method, (NativeFunction.OfRef) a -> ((Fakes.Keyed) a.getRef(0)).text());
+                }
+            }
+            registry.declaredProperty(type, "key").ifPresent(key ->
+                    b.bindGetter(key, (NativeFunction.OfRef) a -> ((Fakes.Keyed) a.getRef(0)).key()));
+        }
 
         // CommandSender
         b.bindGetter(EntityApi.SENDER_NAME, (NativeFunction.OfRef) a -> ((Fakes.Sender) a.getRef(0)).name());
@@ -177,7 +430,9 @@ public final class TestPlatform implements Platform {
                 ((Fakes.Entity) a.getRef(0)).teleport(((Fakes.Entity) a.getRef(1)).location()));
         b.bindGetter(EntityApi.HEALTH, (NativeFunction.OfDouble) a -> ((Fakes.LivingEntity) a.getRef(0)).health());
         b.bindSetter(EntityApi.HEALTH, a -> ((Fakes.LivingEntity) a.getRef(0)).health(a.getDouble(1)));
-        b.bindGetter(EntityApi.MAX_HEALTH, (NativeFunction.OfDouble) a -> ((Fakes.LivingEntity) a.getRef(0)).maxHealth());
+        b.bindGetter(EntitiesApi.LIVING_ENTITY_MAX_HEALTH, (NativeFunction.OfDouble) a ->
+                ((Fakes.LivingEntity) a.getRef(0)).maxHealth());
+        b.bindSetter(EntitiesApi.LIVING_ENTITY_MAX_HEALTH, a -> ((Fakes.LivingEntity) a.getRef(0)).maxHealth(a.getDouble(1)));
         b.bind(EntityApi.PLAYER_TO_STRING, (NativeFunction.OfRef) a -> ((Fakes.Player) a.getRef(0)).name());
         b.bindGetter(EntityApi.FOOD, (NativeFunction.OfInt) a -> ((Fakes.Player) a.getRef(0)).food());
         b.bindSetter(EntityApi.FOOD, a -> ((Fakes.Player) a.getRef(0)).food(a.getInt(1)));
@@ -189,7 +444,42 @@ public final class TestPlatform implements Platform {
         b.bindGetter(EntityApi.DISPLAY_NAME, (NativeFunction.OfRef) a -> ((Fakes.Player) a.getRef(0)).displayName());
         b.bindSetter(EntityApi.DISPLAY_NAME, a -> ((Fakes.Player) a.getRef(0)).displayName(a.getRef(1)));
         b.bind(EntityApi.KICK, (NativeFunction.OfVoid) a -> ((Fakes.Player) a.getRef(0)).kick(a.getRef(1)));
-        b.bind(EntityApi.UUID_TO_STRING, (NativeFunction.OfRef) a -> a.getRef(0).toString());
+        // OfflinePlayer (fake players are always known and online while joined)
+        b.bindGetter(EntityApi.OFFLINE_NAME, (NativeFunction.OfRef) a -> ((Fakes.Player) a.getRef(0)).name());
+        b.bindGetter(EntityApi.OFFLINE_UUID, (NativeFunction.OfRef) a -> ((Fakes.Player) a.getRef(0)).uuid());
+        b.bindGetter(EntityApi.OFFLINE_ONLINE, (NativeFunction.OfBool) a -> players.contains((Fakes.Player) a.getRef(0)));
+        b.bindGetter(EntityApi.OFFLINE_PLAYER_ONLINE, (NativeFunction.OfRef) a ->
+                players.contains((Fakes.Player) a.getRef(0)) ? a.getRef(0) : null);
+        b.bindGetter(EntityApi.OFFLINE_PLAYED_BEFORE, (NativeFunction.OfBool) a -> true);
+        b.bind(EntityApi.OFFLINE_TO_STRING, (NativeFunction.OfRef) a -> ((Fakes.Player) a.getRef(0)).name());
+        b.bind(ServerApi.OFFLINE_PLAYER_BY_NAME, (NativeFunction.OfRef) a -> {
+            for (Fakes.Player player : known) {
+                if (player.name().equalsIgnoreCase(a.getString(0))) {
+                    return player;
+                }
+            }
+            throw new dev.tachyonscript.api.natives.ScriptError("No player named " + a.getString(0) + " has played here.");
+        });
+        b.bind(ServerApi.OFFLINE_PLAYER_BY_UUID, (NativeFunction.OfRef) a -> {
+            for (Fakes.Player player : known) {
+                if (player.uuid().equals(a.getRef(0))) {
+                    return player;
+                }
+            }
+            throw new dev.tachyonscript.api.natives.ScriptError("No player with UUID " + a.getRef(0) + " has played here.");
+        });
+        b.bindType(MinecraftTypes.OFFLINE_PLAYER, Fakes.Player.class);
+        b.bindCodec(dev.tachyonscript.api.type.Types.COMPONENT, new dev.tachyonscript.api.storage.Codec() {
+            @Override
+            public String encode(Object value) {
+                return (String) value;
+            }
+
+            @Override
+            public Object decode(String text) {
+                return text;
+            }
+        });
 
         // World, Location, Block, GameMode
         b.bindGetter(WorldApi.WORLD_NAME, (NativeFunction.OfRef) a -> ((Fakes.World) a.getRef(0)).name());
@@ -215,7 +505,8 @@ public final class TestPlatform implements Platform {
         });
         b.bind(WorldApi.NEW_LOCATION, (NativeFunction.OfRef) a ->
                 new Fakes.Location((Fakes.World) a.getRef(0), a.getDouble(1), a.getDouble(2), a.getDouble(3), 0, 0));
-        b.bindGetter(WorldApi.BLOCK_TYPE, (NativeFunction.OfRef) a -> ((Fakes.Block) a.getRef(0)).type());
+        b.bindGetter(WorldsApi.BLOCK_TYPE, (NativeFunction.OfRef) a ->
+                new Fakes.Keyed("Material", ((Fakes.Block) a.getRef(0)).type()));
         b.bindGetter(WorldApi.BLOCK_LOCATION, (NativeFunction.OfRef) a -> ((Fakes.Block) a.getRef(0)).location());
         b.bindGetter(WorldApi.BLOCK_WORLD, (NativeFunction.OfRef) a -> ((Fakes.Block) a.getRef(0)).location().world());
         b.bindGetter(WorldApi.SURVIVAL, (NativeFunction.OfRef) a -> Fakes.GameMode.SURVIVAL);

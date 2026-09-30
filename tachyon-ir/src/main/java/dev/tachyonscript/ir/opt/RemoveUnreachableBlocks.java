@@ -24,11 +24,17 @@ public final class RemoveUnreachableBlocks implements IrPass {
         work.add(0);
         reachable[0] = true;
         while (!work.isEmpty()) {
-            for (int successor : blocks.get(work.poll()).terminator().successors()) {
+            IrBlock block = blocks.get(work.poll());
+            for (int successor : block.terminator().successors()) {
                 if (!reachable[successor]) {
                     reachable[successor] = true;
                     work.add(successor);
                 }
+            }
+            // An error in a reachable block reaches its handler.
+            if (block.hasHandler() && !reachable[block.handler()]) {
+                reachable[block.handler()] = true;
+                work.add(block.handler());
             }
         }
         int[] renumber = new int[blocks.size()];
@@ -45,7 +51,8 @@ public final class RemoveUnreachableBlocks implements IrPass {
         List<IrBlock> result = new ArrayList<>(next);
         for (IrBlock block : blocks) {
             if (reachable[block.index()]) {
-                result.add(new IrBlock(renumber[block.index()], block.instructions(), remap(block.terminator(), renumber)));
+                result.add(new IrBlock(renumber[block.index()], block.instructions(), remap(block.terminator(), renumber),
+                        block.hasHandler() ? renumber[block.handler()] : -1));
             }
         }
         return function.withBlocks(result);

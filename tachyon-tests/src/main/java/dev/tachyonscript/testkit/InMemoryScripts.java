@@ -18,6 +18,11 @@ public final class InMemoryScripts implements ScriptSource {
         return this;
     }
 
+    /** The content of a script (tests edit scripts by modifying it). */
+    public String get(String path) {
+        return files.get(path);
+    }
+
     public InMemoryScripts remove(String path) {
         files.remove(path);
         return this;

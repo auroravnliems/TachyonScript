@@ -15,7 +15,7 @@ them without reflection.
 // build.gradle.kts of your plugin
 dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT")
-    compileOnly(files("libs/TachyonScript-0.1.0-SNAPSHOT.jar"))
+    compileOnly(files("libs/TachyonScript-0.2.0-SNAPSHOT.jar"))
 }
 ```
 
@@ -176,7 +176,7 @@ public final class CoinsPlugin extends JavaPlugin {
 After the server starts, the console lists the addon:
 
 ```text
-[TachyonScript] TachyonScript 0.1.0-SNAPSHOT (...) on Paper 1.21.11; addons: Coins
+[TachyonScript] TachyonScript 0.2.0-SNAPSHOT (...) on Paper 1.21.11; addons: Coins
 ```
 
 Scripts can now use it:

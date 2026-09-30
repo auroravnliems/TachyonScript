@@ -1,0 +1,5 @@
+PROGRESS minecraft:progress
+NOTCHED_6 minecraft:notched_6
+NOTCHED_10 minecraft:notched_10
+NOTCHED_12 minecraft:notched_12
+NOTCHED_20 minecraft:notched_20

@@ -24,7 +24,8 @@ final class TypeResolver {
             "double", PrimitiveType.DOUBLE,
             "bool", PrimitiveType.BOOL,
             "void", PrimitiveType.VOID,
-            "Duration", PrimitiveType.DURATION);
+            "Duration", PrimitiveType.DURATION,
+            "Instant", PrimitiveType.INSTANT);
 
     /** Names from other languages, mapped to the TachyonScript spelling. */
     private static final Map<String, String> FOREIGN_NAMES = Map.ofEntries(
@@ -40,7 +41,15 @@ final class TypeResolver {
             Map.entry("Object", "any"),
             Map.entry("Any", "any"),
             Map.entry("ArrayList", "List"),
-            Map.entry("HashMap", "Map"));
+            Map.entry("HashMap", "Map"),
+            Map.entry("Exception", "Error"),
+            Map.entry("Throwable", "Error"),
+            Map.entry("ItemType", "Material"),
+            Map.entry("Item", "ItemStack"),
+            Map.entry("Function", "function(...): ..."),
+            Map.entry("Runnable", "function()"),
+            Map.entry("Date", "Instant"),
+            Map.entry("Time", "Instant"));
 
     private final ModuleContext context;
 
@@ -56,6 +65,17 @@ final class TypeResolver {
                 yield inner.isError() ? inner : Types.nullable(inner);
             }
             case TypeRef.Named named -> resolveNamed(named);
+            case TypeRef.Function function -> {
+                List<Type> parameters = new ArrayList<>();
+                boolean failed = false;
+                for (TypeRef parameter : function.parameters()) {
+                    Type resolved = resolve(parameter, false);
+                    failed |= resolved.isError();
+                    parameters.add(resolved);
+                }
+                Type returnType = function.returnType() == null ? PrimitiveType.VOID : resolve(function.returnType(), true);
+                yield failed || returnType.isError() ? Types.ERROR : Types.function(parameters, returnType);
+            }
         };
         if (type == PrimitiveType.VOID && !allowVoid) {
             context.error(DiagnosticCode.TYPE_MISMATCH, ref.span(), "'void' can only be used as a return type.");
@@ -93,6 +113,9 @@ final class TypeResolver {
         }
         Type type = PRIMITIVES.get(name);
         if (type == null) {
+            type = recordType(name);
+        }
+        if (type == null) {
             type = context.registry().type(name).orElse(null);
         }
         if (type == null) {
@@ -104,6 +127,25 @@ final class TypeResolver {
             return Types.ERROR;
         }
         return type;
+    }
+
+    /** A record of this module, an imported record ({@code Warp}) or a record of an imported module ({@code shop.Warp}). */
+    private ClassType recordType(String name) {
+        RecordSymbol own = context.records().get(name);
+        if (own != null) {
+            return own.type();
+        }
+        if (context.importedNames().get(name) instanceof RecordSymbol imported) {
+            return imported.type();
+        }
+        int dot = name.lastIndexOf('.');
+        if (dot > 0) {
+            BoundModule module = context.moduleAliases().get(name.substring(0, dot));
+            if (module != null && module.member(name.substring(dot + 1)) instanceof RecordSymbol record) {
+                return record.type();
+            }
+        }
+        return null;
     }
 
     private void reportUnknown(TypeRef.Named named, String name) {
@@ -125,12 +167,14 @@ final class TypeResolver {
         for (ClassType type : context.registry().types()) {
             names.add(type.name());
         }
+        names.addAll(context.records().keySet());
         return names;
     }
 
     /** Whether {@code name} denotes a type (used to explain "type used as a value"). */
     boolean isTypeName(String name) {
         return PRIMITIVES.containsKey(name) || name.equals("List") || name.equals("Map")
-                || context.registry().type(name).isPresent() || SymbolRegistry.isReservedTypeName(name);
+                || context.registry().type(name).isPresent() || SymbolRegistry.isReservedTypeName(name)
+                || recordType(name) != null;
     }
 }

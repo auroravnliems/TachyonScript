@@ -22,21 +22,72 @@ public final class BoundPrinter {
                     .append(constant.value() instanceof String text ? quote(text) : String.valueOf(constant.value()))
                     .append(")\n");
         }
+        for (GlobalSymbol global : module.globals()) {
+            out.append("(global ").append(global).append(")\n");
+        }
+        for (RecordSymbol record : module.records()) {
+            out.append("(record ").append(record.name()).append(" (");
+            for (int i = 0; i < record.fields().size(); i++) {
+                RecordSymbol.Field field = record.fields().get(i);
+                out.append(i == 0 ? "" : " ").append(field.name()).append(':').append(field.type().displayName());
+            }
+            out.append("))\n");
+        }
+        if (module.initializer() != null) {
+            out.append(print(module.initializer())).append('\n');
+        }
+        module.defaults().forEach((global, function) -> out.append("(default ").append(global.name()).append(' ')
+                .append(print(function.body())).append(")\n"));
         for (BoundFunction function : module.functions()) {
             out.append(print(function)).append('\n');
         }
         for (BoundEventHandler handler : module.handlers()) {
             out.append(print(handler)).append('\n');
         }
+        for (BoundCommand command : module.commands()) {
+            out.append("(command /").append(String.join(" ", command.path()));
+            for (BoundCommand.Parameter parameter : command.parameters()) {
+                out.append(' ').append(parameter.name()).append(':').append(parameter.type().displayName());
+                if (parameter.optional()) {
+                    out.append('?');
+                }
+                if (parameter.rest()) {
+                    out.append("...");
+                }
+            }
+            out.append(' ').append(print(command.function().body())).append(")\n");
+        }
+        for (BoundTask task : module.tasks()) {
+            out.append(task.intervalMillis() > 0 ? "(every " + task.intervalMillis() + "ms " : "(at " + task.dailyMinute() + "min ")
+                    .append(print(task.function().body())).append(")\n");
+        }
+        for (BoundFunction hook : module.loadHooks()) {
+            out.append("(on-load ").append(print(hook.body())).append(")\n");
+        }
+        for (BoundFunction hook : module.unloadHooks()) {
+            out.append("(on-unload ").append(print(hook.body())).append(")\n");
+        }
+        for (BoundPlaceholder placeholder : module.placeholders()) {
+            out.append("(placeholder ").append(placeholder.name()).append(' ')
+                    .append(print(placeholder.function().body())).append(")\n");
+        }
         return out.toString();
     }
 
     public static String print(BoundFunction function) {
-        return "(function " + function.symbol() + " " + print(function.body()) + ")";
+        return "(function " + (function.symbol() != null ? function.symbol().toString() : function.key()) + " "
+                + print(function.body()) + ")";
     }
 
     public static String print(BoundEventHandler handler) {
-        StringBuilder out = new StringBuilder("(event ").append(handler.event().name()).append(" [");
+        StringBuilder out = new StringBuilder("(event ").append(handler.event().name());
+        if (handler.priority() != BoundEventHandler.NORMAL_PRIORITY) {
+            out.append(" @").append(BoundEventHandler.PRIORITIES.get(handler.priority()));
+        }
+        if (handler.ignoreCancelled()) {
+            out.append(" @ignoreCancelled");
+        }
+        out.append(" [");
         for (int i = 0; i < handler.eventVariables().size(); i++) {
             out.append(i == 0 ? "" : " ").append(handler.eventVariables().get(i).name());
         }
@@ -73,6 +124,18 @@ public final class BoundPrinter {
             case BoundStatement.Return ret -> ret.value() == null ? "(return)" : "(return " + print(ret.value()) + ")";
             case BoundStatement.Break ignored -> "(break)";
             case BoundStatement.Continue ignored -> "(continue)";
+            case BoundStatement.GlobalStore store -> "(global-set " + store.global().name() + " " + print(store.value()) + ")";
+            case BoundStatement.GlobalAdd add -> "(global-add " + add.global().name() + " " + print(add.delta()) + ")";
+            case BoundStatement.PlayerDataStore store -> "(playerdata-set " + store.global().name() + " "
+                    + print(store.owner()) + " " + print(store.value()) + ")";
+            case BoundStatement.PlayerDataAdd add -> "(playerdata-add " + add.global().name() + " "
+                    + print(add.owner()) + " " + print(add.delta()) + ")";
+            case BoundStatement.Try tryStatement -> "(try " + print(tryStatement.body())
+                    + (tryStatement.catchBody() != null ? " (catch " + tryStatement.catchLocal().name() + " "
+                    + print(tryStatement.catchBody()) + ")" : "")
+                    + (tryStatement.finallyBody() != null ? " (finally " + print(tryStatement.finallyBody()) + ")" : "")
+                    + ")";
+            case BoundStatement.Throw throwStatement -> "(throw " + print(throwStatement.value()) + ")";
         };
     }
 
@@ -119,6 +182,46 @@ public final class BoundPrinter {
             case BoundExpression.ListContains contains -> "(list-contains " + print(contains.list()) + " "
                     + print(contains.element()) + ")";
             case BoundExpression.ListAdd add -> "(list-add " + print(add.list()) + " " + print(add.element()) + ")";
+            case BoundExpression.KeyedConstant constant -> constant.type().name() + "." + constant.name();
+            case BoundExpression.GlobalLoad load -> load.type().equals(load.global().type())
+                    ? "@" + load.global().name() : "@" + load.global().name() + "!" + load.type().displayName();
+            case BoundExpression.PlayerDataLoad load -> "(playerdata " + load.global().name() + " " + print(load.owner()) + ")";
+            case BoundExpression.Lambda lambda -> {
+                StringBuilder out = new StringBuilder("(lambda ").append(lambda.key()).append(" [");
+                for (int i = 0; i < lambda.captures().size(); i++) {
+                    out.append(i == 0 ? "" : " ").append(lambda.captures().get(i).name()).append('=')
+                            .append(print(lambda.captureValues().get(i)));
+                }
+                out.append("] (");
+                for (int i = 0; i < lambda.parameters().size(); i++) {
+                    LocalSymbol parameter = lambda.parameters().get(i);
+                    out.append(i == 0 ? "" : " ").append(parameter.name()).append(':').append(parameter.type().displayName());
+                }
+                yield out.append("): ").append(lambda.returnType().displayName()).append(' ').append(print(lambda.body()))
+                        .append(')').toString();
+            }
+            case BoundExpression.FunctionReference reference -> "(function-ref " + reference.function().key() + ")";
+            case BoundExpression.ClosureCall call -> {
+                StringBuilder out = new StringBuilder("(call-value ").append(print(call.callee()));
+                for (BoundExpression argument : call.arguments()) {
+                    out.append(' ').append(print(argument));
+                }
+                yield out.append(')').toString();
+            }
+            case BoundExpression.Conditional conditional -> "(? " + print(conditional.condition()) + " "
+                    + print(conditional.whenTrue()) + " " + print(conditional.whenFalse()) + ")";
+            case BoundExpression.MapLiteral map -> {
+                StringBuilder out = new StringBuilder("(map:").append(map.type().displayName());
+                for (int i = 0; i < map.keys().size(); i++) {
+                    out.append(' ').append(print(map.keys().get(i))).append(':').append(print(map.values().get(i)));
+                }
+                yield out.append(')').toString();
+            }
+            case BoundExpression.NewRecord record -> call("new " + record.record().name(), record.fields());
+            case BoundExpression.RecordGet get -> "(field " + print(get.receiver()) + " " + get.field().name() + ")";
+            case BoundExpression.Let let -> "(let " + let.local().name() + " " + print(let.value()) + " "
+                    + print(let.body()) + ")";
+            case BoundExpression.GlobalRestore restore -> "(restore " + restore.global().name() + ")";
             case BoundExpression.Error ignored -> "<error>";
         };
     }
@@ -131,7 +234,8 @@ public final class BoundPrinter {
         if (value instanceof String text) {
             return quote(text);
         }
-        String suffix = literal.type() == Types.DURATION ? "ms" : ":" + literal.type().displayName();
+        String suffix = literal.type() == Types.DURATION ? "ms"
+                : literal.type() == Types.INSTANT ? "@epoch" : ":" + literal.type().displayName();
         return value + suffix;
     }
 

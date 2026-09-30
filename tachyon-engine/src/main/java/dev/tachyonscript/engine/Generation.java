@@ -6,10 +6,12 @@ import dev.tachyonscript.runtime.event.HandlerTable;
 
 import java.time.Instant;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 /**
  * One immutable, fully linked set of active scripts. Reloading builds a new generation and
@@ -20,14 +22,19 @@ public final class Generation {
     private final long id;
     private final Map<String, LoadedScript> scripts;
     private final HandlerTable handlers;
-    private final Set<EventDeclaration> activeEvents;
+    private final Map<EventDeclaration, Set<Integer>> priorities;
     private final Instant created;
 
-    Generation(long id, Map<String, LoadedScript> scripts, HandlerTable handlers, Set<EventDeclaration> activeEvents) {
+    Generation(long id, Map<String, LoadedScript> scripts, HandlerTable handlers, Iterable<CompiledHandler> all) {
         this.id = id;
         this.scripts = Collections.unmodifiableMap(new TreeMap<>(scripts));
         this.handlers = handlers;
-        this.activeEvents = Collections.unmodifiableSet(new LinkedHashSet<>(activeEvents));
+        Map<EventDeclaration, Set<Integer>> used = new LinkedHashMap<>();
+        for (CompiledHandler handler : all) {
+            used.computeIfAbsent(handler.event(), event -> new TreeSet<>()).add(handler.priority());
+        }
+        used.replaceAll((event, levels) -> Collections.unmodifiableSet(levels));
+        this.priorities = Collections.unmodifiableMap(used);
         this.created = Instant.now();
     }
 
@@ -44,8 +51,14 @@ public final class Generation {
         return handlers;
     }
 
+    /** Events with handlers. */
     public Set<EventDeclaration> activeEvents() {
-        return activeEvents;
+        return Collections.unmodifiableSet(new LinkedHashSet<>(priorities.keySet()));
+    }
+
+    /** For each event with handlers, the priorities they use. */
+    public Map<EventDeclaration, Set<Integer>> activePriorities() {
+        return priorities;
     }
 
     public Instant created() {
@@ -56,13 +69,5 @@ public final class Generation {
     public long handlerCount(String path) {
         LoadedScript script = scripts.get(path);
         return script == null ? 0 : script.linked().handlers().size();
-    }
-
-    static Set<EventDeclaration> eventsOf(Iterable<CompiledHandler> handlers) {
-        Set<EventDeclaration> events = new LinkedHashSet<>();
-        for (CompiledHandler handler : handlers) {
-            events.add(handler.event());
-        }
-        return events;
     }
 }

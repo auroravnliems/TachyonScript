@@ -1,0 +1,259 @@
+# Items, materials, enchantments, inventories, menus.
+
+area Items
+
+# ------------------------------------------------------------------ creating items
+
+fn ItemStack(material: Material): ItemStack : One item of a material.
+  do: Items.of(material, 1)
+  ex: player.give(ItemStack(Material.DIAMOND_SWORD))
+fn ItemStack(material: Material, amount: int): ItemStack : Items of a material.
+  do: Items.of(material, amount)
+fn ItemStack(material: Material, amount: int, name: Component): ItemStack : Items with a custom name.
+  do: Items.named(Items.of(material, amount), name, null)
+  ex: let sword = ItemStack(Material.DIAMOND_SWORD, 1, "<gold>Excalibur")
+fn ItemStack(material: Material, amount: int, name: Component, lore: List<Component>): ItemStack : Items with a custom name and lore lines.
+  do: Items.named(Items.of(material, amount), name, lore)
+  ex: let key = ItemStack(Material.TRIPWIRE_HOOK, 1, "<yellow>Crate key", ["<gray>Right-click a crate", "<gray>to open it"])
+
+# ------------------------------------------------------------------ ItemStack
+
+prop ItemStack.type: Material rw : The item's material.
+  get: $.getType()
+  set: $.setType(v)
+prop ItemStack.amount: int rw : How many items the stack holds.
+  get: $.getAmount()
+  set: $.setAmount(Math.max(0, Math.min(99, v)))
+prop ItemStack.maxStackSize: int : The largest amount a stack of this item can hold.
+  get: $.getMaxStackSize()
+prop ItemStack.name: Component? rw : The custom name, or null if the item has none.
+  get: Items.name($)
+  set: Items.setName($, v)
+prop ItemStack.displayName: Component : The name shown for the item: its custom name, or the translated material name.
+  get: $.effectiveName()
+prop ItemStack.lore: List<Component> rw : The lines below the name.
+  get: Items.lore($)
+  set: Items.setLore($, v)
+fn ItemStack.addLore(line: Component) : Adds a line below the existing lore.
+  do: Items.addLore($, line)
+prop ItemStack.enchantments: Map<Enchantment, int> : The item's enchantments and their levels.
+  get: Items.enchantments($)
+fn ItemStack.enchant(enchantment: Enchantment, level: int) : Adds an enchantment at any level (levels above the normal maximum are allowed).
+  do: Items.enchant($, enchantment, level)
+  ex: let sword = ItemStack(Material.DIAMOND_SWORD)\nsword.enchant(Enchantment.SHARPNESS, 10)\nplayer.give(sword)
+fn ItemStack.removeEnchant(enchantment: Enchantment) : Removes an enchantment.
+  do: Items.removeEnchant($, enchantment)
+fn ItemStack.hasEnchant(enchantment: Enchantment): bool : Whether the item has an enchantment.
+  do: $.containsEnchantment(enchantment)
+fn ItemStack.enchantLevel(enchantment: Enchantment): int : The level of an enchantment, or 0.
+  do: $.getEnchantmentLevel(enchantment)
+prop ItemStack.unbreakable: bool rw : Whether the item never loses durability.
+  get: Items.unbreakable($)
+  set: Items.setUnbreakable($, v)
+prop ItemStack.damage: int rw : How much durability the item has lost.
+  get: Items.damage($)
+  set: Items.setDamage($, v)
+prop ItemStack.maxDamage: int : The durability of a new item of this material (0 if it has none).
+  get: $.getType().getMaxDurability()
+prop ItemStack.glowing: bool rw : Whether the item shines like an enchanted item.
+  get: Items.glowing($)
+  set: Items.setGlowing($, v)
+prop ItemStack.customModelData: int rw : A number resource packs use to change the model (0 for none).
+  get: Items.customModelData($)
+  set: Items.setCustomModelData($, v)
+prop ItemStack.itemModel: string? rw : The model key from a resource pack (e.g. 'myserver:ruby'), or null.
+  get: Items.itemModel($)
+  set: Items.setItemModel($, v)
+prop ItemStack.hideTooltip: bool rw : Whether the item shows no tooltip at all.
+  get: Items.hideTooltip($)
+  set: Items.setHideTooltip($, v)
+prop ItemStack.color: Color? rw : The color of leather armor or a potion, or null if the item cannot be dyed.
+  get: Items.color($)
+  set: Items.setColor($, v)
+prop ItemStack.skullOwner: OfflinePlayer? rw : The player whose head this is (player heads only).
+  get: Items.skullOwner($)
+  set: Items.setSkullOwner($, v)
+fn ItemStack.addFlags(flag: ItemFlag) : Hides part of the tooltip.
+  do: Items.addFlag($, flag)
+fn ItemStack.removeFlags(flag: ItemFlag) : Shows a hidden part of the tooltip again.
+  do: Items.removeFlag($, flag)
+fn ItemStack.hasFlag(flag: ItemFlag): bool : Whether part of the tooltip is hidden.
+  do: Items.hasFlag($, flag)
+prop ItemStack.isEmpty: bool : Whether the stack is air or has no items.
+  get: $.isEmpty()
+fn ItemStack.isSimilar(other: ItemStack): bool : Whether two stacks are the same item, ignoring the amount.
+  do: $.isSimilar(other)
+fn ItemStack.clone(): ItemStack : An independent copy of the stack.
+  do: $.clone()
+fn ItemStack.withAmount(amount: int): ItemStack : A copy with another amount.
+  do: $.asQuantity(Math.max(1, Math.min(99, amount)))
+fn ItemStack.toString(): string : Text such as '3x diamond' or '1x Excalibur'.
+  do: Items.describe($)
+
+# ------------------------------------------------------------------ Material and enchantments
+
+prop Material.key: string : The material's key, e.g. 'minecraft:diamond'.
+  get: $.getKey().asString()
+prop Material.isBlock: bool : Whether the material can be placed as a block.
+  get: $.isBlock()
+prop Material.isItem: bool : Whether the material exists as an item.
+  get: $.isItem()
+prop Material.isAir: bool : Whether the material is a kind of air.
+  get: $.isAir()
+prop Material.isSolid: bool : Whether the block is solid.
+  get: $.isSolid()
+prop Material.isEdible: bool : Whether the item can be eaten.
+  get: $.isEdible()
+prop Material.isFlammable: bool : Whether the block catches fire.
+  get: $.isFlammable()
+prop Material.isFuel: bool : Whether the item burns in a furnace.
+  get: $.isFuel()
+prop Material.hasGravity: bool : Whether the block falls (sand, gravel, ...).
+  get: $.hasGravity()
+prop Material.maxStackSize: int : The largest stack of this material.
+  get: $.getMaxStackSize()
+prop Material.maxDurability: int : The durability of tools and armor of this material (0 if none).
+  get: $.getMaxDurability()
+prop Material.hardness: double : How long the block takes to break.
+  get: $.getHardness()
+prop Material.blastResistance: double : How well the block resists explosions.
+  get: $.getBlastResistance()
+prop Material.prettyName: string : A readable name, e.g. 'Diamond Sword'.
+  get: Texts.pretty($.getKey().getKey())
+fn Material.toString(): string : The material's key without 'minecraft:', e.g. 'diamond_sword'.
+  do: Texts.keyText($.getKey())
+fn Material.matchMaterial(name: string): Material? static : The material with a name such as 'diamond_sword' or 'minecraft:stone', or null.
+  do: Items.material(name)
+fn Material.values(): List<Material> static : Every material (without legacy ones).
+  do: Items.materials()
+prop Enchantment.key: string : The enchantment's key, e.g. 'minecraft:sharpness'.
+  get: $.getKey().asString()
+prop Enchantment.maxLevel: int : The highest normal level.
+  get: $.getMaxLevel()
+prop Enchantment.isCursed: bool : Whether the enchantment is a curse.
+  get: $.isCursed()
+fn Enchantment.canEnchantItem(item: ItemStack): bool : Whether the enchantment normally applies to an item.
+  do: $.canEnchantItem(item)
+fn Enchantment.toString(): string : The enchantment's key without 'minecraft:'.
+  do: Texts.keyText($.getKey())
+
+# ------------------------------------------------------------------ inventories
+
+fn Inventory(rows: int, title: Component): Inventory : A new chest inventory with 1 to 6 rows (it belongs to no block).
+  do: Items.inventory(rows, title)
+fn Inventory(type: InventoryType, title: Component): Inventory : A new inventory of a kind (hopper, dispenser, ...).
+  do: Bukkit.createInventory(null, type, title)
+prop Inventory.size: int : The number of slots.
+  get: $.getSize()
+prop Inventory.type: InventoryType : The kind of inventory.
+  get: $.getType()
+prop Inventory.contents: List<ItemStack?> rw : Every slot, with null for empty slots.
+  get: Items.contents($)
+  set: ctx.forInventory($, () -> Items.setContents($, v))
+prop Inventory.isEmpty: bool : Whether every slot is empty.
+  get: $.isEmpty()
+prop Inventory.firstEmpty: int : The first empty slot, or -1 if the inventory is full.
+  get: $.firstEmpty()
+prop Inventory.viewers: List<Player> : The players looking at the inventory.
+  get: Items.viewers($)
+prop Inventory.location: Location? : Where the inventory's block or entity is, or null.
+  get: $.getLocation()
+fn Inventory.get(slot: int): ItemStack? : The items in a slot, or null if it is empty.
+  do: Items.get($, slot)
+fn Inventory.set(slot: int, item: ItemStack?) : Puts items in a slot (null empties it).
+  do: ctx.forInventory($, () -> Items.set($, slot, item))
+fn Inventory.add(item: ItemStack): int : Adds items where they fit; returns how many did not fit.
+  do: ctx.callInventory($, () -> Items.add($, item))
+fn Inventory.remove(material: Material, amount: int): int : Removes up to an amount of a material; returns how many were removed.
+  do: ctx.callInventory($, () -> Items.remove($, material, amount))
+  ex: if player.inventory.count(Material.GOLD_INGOT) >= 10 {\n    player.inventory.remove(Material.GOLD_INGOT, 10)\n    player.give(ItemStack(Material.DIAMOND))\n}
+fn Inventory.removeItem(item: ItemStack): int : Removes items similar to a stack, up to its amount; returns how many were removed.
+  do: ctx.callInventory($, () -> Items.removeSimilar($, item))
+fn Inventory.contains(material: Material): bool : Whether the inventory holds a material.
+  do: $.contains(material)
+fn Inventory.contains(material: Material, amount: int): bool : Whether the inventory holds at least an amount of a material.
+  do: Items.count($, material) >= amount
+fn Inventory.containsAtLeast(item: ItemStack, amount: int): bool : Whether the inventory holds at least an amount of items similar to a stack.
+  do: $.containsAtLeast(item, amount)
+fn Inventory.count(material: Material): int : How many items of a material the inventory holds.
+  do: Items.count($, material)
+fn Inventory.hasSpace(item: ItemStack): bool : Whether all the items would fit.
+  do: Items.fits($, item)
+fn Inventory.clear() : Empties every slot.
+  do: ctx.forInventory($, () -> $.clear())
+fn Inventory.clear(slot: int) : Empties a slot.
+  do: ctx.forInventory($, () -> $.clear(slot))
+prop PlayerInventory.heldSlot: int rw : The selected hotbar slot, 0 to 8.
+  get: $.getHeldItemSlot()
+  set: ctx.forInventory($, () -> $.setHeldItemSlot(Math.max(0, Math.min(8, v))))
+
+# ------------------------------------------------------------------ menus
+
+fn Menu(rows: int, title: Component): Menu : A chest menu with 1 to 6 rows. Clicks are cancelled unless allowTaking is set.
+  do: ScriptMenu.create(ctx, rows, title)
+  ex: let menu = Menu(3, "<dark_green>Shop")\nmenu.set(13, ItemStack(Material.BREAD, 16), click => {\n    click.player.give(ItemStack(Material.BREAD, 16))\n    click.close()\n})\nmenu.open(player)
+  details: A menu belongs to the script that created it: reloading the script closes it. Slots count from 0 (top left) to rows * 9 - 1.
+fn Menu(type: InventoryType, title: Component): Menu : A menu of another shape (hopper, dispenser, ...).
+  do: ScriptMenu.create(ctx, type, title)
+fn Menu.slot(row: int, column: int): int static : The slot index of a row and a column, both counted from 0.
+  do: row * 9 + column
+prop Menu.title: Component : The menu's title.
+  get: $.title()
+prop Menu.size: int : The number of slots.
+  get: $.inventory().getSize()
+prop Menu.rows: int : The number of rows.
+  get: $.inventory().getSize() / 9
+prop Menu.inventory: Inventory : The menu's inventory.
+  get: $.inventory()
+prop Menu.viewers: List<Player> : The players looking at the menu.
+  get: Items.viewers($.inventory())
+prop Menu.allowTaking: bool rw : Whether players may take and put items (false: every click is cancelled).
+  get: $.allowTaking()
+  set: $.allowTaking(v)
+fn Menu.set(slot: int, item: ItemStack?) : Puts an item in a slot without a click handler.
+  do: $.set(slot, item, null)
+fn Menu.set(slot: int, item: ItemStack?, onClick: function(MenuClick)) : Puts an item in a slot; the function runs when it is clicked.
+  do: $.set(slot, item, onClick)
+fn Menu.onClick(slot: int, onClick: function(MenuClick)) : Sets the click handler of a slot.
+  do: $.handler(slot, onClick)
+fn Menu.get(slot: int): ItemStack? : The item in a slot, or null.
+  do: Items.get($.inventory(), slot)
+fn Menu.fill(item: ItemStack) : Puts an item in every empty slot.
+  do: $.fill(item)
+fn Menu.fillBorder(item: ItemStack) : Puts an item in every empty slot of the outer rows and columns.
+  do: $.fillBorder(item)
+fn Menu.clear() : Empties every slot and removes the click handlers.
+  do: $.clear()
+fn Menu.onOpen(handler: function(Player)) : Runs a function when a player opens the menu.
+  do: $.onOpen(handler)
+fn Menu.onClose(handler: function(Player)) : Runs a function when a player closes the menu.
+  do: $.onClose(handler)
+fn Menu.open(player: Player) entity(player) modifies : Shows the menu to a player.
+  do: Screens.change(ctx.plugin(), player, () -> player.openInventory($.inventory()))
+fn Menu.close() : Closes the menu for every viewer.
+  do: $.closeAll()
+prop MenuClick.player: Player : The player who clicked.
+  get: $.player()
+prop MenuClick.slot: int : The clicked slot.
+  get: $.slot()
+prop MenuClick.click: ClickType : How the slot was clicked.
+  get: $.click()
+prop MenuClick.item: ItemStack? : The item in the clicked slot, or null.
+  get: $.item()
+prop MenuClick.cursor: ItemStack? : The item on the player's cursor, or null.
+  get: $.cursor()
+prop MenuClick.menu: Menu : The menu.
+  get: $.menu()
+prop MenuClick.left: bool : Whether it was a left click.
+  get: $.click().isLeftClick()
+prop MenuClick.right: bool : Whether it was a right click.
+  get: $.click().isRightClick()
+prop MenuClick.shift: bool : Whether shift was held.
+  get: $.click().isShiftClick()
+prop MenuClick.hotbarButton: int : The number key pressed (0 to 8), or -1.
+  get: $.hotbarButton()
+prop MenuClick.cancelled: bool rw : Whether the click is cancelled (the item stays in place).
+  get: $.cancelled()
+  set: $.cancelled(v)
+fn MenuClick.close() : Closes the menu for this player (right after the click).
+  do: $.close()

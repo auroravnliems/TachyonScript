@@ -22,6 +22,56 @@ runtime:
   # Execution backend. Only 'interpreter' exists yet; the bytecode backend is planned.
   backend: interpreter
 
+storage:
+  # Where 'persistent var' and 'playerdata var' values are saved:
+  #   sqlite - a file in the plugin folder (the default; nothing to set up)
+  #   mysql  - a MySQL or MariaDB server (share data between servers)
+  #   memory - not saved at all (for testing)
+  type: sqlite
+  sqlite-file: data.db
+  mysql:
+    host: localhost
+    port: 3306
+    database: minecraft
+    user: root
+    password: ''
+    # Extra JDBC connection properties, for example useSSL: 'false'.
+    properties: {}
+  # How often changed values are written, in seconds. They are also written when a player
+  # leaves, on reload and on shutdown. 0 writes only then.
+  flush-interval-seconds: 30
+
+# Databases scripts open with Database("name"). SQLite files are relative to the plugin folder.
+# Scripts can also open their own SQLite files with Database.sqlite("file.db") (in the
+# 'databases' folder) without any configuration.
+databases: {}
+#  main:
+#    type: sqlite
+#    file: databases/main.db
+#  network:
+#    type: mysql
+#    host: localhost
+#    port: 3306
+#    database: network
+#    user: minecraft
+#    password: secret
+#    pool-size: 4
+#    properties:
+#      useSSL: 'false'
+
+commands:
+  # Messages of script commands (MiniMessage). Values in <...> are inserted as plain text.
+  messages:
+    no-permission: '<red>You do not have permission to use this command.'
+    player-only: '<red>Only players can use this command.'
+    cooldown: '<red>Please wait <remaining> before using this command again.'
+    not-a-number: "<red>'<input>' is not a number."
+    invalid-argument: '<red><message>'
+    missing-argument: '<red>Missing <name>. Usage: <usage>'
+    too-many-arguments: '<red>Too many arguments. Usage: <usage>'
+    error: '<red>An error occurred while running this command.'
+    subcommands: '<gold>/<label></gold> <gray>sub-commands:</gray> <commands>'
+
 debug:
   # Include Java causes in runtime error reports and enable log.debug(...) output.
   enabled: false

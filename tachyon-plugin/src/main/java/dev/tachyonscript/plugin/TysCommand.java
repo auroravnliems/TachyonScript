@@ -58,6 +58,7 @@ final class TysCommand implements CommandExecutor, TabCompleter {
         ERRORS("tachyonscript.admin", "", "Show compile errors and runtime errors"),
         PROFILE("tachyonscript.profile", "start|stop|report", "Measure script execution time"),
         DUMP("tachyonscript.debug", "<script> [ir|code]", "Print the compiled form of a script to the console"),
+        STATUS("tachyonscript.admin", "", "Show storage, databases, commands and placeholders"),
         VERSION("tachyonscript.admin", "", "Show version information");
 
         final String permission;
@@ -115,6 +116,7 @@ final class TysCommand implements CommandExecutor, TabCompleter {
             case ERRORS -> errors(sender);
             case PROFILE -> profile(sender, rest);
             case DUMP -> dump(sender, rest);
+            case STATUS -> status(sender);
             case VERSION -> version(sender);
         }
         return true;
@@ -346,6 +348,23 @@ final class TysCommand implements CommandExecutor, TabCompleter {
         if (!(sender instanceof ConsoleCommandSender)) {
             info(sender, "The " + kind + " of " + path + " was printed to the server console.");
         }
+    }
+
+    private void status(CommandSender sender) {
+        ScriptEngine engine = plugin.engine();
+        send(sender, Component.text("TachyonScript status", ACCENT));
+        field(sender, "Saved variables", engine.data().backend().describe() + ", written every "
+                + (engine.data().flushIntervalMillis() / 1000) + " s");
+        List<String> databases = engine.databases().configuredNames();
+        field(sender, "Databases", databases.isEmpty() ? "none configured (scripts can use Database.sqlite)"
+                : String.join(", ", databases));
+        List<String> commands = engine.commandNames();
+        field(sender, "Script commands", commands.isEmpty() ? "none" : "/" + String.join(", /", commands));
+        Set<String> placeholders = new TreeSet<>(engine.placeholderNames());
+        field(sender, "Placeholders", placeholders.isEmpty() ? "none" : "%tys_" + String.join("%, %tys_", placeholders) + "%");
+        field(sender, "PlaceholderAPI", plugin.getServer().getPluginManager().isPluginEnabled("PlaceholderAPI")
+                ? "connected" : "not installed");
+        field(sender, "Vault", plugin.getServer().getPluginManager().isPluginEnabled("Vault") ? "installed" : "not installed");
     }
 
     private void version(CommandSender sender) {

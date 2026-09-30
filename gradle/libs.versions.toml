@@ -14,3 +14,5 @@ junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher
 jmh-core = { module = "org.openjdk.jmh:jmh-core", version.ref = "jmh" }
 jmh-annprocess = { module = "org.openjdk.jmh:jmh-generator-annprocess", version.ref = "jmh" }
 paper-api = { module = "io.papermc.paper:paper-api", version.ref = "paper" }
+# The SQLite driver Paper ships with (tests only: on a server Paper provides it).
+sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version = "3.49.1.0" }

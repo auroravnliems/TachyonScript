@@ -162,6 +162,7 @@ final class BukkitFakes {
         private final boolean folia;
         int entityWrites;
         int globalWrites;
+        int regionWrites;
         final List<Entity> entities = new ArrayList<>();
 
         InlineThreading(boolean folia) {
@@ -184,6 +185,32 @@ final class BukkitFakes {
         public void global(Runnable action) {
             globalWrites++;
             action.run();
+        }
+
+        @Override
+        public void forRegion(org.bukkit.Location location, Runnable action) {
+            regionWrites++;
+            action.run();
+        }
+
+        @Override
+        public boolean ownsEntity(Entity entity) {
+            return true;
+        }
+
+        @Override
+        public boolean ownsRegion(org.bukkit.Location location) {
+            return true;
+        }
+
+        @Override
+        public boolean ownsGlobal() {
+            return true;
+        }
+
+        @Override
+        public boolean onTickThread() {
+            return true;
         }
     }
 }

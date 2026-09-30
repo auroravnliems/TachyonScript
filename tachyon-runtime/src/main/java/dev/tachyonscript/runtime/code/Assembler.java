@@ -5,10 +5,13 @@ import dev.tachyonscript.api.type.ClassType;
 import dev.tachyonscript.api.type.Representation;
 import dev.tachyonscript.ir.BinaryOp;
 import dev.tachyonscript.ir.ConvertOp;
+import dev.tachyonscript.ir.FunctionRef;
+import dev.tachyonscript.ir.GlobalRef;
 import dev.tachyonscript.ir.Instruction;
 import dev.tachyonscript.ir.IrBlock;
 import dev.tachyonscript.ir.IrFunction;
 import dev.tachyonscript.ir.IrModule;
+import dev.tachyonscript.ir.RecordRef;
 import dev.tachyonscript.ir.Register;
 import dev.tachyonscript.ir.Spans;
 import dev.tachyonscript.ir.Terminator;
@@ -27,7 +30,8 @@ import java.util.Map;
  * are laid out in IR order; jumps to the next block become fall-throughs and two-way
  * branches pick the conditional form that falls through. Loop back edges become
  * {@link Opcodes#LOOP}, the only place the runtime checks its execution budget. A pc →
- * source span table is recorded for error reporting.
+ * source span table is recorded for error reporting, and a pc-range → handler table for
+ * {@code try} blocks (consecutive blocks with the same handler share one range).
  */
 public final class Assembler {
 
@@ -45,9 +49,10 @@ public final class Assembler {
         }
         List<AssembledModule.Handler> handlers = new ArrayList<>();
         for (IrModule.EventHandler handler : module.handlers()) {
-            handlers.add(new AssembledModule.Handler(handler.event(), handler.function()));
+            handlers.add(new AssembledModule.Handler(handler.event(), handler.function(), handler.priority(),
+                    handler.ignoreCancelled()));
         }
-        return new AssembledModule(module.name(), module.source(), units, handlers);
+        return new AssembledModule(module.name(), module.source(), units, handlers, module.globals(), module.records());
     }
 
     private final class FunctionAssembler {
@@ -64,9 +69,11 @@ public final class Assembler {
         private final Map<Long, Integer> primitivePool = new LinkedHashMap<>();
         private final Map<Object, Integer> referencePool = new LinkedHashMap<>();
         private final Map<NativeDeclaration, Integer> natives = new LinkedHashMap<>();
-        private final Map<String, Integer> functions = new LinkedHashMap<>();
+        private final Map<FunctionRef, Integer> functions = new LinkedHashMap<>();
         private final Map<ClassType, Integer> classes = new LinkedHashMap<>();
         private final Map<List<String>, Integer> templates = new LinkedHashMap<>();
+        private final Map<GlobalRef, Integer> globals = new LinkedHashMap<>();
+        private final Map<RecordRef, Integer> records = new LinkedHashMap<>();
         private final List<Integer> linePcs = new ArrayList<>();
         private final List<Long> lineSpans = new ArrayList<>();
         private long currentSpan = Long.MIN_VALUE;
@@ -86,6 +93,7 @@ public final class Assembler {
         CodeUnit assemble() {
             List<IrBlock> blocks = function.blocks();
             int[] blockStart = new int[blocks.size()];
+            int[] blockEnd = new int[blocks.size()];
             for (int b = 0; b < blocks.size(); b++) {
                 IrBlock block = blocks.get(b);
                 blockStart[b] = size;
@@ -93,6 +101,7 @@ public final class Assembler {
                     instruction(instruction);
                 }
                 terminator(block.terminator(), b + 1 < blocks.size() ? b + 1 : -1);
+                blockEnd[b] = size;
             }
             for (long[] fixup : fixups) {
                 code[(int) fixup[0]] = blockStart[(int) fixup[1]];
@@ -108,12 +117,37 @@ public final class Assembler {
             primitivePool.forEach((value, index) -> primitives[index] = value);
             Object[] references = new Object[referencePool.size()];
             referencePool.forEach((value, index) -> references[index] = value);
-            return new CodeUnit(function.key(), function.displayName(), Arrays.copyOf(code, size),
+            return new CodeUnit(function.key(), function.displayName(), function.kind(), Arrays.copyOf(code, size),
                     primitiveSlots, referenceSlots, parameterSlots, parameterIsReference, function.returnKind(),
                     primitives, references, List.copyOf(natives.keySet()), List.copyOf(functions.keySet()),
-                    List.copyOf(classes.keySet()), List.copyOf(templates.keySet()),
+                    List.copyOf(classes.keySet()), List.copyOf(templates.keySet()), List.copyOf(globals.keySet()),
+                    List.copyOf(records.keySet()), handlerTable(blocks, blockStart, blockEnd),
                     linePcs.stream().mapToInt(Integer::intValue).toArray(),
                     lineSpans.stream().mapToLong(Long::longValue).toArray(), function.span());
+        }
+
+        /** {@code (start, end, handlerPc, errorSlot)} for each run of consecutive blocks with the same handler. */
+        private int[] handlerTable(List<IrBlock> blocks, int[] blockStart, int[] blockEnd) {
+            List<int[]> ranges = new ArrayList<>();
+            for (IrBlock block : blocks) {
+                if (!block.hasHandler() || blockStart[block.index()] == blockEnd[block.index()]) {
+                    continue;
+                }
+                IrBlock handler = blocks.get(block.handler());
+                int handlerPc = blockStart[handler.index()];
+                int errorSlot = slot(((Instruction.Catch) handler.instructions().getFirst()).target());
+                int[] last = ranges.isEmpty() ? null : ranges.getLast();
+                if (last != null && last[1] == blockStart[block.index()] && last[2] == handlerPc && last[3] == errorSlot) {
+                    last[1] = blockEnd[block.index()];
+                } else {
+                    ranges.add(new int[] {blockStart[block.index()], blockEnd[block.index()], handlerPc, errorSlot});
+                }
+            }
+            int[] table = new int[ranges.size() * 4];
+            for (int i = 0; i < ranges.size(); i++) {
+                System.arraycopy(ranges.get(i), 0, table, i * 4, 4);
+            }
+            return table;
         }
 
         // ------------------------------------------------------------ instructions
@@ -122,6 +156,8 @@ public final class Assembler {
             mark(instruction.span());
             switch (instruction) {
                 case Instruction.Const constant -> constant(constant);
+                case Instruction.KeyedConst keyed -> emit(Opcodes.CONST_R, slot(keyed.target()),
+                        reference(new KeyedConstant(keyed.type(), keyed.key())));
                 case Instruction.Move move -> emit(move.target().kind() == Representation.REF ? Opcodes.MOV_R : Opcodes.MOV_P,
                         slot(move.target()), slot(move.source()));
                 case Instruction.Unary unary -> emit(unaryOpcode(unary.op()), slot(unary.target()), slot(unary.operand()));
@@ -135,6 +171,9 @@ public final class Assembler {
                         slot(cast.target()), slot(cast.operand()), index(classes, cast.type()));
                 case Instruction.CallNative call -> nativeCall(call);
                 case Instruction.Call call -> scriptCall(call);
+                case Instruction.NewClosure closure -> variadic(Opcodes.NEW_CLOSURE, slot(closure.target()),
+                        index(functions, closure.function()), closure.captures());
+                case Instruction.CallClosure call -> closureCall(call);
                 case Instruction.Concat concat -> variadic(Opcodes.CONCAT, slot(concat.target()), -1, concat.parts());
                 case Instruction.RenderTemplate template -> template(template);
                 case Instruction.NewList list -> variadic(Opcodes.NEW_LIST, slot(list.target()), -1, list.elements());
@@ -144,6 +183,36 @@ public final class Assembler {
                 case Instruction.ListAdd add -> emit(Opcodes.LIST_ADD, slot(add.list()), slot(add.value()));
                 case Instruction.ListContains contains -> emit(Opcodes.LIST_CONTAINS, slot(contains.target()),
                         slot(contains.list()), slot(contains.value()));
+                case Instruction.NewMap map -> {
+                    append(Opcodes.NEW_MAP);
+                    append(slot(map.target()));
+                    append(map.keys().size());
+                    for (int i = 0; i < map.keys().size(); i++) {
+                        append(slot(map.keys().get(i)));
+                        append(slot(map.values().get(i)));
+                    }
+                }
+                case Instruction.NewRecord record -> variadic(Opcodes.NEW_RECORD, slot(record.target()),
+                        index(records, record.record()), record.fields());
+                case Instruction.RecordGet get -> emit(Opcodes.RECORD_GET, slot(get.target()), slot(get.record()), get.index());
+                case Instruction.RecordTest test -> emit(Opcodes.RECORD_TEST, slot(test.target()), slot(test.operand()),
+                        index(records, test.record()));
+                case Instruction.RecordCast cast -> emit(cast.safe() ? Opcodes.SAFE_RECORD_CAST : Opcodes.RECORD_CAST,
+                        slot(cast.target()), slot(cast.operand()), index(records, cast.record()));
+                case Instruction.GlobalGet get -> emit(get.target().kind() == Representation.REF ? Opcodes.GLOBAL_GET_R
+                        : Opcodes.GLOBAL_GET_P, slot(get.target()), index(globals, get.global()));
+                case Instruction.GlobalSet set -> emit(set.value().kind() == Representation.REF ? Opcodes.GLOBAL_SET_R
+                        : Opcodes.GLOBAL_SET_P, index(globals, set.global()), slot(set.value()));
+                case Instruction.GlobalAdd add -> emit(Opcodes.GLOBAL_ADD, index(globals, add.global()), slot(add.delta()));
+                case Instruction.GlobalRestore restore -> emit(Opcodes.GLOBAL_RESTORE, slot(restore.target()),
+                        index(globals, restore.global()));
+                case Instruction.PlayerDataGet get -> playerDataGet(get);
+                case Instruction.PlayerDataSet set -> playerDataSet(set);
+                case Instruction.PlayerDataAdd add -> emit(Opcodes.PDATA_ADD, slot(add.owner()), slot(add.delta()),
+                        index(globals, add.data()));
+                case Instruction.Catch ignored -> {
+                    // The runtime stores the error into the catch register when it enters the handler.
+                }
             }
         }
 
@@ -183,9 +252,7 @@ public final class Assembler {
         }
 
         private void scriptCall(Instruction.Call call) {
-            IrFunction callee = module.function(call.function())
-                    .orElseThrow(() -> new IllegalStateException("Unknown function " + call.function()));
-            Representation result = callee.returnKind();
+            Representation result = call.function().returnType().representation();
             int functionIndex = index(functions, call.function());
             if (result == Representation.VOID) {
                 variadic(Opcodes.CALL_V, -1, functionIndex, call.arguments());
@@ -194,6 +261,42 @@ public final class Assembler {
             boolean reference = result == Representation.REF;
             int target = call.target() != null ? slot(call.target()) : scratch(reference);
             variadic(reference ? Opcodes.CALL_R : Opcodes.CALL_P, target, functionIndex, call.arguments());
+        }
+
+        private void closureCall(Instruction.CallClosure call) {
+            Representation result = ((dev.tachyonscript.api.type.FunctionType) call.closure().type().nonNullable())
+                    .returnType().representation();
+            int closure = slot(call.closure());
+            if (result == Representation.VOID) {
+                variadic(Opcodes.CALL_CLOSURE_V, -1, closure, call.arguments());
+                return;
+            }
+            boolean reference = result == Representation.REF;
+            int target = call.target() != null ? slot(call.target()) : scratch(reference);
+            variadic(reference ? Opcodes.CALL_CLOSURE_R : Opcodes.CALL_CLOSURE_P, target, closure, call.arguments());
+        }
+
+        /** Reads a player's value into a scratch reference, then unboxes primitives into the target. */
+        private void playerDataGet(Instruction.PlayerDataGet get) {
+            int data = index(globals, get.data());
+            if (get.target().kind() == Representation.REF) {
+                emit(Opcodes.PDATA_GET, slot(get.target()), slot(get.owner()), data);
+                return;
+            }
+            int boxed = scratch(true);
+            emit(Opcodes.PDATA_GET, boxed, slot(get.owner()), data);
+            emit(convertOpcode(ConvertOp.unbox(get.target().kind())), slot(get.target()), boxed);
+        }
+
+        private void playerDataSet(Instruction.PlayerDataSet set) {
+            int data = index(globals, set.data());
+            if (set.value().kind() == Representation.REF) {
+                emit(Opcodes.PDATA_SET, slot(set.owner()), slot(set.value()), data);
+                return;
+            }
+            int boxed = scratch(true);
+            emit(convertOpcode(ConvertOp.box(set.value().kind())), boxed, slot(set.value()));
+            emit(Opcodes.PDATA_SET, slot(set.owner()), boxed, data);
         }
 
         private void template(Instruction.RenderTemplate template) {
@@ -256,6 +359,7 @@ public final class Assembler {
                         emit(ret.value().kind() == Representation.REF ? Opcodes.RET_R : Opcodes.RET_P, slot(ret.value()));
                     }
                 }
+                case Terminator.Throw thrown -> emit(Opcodes.THROW, slot(thrown.value()));
                 case Terminator.Unreachable ignored -> append(Opcodes.UNREACHABLE);
             }
         }
@@ -382,6 +486,18 @@ public final class Assembler {
             case NE_BOOL -> Opcodes.NE_Z;
             case EQ_REF -> Opcodes.EQ_R;
             case NE_REF -> Opcodes.NE_R;
+            case AND_I32 -> Opcodes.AND_I;
+            case OR_I32 -> Opcodes.OR_I;
+            case XOR_I32 -> Opcodes.XOR_I;
+            case SHL_I32 -> Opcodes.SHL_I;
+            case SHR_I32 -> Opcodes.SHR_I;
+            case USHR_I32 -> Opcodes.USHR_I;
+            case AND_I64 -> Opcodes.AND_L;
+            case OR_I64 -> Opcodes.OR_L;
+            case XOR_I64 -> Opcodes.XOR_L;
+            case SHL_I64 -> Opcodes.SHL_L;
+            case SHR_I64 -> Opcodes.SHR_L;
+            case USHR_I64 -> Opcodes.USHR_L;
         };
     }
 
@@ -417,6 +533,7 @@ public final class Assembler {
             case DURATION_TO_STRING -> Opcodes.DUR2S;
             case REF_TO_STRING -> Opcodes.R2S;
             case STRING_TO_COMPONENT -> Opcodes.S2C;
+            case INSTANT_TO_STRING -> Opcodes.INST2S;
         };
     }
 }

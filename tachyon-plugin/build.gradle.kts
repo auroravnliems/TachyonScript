@@ -4,9 +4,17 @@ plugins {
 
 description = "The TachyonScript Paper plugin."
 
+// Compile-time stand-ins for optional plugin APIs (PlaceholderAPI). They are never packaged:
+// on a server the real classes are used, and only when the plugin is installed.
+sourceSets {
+    create("stubs")
+}
+
 dependencies {
     implementation(project(":tachyon-platform-paper"))
     compileOnly(libs.paper.api)
+    compileOnly(sourceSets["stubs"].output)
+    "stubsCompileOnly"(libs.paper.api)
     testImplementation(libs.paper.api)
 }
 

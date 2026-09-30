@@ -80,8 +80,8 @@ public sealed interface Expression extends Node {
     record Binary(BinaryOperator operator, Expression left, Expression right, Span span) implements Expression {
     }
 
-    /** {@code operand is Type} */
-    record Is(Expression operand, TypeRef type, Span span) implements Expression {
+    /** {@code operand is Type}, or {@code operand !is Type} when {@code negated}. */
+    record Is(Expression operand, TypeRef type, boolean negated, Span span) implements Expression {
     }
 
     /** {@code operand as Type}, or {@code operand as? Type} when {@code safe}. */
@@ -96,6 +96,50 @@ public sealed interface Expression extends Node {
     record ListLiteral(List<Expression> elements, Span span) implements Expression {
         public ListLiteral {
             elements = List.copyOf(elements);
+        }
+    }
+
+    /** One {@code key: value} entry of a map literal. */
+    record MapEntry(Expression key, Expression value, Span span) {
+    }
+
+    /** {@code {"a": 1, "b": 2}} or {@code {}} */
+    record MapLiteral(List<MapEntry> entries, Span span) implements Expression {
+        public MapLiteral {
+            entries = List.copyOf(entries);
+        }
+    }
+
+    /** A lambda parameter; {@code type} is {@code null} when it is inferred from the expected function type. */
+    record LambdaParameter(Identifier name, TypeRef type) {
+    }
+
+    /**
+     * {@code x => x * 2}, {@code (a, b) => a + b}, {@code (p: Player) => { ... }} or
+     * {@code () => ...}. Exactly one of {@code expressionBody} and {@code blockBody} is set.
+     */
+    record Lambda(List<LambdaParameter> parameters, Expression expressionBody, Statement.Block blockBody, Span span)
+            implements Expression {
+        public Lambda {
+            parameters = List.copyOf(parameters);
+        }
+    }
+
+    /** {@code condition ? whenTrue : whenFalse} */
+    record Conditional(Expression condition, Expression whenTrue, Expression whenFalse, Span span) implements Expression {
+    }
+
+    /** One {@code case a, b -> value} of a switch expression. */
+    record SwitchArm(List<Expression> labels, Expression value, Span span) {
+        public SwitchArm {
+            labels = List.copyOf(labels);
+        }
+    }
+
+    /** {@code switch subject { case a -> x; default -> y }} used as a value; {@code defaultValue} may be null. */
+    record Switch(Expression subject, List<SwitchArm> arms, Expression defaultValue, Span span) implements Expression {
+        public Switch {
+            arms = List.copyOf(arms);
         }
     }
 

@@ -28,7 +28,13 @@ public final class NativeDeclaration {
         METHOD,
         GETTER,
         SETTER,
-        EVENT_VARIABLE
+        EVENT_VARIABLE,
+        /**
+         * A built-in operation of the language itself (list, map and function-value operations,
+         * scheduling, storage). Its key starts with {@code $}; the runtime and the engine bind it,
+         * never a platform or addon.
+         */
+        INTRINSIC
     }
 
     private final String key;
@@ -53,6 +59,29 @@ public final class NativeDeclaration {
                     + " threading requires a valid threading parameter index, got " + threadingParameter);
         }
         this.threadingParameter = threadingParameter;
+    }
+
+    /**
+     * Declares a built-in operation of the language. Intrinsics are not visible to scripts by
+     * name; the compiler emits them for language constructs (for example {@code list.remove(x)}
+     * or {@code after 5 seconds { }}), and they are bound by the runtime or the engine.
+     *
+     * @param key        unique key starting with {@code $}, e.g. {@code $list.remove}
+     * @param parameters parameters (types are the erased runtime types)
+     * @param returnType result type
+     * @param effects    side effects; {@link Effect#PURE} allows constant folding
+     */
+    public static NativeDeclaration intrinsic(String key, List<Parameter> parameters, Type returnType, Effect... effects) {
+        if (key == null || key.length() < 2 || key.charAt(0) != '$') {
+            throw new IllegalArgumentException("Intrinsic keys start with '$': " + key);
+        }
+        Set<Effect> set = effects.length == 0 ? Set.of() : EnumSet.copyOf(List.of(effects));
+        return new NativeDeclaration(key, Kind.INTRINSIC, parameters, returnType, set, ThreadingRequirement.ANY, -1);
+    }
+
+    /** Whether this is a built-in operation of the language ({@link Kind#INTRINSIC}). */
+    public boolean isIntrinsic() {
+        return kind == Kind.INTRINSIC;
     }
 
     /** Stable unique key, for example {@code Player.send(Component)} or {@code LivingEntity.health:get}. */

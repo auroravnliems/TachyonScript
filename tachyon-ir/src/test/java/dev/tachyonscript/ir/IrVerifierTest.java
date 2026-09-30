@@ -146,12 +146,90 @@ class IrVerifierTest {
         IrFunction caller = function(Types.VOID, b -> {
             Register text = b.temp(Types.STRING);
             b.emit(new Instruction.Const(text, "x", S));
-            b.emit(new Instruction.Call(null, "g(int)", List.of(text), S));
-            b.emit(new Instruction.Call(null, "missing()", List.of(), S));
+            b.emit(new Instruction.Call(null, new FunctionRef("test", "g(int)", List.of(Types.INT), Types.VOID),
+                    List.of(text), S));
+            b.emit(new Instruction.Call(null, new FunctionRef("test", "missing()", List.of(), Types.VOID), List.of(), S));
             b.terminate(new Terminator.Return(null, S));
         });
         VerificationException error = assertThrows(VerificationException.class, () -> IrVerifier.verify(module(caller, callee)));
         assertEquals(2, error.problems().size(), error.getMessage());
+    }
+
+    @Test
+    void checksExceptionHandlers() {
+        // A handler may only read what is assigned before every block it covers.
+        IrFunction readsTooEarly = function(Types.INT, b -> {
+            int handler = b.newBlock();
+            b.setHandler(handler);
+            int body = b.newBlock();
+            b.setHandler(-1);
+            Register value = b.temp(Types.INT);
+            b.terminate(new Terminator.Jump(body, false, S));
+            b.switchTo(body);
+            b.emit(new Instruction.Const(value, 1, S));
+            b.terminate(new Terminator.Return(value, S));
+            b.switchTo(handler);
+            b.emit(new Instruction.Catch(b.temp(Types.EXCEPTION), S));
+            b.terminate(new Terminator.Return(value, S));
+        });
+        assertTrue(invalid(readsTooEarly).getMessage().contains("may be read before it is assigned"));
+
+        IrFunction noCatch = function(Types.VOID, b -> {
+            int handler = b.newBlock();
+            b.setHandler(handler);
+            int body = b.newBlock();
+            b.terminate(new Terminator.Jump(body, false, S));
+            b.switchTo(body);
+            b.terminate(new Terminator.Return(null, S));
+            b.switchTo(handler);
+            b.terminate(new Terminator.Return(null, S));
+        });
+        assertTrue(invalid(noCatch).getMessage().contains("not a block starting with catch"));
+
+        IrFunction valid = function(Types.VOID, b -> {
+            int handler = b.newBlock();
+            b.setHandler(handler);
+            int body = b.newBlock();
+            b.setHandler(-1);
+            b.terminate(new Terminator.Jump(body, false, S));
+            b.switchTo(body);
+            Register message = b.temp(Types.STRING);
+            b.emit(new Instruction.Const(message, "boom", S));
+            b.terminate(new Terminator.Throw(message, S));
+            b.switchTo(handler);
+            b.emit(new Instruction.Catch(b.temp(Types.EXCEPTION), S));
+            b.terminate(new Terminator.Return(null, S));
+        });
+        assertDoesNotThrow(() -> IrVerifier.verify(module(valid)));
+    }
+
+    @Test
+    void checksClosures() {
+        FunctionBuilder lambdaBuilder = new FunctionBuilder("lambda#0", "lambda", IrFunction.Kind.LAMBDA, Types.INT, S);
+        Register captured = lambdaBuilder.parameter(Types.INT, "base");
+        Register argument = lambdaBuilder.parameter(Types.INT, "x");
+        Register sum = lambdaBuilder.temp(Types.INT);
+        lambdaBuilder.emit(new Instruction.Binary(BinaryOp.ADD_I32, sum, captured, argument, S));
+        lambdaBuilder.terminate(new Terminator.Return(sum, S));
+        IrFunction lambda = lambdaBuilder.build();
+        FunctionRef reference = new FunctionRef("test", "lambda#0", List.of(Types.INT, Types.INT), Types.INT);
+        IrFunction creator = function(Types.INT, b -> {
+            Register base = b.temp(Types.INT);
+            b.emit(new Instruction.Const(base, 10, S));
+            Register closure = b.temp(Types.function(Types.INT, Types.INT));
+            b.emit(new Instruction.NewClosure(closure, reference, List.of(base), S));
+            Register result = b.temp(Types.INT);
+            b.emit(new Instruction.CallClosure(result, closure, List.of(base), S));
+            b.terminate(new Terminator.Return(result, S));
+        });
+        assertDoesNotThrow(() -> IrVerifier.verify(module(creator, lambda)));
+        IrFunction wrongArity = function(Types.VOID, b -> {
+            Register closure = b.temp(Types.function(Types.INT, Types.INT));
+            b.emit(new Instruction.NewClosure(closure, reference, List.of(), S));
+            b.terminate(new Terminator.Return(null, S));
+        });
+        assertTrue(assertThrows(VerificationException.class, () -> IrVerifier.verify(module(wrongArity, lambda)))
+                .getMessage().contains("captured values"));
     }
 
     @Test

@@ -1,0 +1,317 @@
+# Entities: every entity, living entities, mobs and special entity kinds.
+# Reads run on the calling thread; writes go to the thread that owns the entity (PaperContext).
+
+area Entities
+
+# ------------------------------------------------------------------ Entity
+
+prop Entity.type: EntityType : The kind of entity.
+  get: $.getType()
+  ex: event entity.spawn {\n    if entity.type == EntityType.CREEPER {\n        event.cancel()\n    }\n}
+prop Entity.id: int : The entity's number in this server session (not saved; use uuid to remember entities).
+  get: $.getEntityId()
+prop Entity.customName: Component? rw entity : The name shown above the entity; null for none.
+  get: $.customName()
+  set: $.customName(v)
+prop Entity.customNameVisible: bool rw entity : Whether the custom name is always shown (not only when looked at).
+  get: $.isCustomNameVisible()
+  set: $.setCustomNameVisible(v)
+prop Entity.velocity: Vector rw entity : The current velocity in blocks per tick.
+  get: $.getVelocity()
+  set: $.setVelocity(v.clone())
+  ex: player.velocity = Vector(0, 1.5, 0)   // launch upwards
+prop Entity.onGround: bool : Whether the entity stands on a block.
+  get: $.isOnGround()
+prop Entity.dead: bool : Whether the entity died or was removed.
+  get: $.isDead()
+prop Entity.fireTicks: int rw entity : Ticks the entity keeps burning (20 ticks = 1 second).
+  get: $.getFireTicks()
+  set: $.setFireTicks(Math.max(0, v))
+prop Entity.freezeTicks: int rw entity : Ticks the entity has been freezing in powder snow.
+  get: $.getFreezeTicks()
+  set: $.setFreezeTicks(Math.max(0, v))
+prop Entity.fallDistance: double rw entity : How far the entity has fallen, in blocks.
+  get: $.getFallDistance()
+  set: $.setFallDistance((float) v)
+prop Entity.ticksLived: int : Ticks since the entity spawned.
+  get: $.getTicksLived()
+prop Entity.gravity: bool rw entity : Whether gravity pulls the entity down.
+  get: $.hasGravity()
+  set: $.setGravity(v)
+prop Entity.silent: bool rw entity : Whether the entity makes no sounds.
+  get: $.isSilent()
+  set: $.setSilent(v)
+prop Entity.glowing: bool rw entity : Whether the entity has a glowing outline.
+  get: $.isGlowing()
+  set: $.setGlowing(v)
+prop Entity.invulnerable: bool rw entity : Whether the entity ignores damage (except from creative players and the void).
+  get: $.isInvulnerable()
+  set: $.setInvulnerable(v)
+prop Entity.persistent: bool rw entity : Whether the entity is saved with its chunk (false: removed when the chunk unloads).
+  get: $.isPersistent()
+  set: $.setPersistent(v)
+prop Entity.inWater: bool : Whether the entity is in water.
+  get: $.isInWater()
+prop Entity.inLava: bool : Whether the entity is in lava.
+  get: $.isInLava()
+prop Entity.frozen: bool : Whether the entity is fully frozen.
+  get: $.isFrozen()
+prop Entity.facing: BlockFace : The horizontal direction the entity faces.
+  get: $.getFacing()
+prop Entity.height: double : The entity's height in blocks.
+  get: $.getHeight()
+prop Entity.width: double : The entity's width in blocks.
+  get: $.getWidth()
+prop Entity.direction: Vector : The direction the entity looks at, as a vector of length 1.
+  get: $.getLocation().getDirection()
+prop Entity.passengers: List<Entity> : The entities riding this one.
+  get: new ArrayList<Object>($.getPassengers())
+prop Entity.vehicle: Entity? : The entity this one rides, or null.
+  get: $.getVehicle()
+prop Entity.portalCooldown: int rw entity : Ticks before the entity can use a portal again.
+  get: $.getPortalCooldown()
+  set: $.setPortalCooldown(Math.max(0, v))
+prop Entity.scoreboardTags: List<string> : The entity's scoreboard tags (the /tag command).
+  get: new ArrayList<Object>($.getScoreboardTags())
+prop Entity.chunk: Chunk : The chunk the entity is in.
+  get: $.getChunk()
+fn Entity.addScoreboardTag(tag: string): bool entity modifies : Adds a scoreboard tag; false if it was already there.
+  do: $.addScoreboardTag(tag)
+fn Entity.removeScoreboardTag(tag: string): bool entity modifies : Removes a scoreboard tag; false if it was not there.
+  do: $.removeScoreboardTag(tag)
+fn Entity.hasScoreboardTag(tag: string): bool : Whether the entity has a scoreboard tag.
+  do: $.getScoreboardTags().contains(tag)
+fn Entity.remove() entity modifies : Removes the entity from the world (players cannot be removed; kick them instead).
+  do: Entities.remove($)
+fn Entity.addPassenger(passenger: Entity) entity modifies : Makes another entity ride this one.
+  do: $.addPassenger(passenger)
+fn Entity.removePassenger(passenger: Entity) entity modifies : Makes a passenger get off.
+  do: $.removePassenger(passenger)
+fn Entity.eject() entity modifies : Makes every passenger get off.
+  do: $.eject()
+fn Entity.leaveVehicle() entity modifies : Gets off the entity's vehicle.
+  do: $.leaveVehicle()
+fn Entity.setRotation(yaw: double, pitch: double) entity modifies : Turns the entity (degrees).
+  do: $.setRotation((float) yaw, (float) pitch)
+fn Entity.nearbyEntities(radius: double): List<Entity> reads : Entities within a distance (a sphere), excluding this one.
+  do: Entities.nearby($, radius)
+  ex: for other in player.nearbyEntities(10) {\n    if other is Monster {\n        other.glowing = true\n    }\n}
+fn Entity.nearbyPlayers(radius: double): List<Player> reads : Players within a distance, excluding this entity.
+  do: Entities.nearbyPlayers($, radius)
+fn Entity.distance(other: Entity): double : The distance to another entity; very large if they are in different worlds.
+  do: Entities.distance($, other)
+fn Entity.distance(location: Location): double : The distance to a location; very large if it is in another world.
+  do: Entities.distance($.getLocation(), location)
+fn Entity.toString(): string : The entity's name.
+  do: $.getName()
+
+# ------------------------------------------------------------------ LivingEntity
+
+prop LivingEntity.maxHealth: double rw entity : Maximum health (the MAX_HEALTH attribute).
+  get: Entities.maxHealth($)
+  set: Entities.setMaxHealth($, v)
+prop LivingEntity.absorption: double rw entity : Extra hearts from absorption.
+  get: $.getAbsorptionAmount()
+  set: $.setAbsorptionAmount(Math.max(0, v))
+prop LivingEntity.eyeLocation: Location : The location of the entity's eyes, looking where it looks.
+  get: $.getEyeLocation()
+prop LivingEntity.remainingAir: int rw entity : Ticks of air left under water.
+  get: $.getRemainingAir()
+  set: $.setRemainingAir(v)
+prop LivingEntity.maximumAir: int rw entity : Ticks of air when fully refilled.
+  get: $.getMaximumAir()
+  set: $.setMaximumAir(Math.max(0, v))
+prop LivingEntity.noDamageTicks: int rw entity : Ticks of invulnerability left after being hurt.
+  get: $.getNoDamageTicks()
+  set: $.setNoDamageTicks(Math.max(0, v))
+prop LivingEntity.lastDamage: double : The damage of the last hit.
+  get: $.getLastDamage()
+prop LivingEntity.killer: Player? : The player who killed the entity (set when it dies), or null.
+  get: $.getKiller()
+prop LivingEntity.potionEffects: List<PotionEffect> : The active potion effects.
+  get: new ArrayList<Object>($.getActivePotionEffects())
+prop LivingEntity.ai: bool rw entity : Whether the entity moves and acts on its own.
+  get: $.hasAI()
+  set: $.setAI(v)
+prop LivingEntity.collidable: bool rw entity : Whether other entities push this one.
+  get: $.isCollidable()
+  set: $.setCollidable(v)
+prop LivingEntity.canPickupItems: bool rw entity : Whether the entity picks up items.
+  get: $.getCanPickupItems()
+  set: $.setCanPickupItems(v)
+prop LivingEntity.removeWhenFarAway: bool rw entity : Whether the entity despawns when no player is near.
+  get: $.getRemoveWhenFarAway()
+  set: $.setRemoveWhenFarAway(v)
+prop LivingEntity.invisible: bool rw entity : Whether the entity is invisible.
+  get: $.isInvisible()
+  set: $.setInvisible(v)
+prop LivingEntity.gliding: bool rw entity : Whether the entity glides with an elytra.
+  get: $.isGliding()
+  set: $.setGliding(v)
+prop LivingEntity.swimming: bool : Whether the entity swims.
+  get: $.isSwimming()
+prop LivingEntity.climbing: bool : Whether the entity climbs a ladder or vines.
+  get: $.isClimbing()
+prop LivingEntity.sleeping: bool : Whether the entity sleeps.
+  get: $.isSleeping()
+prop LivingEntity.arrowsInBody: int rw entity : Arrows stuck in the entity.
+  get: $.getArrowsInBody()
+  set: $.setArrowsInBody(Math.max(0, v))
+prop LivingEntity.helmet: ItemStack? rw entity : The item on the head.
+  get: Entities.equipment($, org.bukkit.inventory.EquipmentSlot.HEAD)
+  set: Entities.setEquipment($, org.bukkit.inventory.EquipmentSlot.HEAD, v)
+prop LivingEntity.chestplate: ItemStack? rw entity : The item on the chest.
+  get: Entities.equipment($, org.bukkit.inventory.EquipmentSlot.CHEST)
+  set: Entities.setEquipment($, org.bukkit.inventory.EquipmentSlot.CHEST, v)
+prop LivingEntity.leggings: ItemStack? rw entity : The item on the legs.
+  get: Entities.equipment($, org.bukkit.inventory.EquipmentSlot.LEGS)
+  set: Entities.setEquipment($, org.bukkit.inventory.EquipmentSlot.LEGS, v)
+prop LivingEntity.boots: ItemStack? rw entity : The item on the feet.
+  get: Entities.equipment($, org.bukkit.inventory.EquipmentSlot.FEET)
+  set: Entities.setEquipment($, org.bukkit.inventory.EquipmentSlot.FEET, v)
+prop LivingEntity.mainHand: ItemStack? rw entity : The item in the main hand (the tool).
+  get: Entities.equipment($, org.bukkit.inventory.EquipmentSlot.HAND)
+  set: Entities.setEquipment($, org.bukkit.inventory.EquipmentSlot.HAND, v)
+  ex: let tool = player.mainHand\nif tool != null && tool.type == Material.DIAMOND_PICKAXE {\n    player.send("Nice pickaxe!")\n}
+prop LivingEntity.offHand: ItemStack? rw entity : The item in the off hand.
+  get: Entities.equipment($, org.bukkit.inventory.EquipmentSlot.OFF_HAND)
+  set: Entities.setEquipment($, org.bukkit.inventory.EquipmentSlot.OFF_HAND, v)
+fn LivingEntity.equipment(slot: EquipmentSlot): ItemStack? : The item in an equipment slot.
+  do: Entities.equipment($, slot)
+fn LivingEntity.setEquipment(slot: EquipmentSlot, item: ItemStack?) entity modifies : Puts an item in an equipment slot.
+  do: Entities.setEquipment($, slot, item)
+fn LivingEntity.heal(amount: double) entity modifies : Adds health, up to the maximum.
+  do: $.setHealth(Math.min(Entities.maxHealth($), $.getHealth() + Math.max(0, amount)))
+fn LivingEntity.damage(amount: double) entity modifies : Hurts the entity (armor and effects apply).
+  do: $.damage(amount)
+fn LivingEntity.damage(amount: double, source: Entity) entity modifies : Hurts the entity as if another entity attacked it.
+  do: $.damage(amount, source)
+fn LivingEntity.kill() entity modifies : Kills the entity.
+  do: $.setHealth(0)
+fn LivingEntity.addPotionEffect(effect: PotionEffect) entity modifies : Gives a potion effect.
+  do: $.addPotionEffect(effect)
+fn LivingEntity.addPotionEffect(type: PotionEffectType, duration: Duration, level: int) entity modifies : Gives a potion effect for a duration; level 1 is the normal strength.
+  do: $.addPotionEffect(Effects.of(type, duration, level))
+  ex: player.addPotionEffect(PotionEffectType.SPEED, 30 seconds, 2)
+fn LivingEntity.removePotionEffect(type: PotionEffectType) entity modifies : Removes a potion effect.
+  do: $.removePotionEffect(type)
+fn LivingEntity.hasPotionEffect(type: PotionEffectType): bool : Whether the entity has a potion effect.
+  do: $.hasPotionEffect(type)
+fn LivingEntity.potionEffect(type: PotionEffectType): PotionEffect? : The active effect of a type, or null.
+  do: $.getPotionEffect(type)
+fn LivingEntity.clearPotionEffects() entity modifies : Removes every potion effect.
+  do: $.clearActivePotionEffects()
+fn LivingEntity.attribute(attribute: Attribute): double : The current value of an attribute (0 if the entity does not have it).
+  do: Entities.attribute($, attribute)
+fn LivingEntity.attributeBase(attribute: Attribute): double : The base value of an attribute (0 if the entity does not have it).
+  do: Entities.attributeBase($, attribute)
+fn LivingEntity.setAttributeBase(attribute: Attribute, value: double) entity modifies : Changes the base value of an attribute.
+  do: Entities.setAttributeBase($, attribute, value)
+  ex: player.setAttributeBase(Attribute.MOVEMENT_SPEED, 0.15)
+fn LivingEntity.hasLineOfSight(other: Entity): bool : Whether the entity can see another entity (no blocks in between).
+  do: $.hasLineOfSight(other)
+fn LivingEntity.targetBlock(maxDistance: int): Block? : The block the entity looks at, up to a distance.
+  do: $.getTargetBlockExact(Math.max(1, maxDistance))
+fn LivingEntity.targetEntity(maxDistance: int): Entity? : The entity the entity looks at, up to a distance.
+  do: $.getTargetEntity(Math.max(1, maxDistance))
+fn LivingEntity.swingMainHand() entity modifies : Plays the main hand swing animation.
+  do: $.swingMainHand()
+fn LivingEntity.launchProjectile(type: EntityType): Projectile entity modifies : Shoots a projectile (arrow, snowball, fireball, ...) where the entity looks.
+  do: Entities.launch($, type)
+
+# ------------------------------------------------------------------ mobs
+
+prop Mob.target: LivingEntity? rw entity : The entity the mob attacks or follows; null for none.
+  get: $.getTarget()
+  set: $.setTarget(v)
+prop Mob.aware: bool rw entity : Whether the mob reacts to the world (false: it stands still but is pushed).
+  get: $.isAware()
+  set: $.setAware(v)
+fn Mob.moveTo(destination: Location): bool entity modifies : Makes the mob walk to a location; false if there is no path.
+  do: $.getPathfinder().moveTo(destination)
+fn Mob.moveTo(destination: Location, speed: double): bool entity modifies : Makes the mob walk to a location at a speed (1 = normal).
+  do: $.getPathfinder().moveTo(destination, speed)
+fn Mob.stopMoving() entity modifies : Stops the mob's current path.
+  do: $.getPathfinder().stopPathfinding()
+fn Mob.lookAt(location: Location) entity modifies : Turns the mob's head towards a location.
+  do: $.lookAt(location)
+prop Ageable.baby: bool rw entity : Whether the mob is a baby.
+  get: !$.isAdult()
+  set: { if (v) { self.setBaby(); } else { self.setAdult(); } }
+prop Ageable.age: int rw entity : The age in ticks; negative for babies (they grow up at 0).
+  get: $.getAge()
+  set: $.setAge(v)
+prop Animals.loveMode: bool : Whether the animal is ready to breed.
+  get: $.isLoveMode()
+fn Animals.setLoveModeTicks(ticks: int) entity modifies : Makes the animal ready to breed for some ticks.
+  do: $.setLoveModeTicks(Math.max(0, ticks))
+prop Tameable.tamed: bool rw entity : Whether the animal is tamed.
+  get: $.isTamed()
+  set: $.setTamed(v)
+prop Tameable.owner: OfflinePlayer? : The player who tamed the animal, or null.
+  get: Entities.owner($)
+fn Tameable.setOwner(owner: Player?) entity modifies : Makes a player the owner (null: no owner).
+  do: $.setOwner(owner)
+
+# ------------------------------------------------------------------ special entities
+
+prop Item.itemStack: ItemStack rw entity : The items this entity holds.
+  get: $.getItemStack()
+  set: $.setItemStack(v)
+prop Item.pickupDelay: int rw entity : Ticks before the item can be picked up.
+  get: $.getPickupDelay()
+  set: $.setPickupDelay(Math.max(0, v))
+prop Item.unlimitedLifetime: bool rw entity : Whether the item never despawns.
+  get: $.isUnlimitedLifetime()
+  set: $.setUnlimitedLifetime(v)
+prop Item.thrower: UUID? : The UUID of whoever dropped the item, or null.
+  get: $.getThrower()
+prop Projectile.shooter: Entity? : The entity that shot the projectile, or null (for example a dispenser).
+  get: $.getShooter() instanceof Entity shooter ? shooter : null
+prop ExperienceOrb.experience: int rw entity : The experience points of the orb.
+  get: $.getExperience()
+  set: $.setExperience(Math.max(0, v))
+prop FallingBlock.material: Material : The block type that is falling.
+  get: $.getBlockData().getMaterial()
+prop FallingBlock.dropItem: bool rw entity : Whether the block drops as an item when it cannot land.
+  get: $.getDropItem()
+  set: $.setDropItem(v)
+prop TNTPrimed.fuseTicks: int rw entity : Ticks before the TNT explodes.
+  get: $.getFuseTicks()
+  set: $.setFuseTicks(Math.max(0, v))
+prop TNTPrimed.yield: double rw entity : The explosion strength (4 for normal TNT).
+  get: $.getYield()
+  set: $.setYield((float) Math.max(0, v))
+prop ArmorStand.small: bool rw entity : Whether the armor stand is small.
+  get: $.isSmall()
+  set: $.setSmall(v)
+prop ArmorStand.arms: bool rw entity : Whether the armor stand shows arms.
+  get: $.hasArms()
+  set: $.setArms(v)
+prop ArmorStand.basePlate: bool rw entity : Whether the armor stand shows its base plate.
+  get: $.hasBasePlate()
+  set: $.setBasePlate(v)
+prop ArmorStand.marker: bool rw entity : Whether the armor stand is a marker (tiny hitbox, cannot be hit).
+  get: $.isMarker()
+  set: $.setMarker(v)
+prop TextDisplay.text: Component rw entity : The displayed text.
+  get: $.text()
+  set: $.text(v)
+prop TextDisplay.lineWidth: int rw entity : The width at which lines wrap, in pixels.
+  get: $.getLineWidth()
+  set: $.setLineWidth(Math.max(1, v))
+prop TextDisplay.shadowed: bool rw entity : Whether the text has a shadow.
+  get: $.isShadowed()
+  set: $.setShadowed(v)
+prop TextDisplay.seeThrough: bool rw entity : Whether the text is visible through blocks.
+  get: $.isSeeThrough()
+  set: $.setSeeThrough(v)
+prop TextDisplay.background: Color? rw entity : The background color (null: the default gray).
+  get: $.getBackgroundColor()
+  set: $.setBackgroundColor(v)
+prop TextDisplay.billboard: bool rw entity : Whether the text always turns towards the viewer.
+  get: $.getBillboard() == org.bukkit.entity.Display.Billboard.CENTER
+  set: $.setBillboard(v ? org.bukkit.entity.Display.Billboard.CENTER : org.bukkit.entity.Display.Billboard.FIXED)
+prop TextDisplay.scale: double rw entity : The size of the text (1 = normal).
+  get: Entities.scale($)
+  set: Entities.setScale($, v)

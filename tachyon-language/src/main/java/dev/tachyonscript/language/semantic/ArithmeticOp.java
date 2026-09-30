@@ -1,10 +1,21 @@
 package dev.tachyonscript.language.semantic;
 
-/** Arithmetic operations on numeric operands of one representation. */
+/** Arithmetic and bitwise operations on numeric operands of one representation. */
 public enum ArithmeticOp {
     ADD,
     SUBTRACT,
     MULTIPLY,
     DIVIDE,
-    REMAINDER
+    REMAINDER,
+    /** Bitwise operations: int and long only. */
+    BIT_AND,
+    BIT_OR,
+    BIT_XOR,
+    SHIFT_LEFT,
+    SHIFT_RIGHT,
+    UNSIGNED_SHIFT_RIGHT;
+
+    public boolean isBitwise() {
+        return ordinal() >= BIT_AND.ordinal();
+    }
 }

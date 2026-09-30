@@ -6,6 +6,7 @@ package dev.tachyonscript.language.diagnostic;
  * <p>Codes never change meaning once released, so they can be searched, documented and
  * suppressed. Ranges: {@code TYS00xx} lexical, {@code TYS01xx} syntax, {@code TYS02xx}
  * names and types, {@code TYS03xx} warnings and lints, {@code TYS09xx} internal errors.
+ * Codes are never reused: a removed diagnostic leaves a gap.
  */
 public enum DiagnosticCode {
     // Lexical
@@ -38,6 +39,8 @@ public enum DiagnosticCode {
     UNKNOWN_EVENT("TYS0203", Severity.ERROR),
     UNKNOWN_FUNCTION("TYS0204", Severity.ERROR),
     DUPLICATE_DECLARATION("TYS0205", Severity.ERROR),
+    UNKNOWN_MODULE("TYS0206", Severity.ERROR),
+    UNKNOWN_CONSTANT("TYS0207", Severity.ERROR),
     TYPE_MISMATCH("TYS0210", Severity.ERROR),
     NO_MATCHING_OVERLOAD("TYS0211", Severity.ERROR),
     AMBIGUOUS_OVERLOAD("TYS0212", Severity.ERROR),
@@ -62,6 +65,16 @@ public enum DiagnosticCode {
     NOT_ITERABLE("TYS0232", Severity.ERROR),
     VOID_VALUE("TYS0233", Severity.ERROR),
     UNSAFE_TEXT_FORMATTING("TYS0234", Severity.ERROR),
+    CONSTANT_TEXT_REQUIRED("TYS0235", Severity.ERROR),
+    CAPTURED_VARIABLE_CHANGES("TYS0236", Severity.ERROR),
+    IMPORT_CYCLE("TYS0237", Severity.ERROR),
+    INVALID_ANNOTATION("TYS0238", Severity.ERROR),
+    NOT_STORABLE("TYS0239", Severity.ERROR),
+    INVALID_COMMAND("TYS0240", Severity.ERROR),
+    SWITCH_NOT_EXHAUSTIVE("TYS0241", Severity.ERROR),
+    JUMP_OUT_OF_FINALLY("TYS0242", Severity.ERROR),
+    USED_BEFORE_DECLARATION("TYS0243", Severity.ERROR),
+    MISSING_STANDARD_TYPE("TYS0244", Severity.ERROR),
 
     // Warnings and lints
     UNREACHABLE_CODE("TYS0300", Severity.WARNING),
@@ -73,6 +86,8 @@ public enum DiagnosticCode {
     UNNECESSARY_NULL_CHECK("TYS0306", Severity.WARNING),
     INTERPOLATION_NOT_FORMATTED("TYS0307", Severity.HINT),
     UNUSED_EXPRESSION("TYS0308", Severity.WARNING),
+    EVENT_USED_LATER("TYS0309", Severity.WARNING),
+    DUPLICATE_CASE("TYS0310", Severity.WARNING),
     TOO_MANY_DIAGNOSTICS("TYS0399", Severity.INFO),
 
     // Internal

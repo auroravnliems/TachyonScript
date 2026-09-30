@@ -7,6 +7,7 @@ import dev.tachyonscript.api.natives.ScriptError;
 import dev.tachyonscript.api.registry.Bindings;
 import dev.tachyonscript.api.type.Types;
 import dev.tachyonscript.api.value.Values;
+import dev.tachyonscript.platform.paper.lib.Codecs;
 import dev.tachyonscript.stdlib.EntityApi;
 import dev.tachyonscript.stdlib.EventApi;
 import dev.tachyonscript.stdlib.MinecraftTypes;
@@ -18,7 +19,10 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
+import dev.tachyonscript.api.storage.Codec;
+import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import org.bukkit.GameMode;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
@@ -69,6 +73,7 @@ final class PaperBindings {
         senders(b);
         entities(b);
         players(b);
+        offlinePlayers(b);
         worlds(b);
         server(b);
         text(b);
@@ -77,24 +82,40 @@ final class PaperBindings {
     }
 
     private static void types(Bindings.Builder b) {
-        b.bindType(MinecraftTypes.UUID, UUID.class)
-                .bindType(MinecraftTypes.COMMAND_SENDER, CommandSender.class)
+        b.bindType(MinecraftTypes.COMMAND_SENDER, CommandSender.class)
                 .bindType(MinecraftTypes.WORLD, World.class)
                 .bindType(MinecraftTypes.LOCATION, Location.class)
                 .bindType(MinecraftTypes.ENTITY, Entity.class)
                 .bindType(MinecraftTypes.LIVING_ENTITY, LivingEntity.class)
+                .bindType(MinecraftTypes.OFFLINE_PLAYER, OfflinePlayer.class)
                 .bindType(MinecraftTypes.PLAYER, Player.class)
                 .bindType(MinecraftTypes.BLOCK, Block.class)
                 .bindType(MinecraftTypes.GAME_MODE, GameMode.class)
                 .bindType(MinecraftTypes.CANCELLABLE, Cancellable.class)
                 .bindType(MinecraftTypes.PLAYER_JOIN_EVENT, PlayerJoinEvent.class)
                 .bindType(MinecraftTypes.PLAYER_QUIT_EVENT, PlayerQuitEvent.class)
+                .bindType(MinecraftTypes.ENTITY_DEATH_EVENT, org.bukkit.event.entity.EntityDeathEvent.class)
                 .bindType(MinecraftTypes.PLAYER_DEATH_EVENT, PlayerDeathEvent.class)
                 .bindType(MinecraftTypes.PLAYER_CHAT_EVENT, AsyncChatEvent.class)
                 .bindType(MinecraftTypes.PLAYER_MOVE_EVENT, PlayerMoveEvent.class)
                 .bindType(MinecraftTypes.BLOCK_BREAK_EVENT, BlockBreakEvent.class)
                 .bindType(MinecraftTypes.ENTITY_DAMAGE_EVENT, EntityDamageEvent.class)
-                .bindType(Types.COMPONENT, Component.class);
+                .bindCodec(MinecraftTypes.LOCATION, Codecs.LOCATION)
+                .bindCodec(MinecraftTypes.WORLD, Codecs.WORLD)
+                .bindCodec(MinecraftTypes.OFFLINE_PLAYER, Codecs.OFFLINE_PLAYER)
+                .bindType(Types.COMPONENT, Component.class)
+                .bindCodec(Types.COMPONENT, new Codec() {
+                    // JSON keeps every detail of a component (colors, click events, fonts...).
+                    @Override
+                    public String encode(Object value) {
+                        return GsonComponentSerializer.gson().serialize((Component) value);
+                    }
+
+                    @Override
+                    public Object decode(String text) {
+                        return GsonComponentSerializer.gson().deserialize(text);
+                    }
+                });
     }
 
     private static void senders(Bindings.Builder b) {
@@ -122,8 +143,6 @@ final class PaperBindings {
             double value = a.getDouble(1);
             threads.forEntity(entity, () -> entity.setHealth(Math.max(0, Math.min(maxHealth(entity), value))));
         });
-        b.bindGetter(EntityApi.MAX_HEALTH, (NativeFunction.OfDouble) a -> maxHealth((LivingEntity) a.getRef(0)));
-        b.bind(EntityApi.UUID_TO_STRING, (NativeFunction.OfRef) a -> a.getRef(0).toString());
     }
 
     /**
@@ -176,6 +195,32 @@ final class PaperBindings {
         });
     }
 
+    private static void offlinePlayers(Bindings.Builder b) {
+        b.bindGetter(EntityApi.OFFLINE_NAME, (NativeFunction.OfRef) a -> ((OfflinePlayer) a.getRef(0)).getName());
+        b.bindGetter(EntityApi.OFFLINE_UUID, (NativeFunction.OfRef) a -> ((OfflinePlayer) a.getRef(0)).getUniqueId());
+        b.bindGetter(EntityApi.OFFLINE_ONLINE, (NativeFunction.OfBool) a -> ((OfflinePlayer) a.getRef(0)).isOnline());
+        b.bindGetter(EntityApi.OFFLINE_PLAYER_ONLINE, (NativeFunction.OfRef) a -> ((OfflinePlayer) a.getRef(0)).getPlayer());
+        b.bindGetter(EntityApi.OFFLINE_PLAYED_BEFORE, (NativeFunction.OfBool) a ->
+                ((OfflinePlayer) a.getRef(0)).hasPlayedBefore());
+        b.bind(EntityApi.OFFLINE_TO_STRING, (NativeFunction.OfRef) a -> {
+            OfflinePlayer player = (OfflinePlayer) a.getRef(0);
+            return player.getName() != null ? player.getName() : player.getUniqueId().toString();
+        });
+        b.bind(ServerApi.OFFLINE_PLAYER_BY_NAME, (NativeFunction.OfRef) a -> {
+            String name = a.getString(0);
+            Player online = Bukkit.getPlayerExact(name);
+            if (online != null) {
+                return online;
+            }
+            OfflinePlayer cached = Bukkit.getOfflinePlayerIfCached(name);
+            if (cached == null) {
+                throw new ScriptError("No player named '" + name + "' has played on this server.");
+            }
+            return cached;
+        });
+        b.bind(ServerApi.OFFLINE_PLAYER_BY_UUID, (NativeFunction.OfRef) a -> Bukkit.getOfflinePlayer((UUID) a.getRef(0)));
+    }
+
     private void worlds(Bindings.Builder b) {
         b.bindGetter(WorldApi.WORLD_NAME, (NativeFunction.OfRef) a -> ((World) a.getRef(0)).getName());
         b.bindGetter(WorldApi.WORLD_PLAYERS, (NativeFunction.OfRef) a -> new ArrayList<Object>(((World) a.getRef(0)).getPlayers()));
@@ -214,7 +259,6 @@ final class PaperBindings {
         b.bind(WorldApi.NEW_LOCATION, (NativeFunction.OfRef) a ->
                 new Location((World) a.getRef(0), a.getDouble(1), a.getDouble(2), a.getDouble(3)));
 
-        b.bindGetter(WorldApi.BLOCK_TYPE, (NativeFunction.OfRef) a -> ((Block) a.getRef(0)).getType().getKey().asString());
         b.bindGetter(WorldApi.BLOCK_LOCATION, (NativeFunction.OfRef) a -> ((Block) a.getRef(0)).getLocation());
         b.bindGetter(WorldApi.BLOCK_WORLD, (NativeFunction.OfRef) a -> ((Block) a.getRef(0)).getWorld());
 

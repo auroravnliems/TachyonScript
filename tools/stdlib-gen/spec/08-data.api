@@ -1,0 +1,146 @@
+# Data stored on items, entities, blocks, chunks and worlds (persistent data containers),
+# economy and chat through Vault, PlaceholderAPI, files and web requests.
+# Tag keys are 'name' (in the tachyonscript namespace) or 'namespace:name'.
+
+area Data
+
+# ------------------------------------------------------------------ item tags
+
+fn ItemStack.tag(key: string): string? : A text tag of the item, or null.
+  do: Tags.getString($, key)
+  ex: let item = player.mainHand\nif item != null && item.tag("crate") == "legendary" {\n    player.send("<gold>Legendary crate key!")\n}
+fn ItemStack.intTag(key: string): int? : A whole-number tag of the item, or null.
+  do: Tags.getInt($, key)
+fn ItemStack.doubleTag(key: string): double? : A number tag of the item, or null.
+  do: Tags.getDouble($, key)
+fn ItemStack.hasTag(key: string): bool : Whether the item has a tag.
+  do: Tags.has($, key)
+fn ItemStack.setTag(key: string, value: string) : Stores a text tag in the item (it stays when the item is moved, dropped or saved).
+  do: Tags.set($, key, value)
+fn ItemStack.setTag(key: string, value: int) : Stores a whole-number tag in the item.
+  do: Tags.set($, key, value)
+fn ItemStack.setTag(key: string, value: double) : Stores a number tag in the item.
+  do: Tags.set($, key, value)
+fn ItemStack.removeTag(key: string) : Removes a tag from the item.
+  do: Tags.remove($, key)
+prop ItemStack.tags: List<string> : The keys of the item's tags.
+  get: Tags.keys($)
+
+# ------------------------------------------------------------------ entity tags
+
+fn Entity.tag(key: string): string? : A text tag of the entity, or null.
+  do: Tags.getString($, key)
+fn Entity.intTag(key: string): int? : A whole-number tag of the entity, or null.
+  do: Tags.getInt($, key)
+fn Entity.doubleTag(key: string): double? : A number tag of the entity, or null.
+  do: Tags.getDouble($, key)
+fn Entity.hasTag(key: string): bool : Whether the entity has a tag.
+  do: Tags.has($, key)
+fn Entity.setTag(key: string, value: string) entity modifies : Stores a text tag in the entity (saved with it).
+  do: Tags.set($, key, value)
+fn Entity.setTag(key: string, value: int) entity modifies : Stores a whole-number tag in the entity.
+  do: Tags.set($, key, value)
+fn Entity.setTag(key: string, value: double) entity modifies : Stores a number tag in the entity.
+  do: Tags.set($, key, value)
+fn Entity.removeTag(key: string) entity modifies : Removes a tag from the entity.
+  do: Tags.remove($, key)
+prop Entity.tags: List<string> : The keys of the entity's tags.
+  get: Tags.keys($)
+
+# ------------------------------------------------------------------ block tags (stored in the chunk)
+
+fn Block.tag(key: string): string? : A text tag of the block, or null (any block can have tags; they are kept in its chunk).
+  do: Tags.getString($, key)
+  ex: event block.place {\n    block.setTag("placedBy", player.name)\n}
+fn Block.intTag(key: string): int? : A whole-number tag of the block, or null.
+  do: Tags.getInt($, key)
+fn Block.doubleTag(key: string): double? : A number tag of the block, or null.
+  do: Tags.getDouble($, key)
+fn Block.hasTag(key: string): bool : Whether the block has a tag.
+  do: Tags.has($, key)
+fn Block.setTag(key: string, value: string) region modifies : Stores a text tag for the block.
+  do: Tags.set($, key, value)
+fn Block.setTag(key: string, value: int) region modifies : Stores a whole-number tag for the block.
+  do: Tags.set($, key, value)
+fn Block.setTag(key: string, value: double) region modifies : Stores a number tag for the block.
+  do: Tags.set($, key, value)
+fn Block.removeTag(key: string) region modifies : Removes a tag of the block.
+  do: Tags.remove($, key)
+fn Block.clearTags() region modifies : Removes every tag of the block (for example when it is broken).
+  do: Tags.clear($)
+
+# ------------------------------------------------------------------ chunk and world tags
+
+fn Chunk.tag(key: string): string? : A text tag of the chunk, or null.
+  do: Tags.getString($, key)
+fn Chunk.setTag(key: string, value: string) region modifies : Stores a text tag in the chunk.
+  do: Tags.set($, key, value)
+fn Chunk.removeTag(key: string) region modifies : Removes a tag from the chunk.
+  do: Tags.remove($, key)
+fn World.tag(key: string): string? : A text tag of the world, or null.
+  do: Tags.getString($, key)
+fn World.setTag(key: string, value: string) global modifies : Stores a text tag in the world.
+  do: Tags.set($, key, value)
+fn World.removeTag(key: string) global modifies : Removes a tag from the world.
+  do: Tags.remove($, key)
+
+# ------------------------------------------------------------------ Vault
+
+prop economy.available: bool : Whether an economy plugin is available through Vault.
+  get: Vault.economyAvailable()
+fn economy.balance(player: OfflinePlayer): double : A player's balance (0 without an economy plugin).
+  do: Vault.balance(player)
+  ex: player.send("Balance: {economy.format(economy.balance(player))}")
+fn economy.has(player: OfflinePlayer, amount: double): bool : Whether a player has at least an amount.
+  do: Vault.has(player, amount)
+fn economy.deposit(player: OfflinePlayer, amount: double): bool : Gives money to a player; false if it failed.
+  do: Vault.deposit(player, amount)
+fn economy.withdraw(player: OfflinePlayer, amount: double): bool : Takes money from a player; false if they do not have enough or it failed.
+  do: Vault.withdraw(player, amount)
+  ex: if economy.withdraw(player, 100) {\n    player.give(ItemStack(Material.DIAMOND))\n} else {\n    player.send("<red>You need 100 coins.")\n}
+fn economy.format(amount: double): string : An amount as the economy plugin writes it, e.g. '$1,234.50'.
+  do: Vault.format(amount)
+prop economy.currencyName: string : The name of the currency (plural).
+  get: Vault.currencyName()
+fn chat.prefix(player: Player): string : The player's chat prefix from the permission plugin (through Vault), or "".
+  do: Vault.prefix(player)
+fn chat.suffix(player: Player): string : The player's chat suffix from the permission plugin (through Vault), or "".
+  do: Vault.suffix(player)
+fn permissions.group(player: Player): string? : The player's primary permission group (through Vault), or null.
+  do: Vault.primaryGroup(player)
+fn permissions.groups(player: Player): List<string> : Every permission group of the player (through Vault).
+  do: Vault.groups(player)
+
+# ------------------------------------------------------------------ PlaceholderAPI
+
+prop papi.available: bool : Whether PlaceholderAPI is installed.
+  get: Papi.available()
+fn papi.parse(player: OfflinePlayer?, text: string): string : Replaces PlaceholderAPI placeholders such as %player_name% (the text is returned unchanged without PlaceholderAPI).
+  do: Papi.parse(player, text)
+  ex: player.send(text.legacy(papi.parse(player, "&7Rank: %vault_rank%")))
+
+# ------------------------------------------------------------------ files (inside plugins/TachyonScript/files)
+
+fn files.read(path: string): string? io : The text of a file, or null if it does not exist.
+  do: ctx.files().read(path)
+fn files.lines(path: string): List<string> io : The lines of a file (empty if it does not exist).
+  do: ctx.files().lines(path)
+fn files.write(path: string, text: string) io : Replaces the text of a file (creating folders as needed).
+  do: ctx.files().write(path, text, false)
+fn files.append(path: string, line: string) io : Adds a line at the end of a file.
+  do: ctx.files().write(path, line + System.lineSeparator(), true)
+  ex: let date = time.format(time.now, "yyyy-MM-dd HH:mm")\nfiles.append("logs/trades.log", "{date} {player.name} bought bread")
+fn files.exists(path: string): bool io : Whether a file exists.
+  do: ctx.files().exists(path)
+fn files.delete(path: string): bool io : Deletes a file; false if it did not exist.
+  do: ctx.files().delete(path)
+fn files.list(folder: string): List<string> io : The names of the files in a folder.
+  do: ctx.files().list(folder)
+
+# ------------------------------------------------------------------ web
+
+fn web.get(url: string, callback: function(int, string)) : Downloads a page in the background, then calls the function with the status code and the body (on the server thread).
+  do: ctx.web().request("GET", url, null, null, callback)
+  ex: web.get("https://api.example.com/status", (status, body) => {\n    log("status {status}: {body}")\n})
+fn web.post(url: string, body: string, contentType: string, callback: function(int, string)) : Sends data in the background, then calls the function with the status code and the response body.
+  do: ctx.web().request("POST", url, body, contentType, callback)

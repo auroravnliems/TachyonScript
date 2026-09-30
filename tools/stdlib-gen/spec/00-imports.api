@@ -1,0 +1,35 @@
+# Java imports of the generated Paper bindings (single-type imports only; the generator rejects clashes).
+
+import java.util.ArrayList
+import java.util.List
+import java.util.Map
+import java.util.LinkedHashMap
+import java.util.UUID
+import org.bukkit.Bukkit
+import org.bukkit.Location
+import org.bukkit.Material
+import org.bukkit.World
+import org.bukkit.entity.Entity
+import org.bukkit.entity.LivingEntity
+import org.bukkit.entity.Player
+import org.bukkit.inventory.ItemStack
+import org.bukkit.inventory.Inventory
+import org.bukkit.util.Vector
+import net.kyori.adventure.text.Component
+import dev.tachyonscript.platform.paper.lib.Entities
+import dev.tachyonscript.platform.paper.lib.Items
+import dev.tachyonscript.platform.paper.lib.Worlds
+import dev.tachyonscript.platform.paper.lib.Blocks
+import dev.tachyonscript.platform.paper.lib.Players
+import dev.tachyonscript.platform.paper.lib.Tags
+import dev.tachyonscript.platform.paper.lib.Texts
+import dev.tachyonscript.platform.paper.lib.Ticks
+import dev.tachyonscript.platform.paper.lib.Vault
+import dev.tachyonscript.platform.paper.lib.Papi
+import dev.tachyonscript.platform.paper.lib.ServerInfo
+import dev.tachyonscript.platform.paper.lib.ScriptMenu
+import dev.tachyonscript.platform.paper.lib.MenuClick
+import dev.tachyonscript.platform.paper.lib.Screens
+import dev.tachyonscript.platform.paper.lib.Sidebar
+import dev.tachyonscript.platform.paper.lib.Bars
+import dev.tachyonscript.platform.paper.lib.Effects

@@ -1,6 +1,7 @@
 package dev.tachyonscript.language.semantic;
 
 import dev.tachyonscript.api.type.ClassType;
+import dev.tachyonscript.api.type.ListType;
 import dev.tachyonscript.api.type.NullType;
 import dev.tachyonscript.api.type.NullableType;
 import dev.tachyonscript.api.type.PrimitiveType;
@@ -63,9 +64,14 @@ final class Conversions {
             if (source.isSubtypeOf(target)) {
                 return 0;
             }
-            if (source == Types.STRING && target == Types.COMPONENT) {
+            if (source == Types.STRING && (target == Types.COMPONENT || target.isConstantText())) {
                 return 2;
             }
+        }
+        if (from instanceof ListType(Type fromElement) && to instanceof ListType(Type toElement)) {
+            // Lists are mutable, so List<Player> is not a List<Entity>; only identical element
+            // types (handled above) and an empty-list literal typed by context convert.
+            return fromElement.isError() || toElement.isError() ? 0 : NONE;
         }
         return NONE;
     }
@@ -128,8 +134,24 @@ final class Conversions {
             }
             return new BoundExpression.Conversion(ConversionKind.STRING_TO_COMPONENT, expression, target, expression.span());
         }
+        if (from == Types.STRING && target instanceof ClassType classType && classType.isConstantText()) {
+            // The binder only lets constants get here; the text itself is the runtime value.
+            Object constant = ConstantEvaluator.evaluate(expression, ConstantEvaluator.SILENT);
+            if (constant instanceof String text) {
+                return new BoundExpression.Literal(text, target, expression.span());
+            }
+            return new BoundExpression.Conversion(ConversionKind.REINTERPRET, expression, target, expression.span());
+        }
         // Reference upcasts need no runtime operation.
         return expression;
+    }
+
+    /** Re-types a value produced by an intrinsic (typed {@code any?}) as {@code target}. */
+    static BoundExpression reinterpret(BoundExpression expression, Type target) {
+        if (expression.type().equals(target) || expression.type().isError()) {
+            return expression;
+        }
+        return new BoundExpression.Conversion(ConversionKind.REINTERPRET, expression, target, expression.span());
     }
 
     /** Converts a boxed numeric constant to the Java box of {@code target} (Java semantics). */
@@ -137,7 +159,7 @@ final class Conversions {
         Number number = (Number) value;
         return switch (target) {
             case INT -> number.intValue();
-            case LONG, DURATION -> number.longValue();
+            case LONG, DURATION, INSTANT -> number.longValue();
             case FLOAT -> number.floatValue();
             case DOUBLE -> number.doubleValue();
             default -> throw new IllegalArgumentException("Not numeric: " + target);

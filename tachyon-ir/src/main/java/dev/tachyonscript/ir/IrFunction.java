@@ -15,7 +15,19 @@ public final class IrFunction {
     /** What produced the function. */
     public enum Kind {
         FUNCTION,
-        EVENT_HANDLER
+        EVENT_HANDLER,
+        /** A lambda or scheduled block; its first parameters receive the captured values. */
+        LAMBDA,
+        COMMAND,
+        /** An {@code every} or {@code at} task. */
+        TASK,
+        /** An {@code on load} or {@code on unload} block. */
+        LIFECYCLE,
+        PLACEHOLDER,
+        /** Initializes the top-level variables of a module. */
+        INITIALIZER,
+        /** Computes the initial value of a {@code playerdata var}. */
+        PLAYERDATA_DEFAULT
     }
 
     private final String key;

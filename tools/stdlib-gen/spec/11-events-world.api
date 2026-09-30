@@ -1,0 +1,376 @@
+# Entity, block, world, chunk, server, inventory, vehicle and item events.
+
+area WorldEvents
+
+# ------------------------------------------------------------------ members of existing event objects
+
+prop BlockBreakEvent.dropItems: bool rw : Whether the block drops its items.
+  get: $.isDropItems()
+  set: $.setDropItems(v)
+prop BlockBreakEvent.exp: int rw : The experience the block drops.
+  get: $.getExpToDrop()
+  set: $.setExpToDrop(Math.max(0, v))
+prop EntityDamageEvent.damageCause: DamageCause : Why the entity takes damage.
+  get: $.getCause()
+prop EntityDamageEvent.finalDamage: double : The damage after armor and effects.
+  get: $.getFinalDamage()
+prop EntityDeathEvent.drops: List<ItemStack> : The items that will drop.
+  get: new ArrayList<Object>($.getDrops())
+prop EntityDeathEvent.droppedExp: int rw : The experience that will drop.
+  get: $.getDroppedExp()
+  set: $.setDroppedExp(Math.max(0, v))
+fn EntityDeathEvent.clearDrops() : Drops nothing.
+  do: $.getDrops().clear()
+fn EntityDeathEvent.addDrop(item: ItemStack) : Adds an item to the drops.
+  do: $.getDrops().add(item.clone())
+
+# ------------------------------------------------------------------ entities
+
+event entity.death = org.bukkit.event.entity.EntityDeathEvent cancellable entity : A living entity (mob or player) dies.
+  var entity: LivingEntity = $.getEntity() : The entity that died.
+  var killer: Player? = $.getEntity().getKiller() : The player who killed it, or null.
+  ex: event entity.death {\n    if killer != null && entity is Monster {\n        killer.giveExp(5)\n    }\n}
+
+event entity.damageByEntity = org.bukkit.event.entity.EntityDamageByEntityEvent cancellable extends EntityDamageEvent entity : An entity is hurt by another entity (a hit, an arrow, an explosion, ...).
+  var entity: Entity = $.getEntity() : The hurt entity.
+  var damager: Entity = $.getDamager() : What hit it (an arrow for shots).
+  var attacker: Entity? = Entities.attacker($.getDamager()) : Who is responsible: the damager, or the shooter of a projectile.
+  var cause: DamageCause = $.getCause() : The kind of damage.
+  ex: event entity.damageByEntity {\n    if entity is Player && attacker is Player {\n        event.cancel()   // no PvP\n    }\n}
+
+event entity.spawn = org.bukkit.event.entity.CreatureSpawnEvent cancellable entity : A creature spawns.
+  var entity: LivingEntity = $.getEntity() : The creature.
+  var location: Location = $.getLocation() : Where it spawns.
+  var reason: SpawnReason = $.getSpawnReason() : Why it spawns.
+
+event entity.target = org.bukkit.event.entity.EntityTargetEvent cancellable entity : A mob chooses a target (or loses it).
+  var entity: Entity = $.getEntity() : The mob.
+  var reason: string = Texts.enumText($.getReason()) : Why it targets, e.g. closest_player.
+  prop target: Entity? rw : The new target; null to forget the target.
+    get: $.getTarget()
+    set: $.setTarget(v)
+
+event entity.tame = org.bukkit.event.entity.EntityTameEvent cancellable entity : A player tames an animal.
+  var entity: LivingEntity = $.getEntity() : The animal.
+  var owner: Player? = Entities.player($.getOwner()) : The player, or null.
+
+event entity.breed = org.bukkit.event.entity.EntityBreedEvent cancellable entity : Two animals breed.
+  var entity: LivingEntity = $.getEntity() : The baby.
+  var mother: LivingEntity = $.getMother() : The mother.
+  var father: LivingEntity = $.getFather() : The father.
+  var breeder: Player? = Entities.player($.getBreeder()) : The player who fed them, or null.
+  prop experience: int rw : The experience dropped.
+    get: $.getExperience()
+    set: $.setExperience(Math.max(0, v))
+
+event entity.regainHealth = org.bukkit.event.entity.EntityRegainHealthEvent cancellable entity : An entity heals.
+  var entity: Entity = $.getEntity() : The entity.
+  var reason: string = Texts.enumText($.getRegainReason()) : Why it heals, e.g. satiated, magic, eating.
+  prop amount: double rw : The health regained.
+    get: $.getAmount()
+    set: $.setAmount(Math.max(0, v))
+
+event entity.shootBow = org.bukkit.event.entity.EntityShootBowEvent cancellable entity : An entity shoots a bow or crossbow.
+  var entity: LivingEntity = $.getEntity() : The shooter.
+  var bow: ItemStack? = $.getBow() : The bow, or null.
+  var projectile: Entity = $.getProjectile() : The projectile.
+  var force: double = $.getForce() : How far the bow was drawn, 0 to 1.
+
+event entity.combust = org.bukkit.event.entity.EntityCombustEvent cancellable entity : An entity catches fire.
+  var entity: Entity = $.getEntity() : The entity.
+  prop duration: double rw : How long it burns, in seconds.
+    get: $.getDuration()
+    set: $.setDuration((float) Math.max(0, v))
+
+event entity.changeBlock = org.bukkit.event.entity.EntityChangeBlockEvent cancellable entity : An entity changes a block (endermen, falling sand, sheep eating grass, ...).
+  var entity: Entity = $.getEntity() : The entity.
+  var block: Block = $.getBlock() : The block.
+  var to: Material = $.getTo() : The new material.
+
+event entity.teleport = org.bukkit.event.entity.EntityTeleportEvent cancellable entity : A non-player entity teleports (enderman, chorus fruit, ...).
+  var entity: Entity = $.getEntity() : The entity.
+  var from: Location = $.getFrom() : Where it was.
+  prop destination: Location? rw : Where it goes.
+    get: $.getTo()
+    set: $.setTo(v)
+
+event entity.toggleGlide = org.bukkit.event.entity.EntityToggleGlideEvent cancellable entity : An entity starts or stops gliding with an elytra.
+  var entity: Entity = $.getEntity() : The entity.
+  var gliding: bool = $.isGliding() : Whether it starts gliding.
+
+event entity.resurrect = org.bukkit.event.entity.EntityResurrectEvent cancellable entity : A totem of undying saves an entity (cancelled when it has none).
+  var entity: LivingEntity = $.getEntity() : The entity.
+  var hand: EquipmentSlot? = $.getHand() : The hand holding the totem, or null.
+
+event entity.potionEffect = org.bukkit.event.entity.EntityPotionEffectEvent cancellable entity : An entity's potion effect is added, changed or removed.
+  var entity: Entity = $.getEntity() : The entity.
+  var newEffect: PotionEffect? = $.getNewEffect() : The new effect, or null when removed.
+  var oldEffect: PotionEffect? = $.getOldEffect() : The previous effect, or null when added.
+  var cause: string = Texts.enumText($.getCause()) : Why it changes, e.g. potion_drink, beacon, milk.
+  var action: string = Texts.enumText($.getAction()) : added, changed, cleared or removed.
+
+event entity.mount = org.bukkit.event.entity.EntityMountEvent cancellable entity : An entity gets on another entity.
+  var entity: Entity = $.getEntity() : The rider.
+  var mount: Entity = $.getMount() : The mount.
+
+event entity.dismount = org.bukkit.event.entity.EntityDismountEvent cancellable entity : An entity gets off another entity.
+  var entity: Entity = $.getEntity() : The rider.
+  var dismounted: Entity = $.getDismounted() : The former mount.
+
+event entity.interact = org.bukkit.event.entity.EntityInteractEvent cancellable entity : A non-player entity interacts with a block (trampling farmland, pressing a plate, ...).
+  var entity: Entity = $.getEntity() : The entity.
+  var block: Block = $.getBlock() : The block.
+
+event entity.transform = org.bukkit.event.entity.EntityTransformEvent cancellable entity : An entity turns into another (zombie villager cured, pig struck by lightning, ...).
+  var entity: Entity = $.getEntity() : The entity before.
+  var transformed: Entity = $.getTransformedEntity() : The entity after.
+  var reason: string = Texts.enumText($.getTransformReason()) : Why it transforms.
+
+event entity.explode = org.bukkit.event.entity.EntityExplodeEvent cancellable region : An entity explodes (creeper, TNT, fireball, ...).
+  var entity: Entity = $.getEntity() : The exploding entity.
+  var location: Location = $.getLocation() : Where it explodes.
+  var blocks: List<Block> = new ArrayList<Object>($.blockList()) : The blocks that will break.
+  prop yield: double rw : The fraction of broken blocks that drop items.
+    get: $.getYield()
+    set: $.setYield((float) Math.max(0, Math.min(1, v)))
+  fn clearBlocks() : Breaks no blocks (the explosion still hurts).
+    do: $.blockList().clear()
+  ex: event entity.explode {\n    event.clearBlocks()   // no creeper holes\n}
+
+event explosion.prime = org.bukkit.event.entity.ExplosionPrimeEvent cancellable region : An entity is about to explode.
+  var entity: Entity = $.getEntity() : The entity.
+  prop radius: double rw : The explosion radius.
+    get: $.getRadius()
+    set: $.setRadius((float) Math.max(0, v))
+  prop fire: bool rw : Whether the explosion starts fires.
+    get: $.getFire()
+    set: $.setFire(v)
+
+event projectile.launch = org.bukkit.event.entity.ProjectileLaunchEvent cancellable entity : A projectile is launched.
+  var projectile: Projectile = $.getEntity() : The projectile.
+  var shooter: Entity? = Entities.shooter($.getEntity()) : Who launched it, or null.
+
+event projectile.hit = org.bukkit.event.entity.ProjectileHitEvent cancellable entity : A projectile hits an entity or a block.
+  var projectile: Projectile = $.getEntity() : The projectile.
+  var hitEntity: Entity? = $.getHitEntity() : The entity hit, or null.
+  var hitBlock: Block? = $.getHitBlock() : The block hit, or null.
+  var shooter: Entity? = Entities.shooter($.getEntity()) : Who launched it, or null.
+
+event entity.pickup = org.bukkit.event.entity.EntityPickupItemEvent cancellable entity : A player or mob picks up an item.
+  var entity: LivingEntity = $.getEntity() : Who picks it up.
+  var player: Player? = Entities.player($.getEntity()) : The player picking it up, or null for mobs.
+  var item: Item = $.getItem() : The item entity.
+  var stack: ItemStack = $.getItem().getItemStack() : The items.
+
+event item.spawn = org.bukkit.event.entity.ItemSpawnEvent cancellable region : An item appears in the world (dropped, broken block, ...).
+  var item: Item = $.getEntity() : The item entity.
+  var location: Location = $.getLocation() : Where it appears.
+
+event item.despawn = org.bukkit.event.entity.ItemDespawnEvent cancellable region : An item despawns after 5 minutes.
+  var item: Item = $.getEntity() : The item entity.
+  var location: Location = $.getLocation() : Where it is.
+
+event item.merge = org.bukkit.event.entity.ItemMergeEvent cancellable region : Two item stacks on the ground merge.
+  var item: Item = $.getEntity() : The item that disappears.
+  var target: Item = $.getTarget() : The item it merges into.
+
+event hanging.break = org.bukkit.event.hanging.HangingBreakEvent cancellable region : A painting or item frame breaks.
+  var entity: Entity = $.getEntity() : The painting or frame.
+  var cause: string = Texts.enumText($.getCause()) : Why it breaks: entity, explosion, obstruction, physics, default.
+
+event hanging.place = org.bukkit.event.hanging.HangingPlaceEvent cancellable region : A player places a painting or item frame.
+  var entity: Entity = $.getEntity() : The painting or frame.
+  var player: Player? = $.getPlayer() : The player, or null.
+  var block: Block = $.getBlock() : The block it hangs on.
+
+event vehicle.enter = org.bukkit.event.vehicle.VehicleEnterEvent cancellable entity : An entity gets into a vehicle (boat, minecart).
+  var vehicle: Entity = $.getVehicle() : The vehicle.
+  var entity: Entity = $.getEntered() : Who gets in.
+
+event vehicle.exit = org.bukkit.event.vehicle.VehicleExitEvent cancellable entity : An entity gets out of a vehicle.
+  var vehicle: Entity = $.getVehicle() : The vehicle.
+  var entity: LivingEntity = $.getExited() : Who gets out.
+
+event vehicle.destroy = org.bukkit.event.vehicle.VehicleDestroyEvent cancellable entity : A vehicle is destroyed.
+  var vehicle: Entity = $.getVehicle() : The vehicle.
+  var attacker: Entity? = $.getAttacker() : Who destroyed it, or null.
+
+# ------------------------------------------------------------------ blocks
+
+event block.place = org.bukkit.event.block.BlockPlaceEvent cancellable region : A player places a block.
+  var player: Player = $.getPlayer() : The player.
+  var block: Block = $.getBlockPlaced() : The placed block.
+  var against: Block = $.getBlockAgainst() : The block it was placed against.
+  var item: ItemStack = $.getItemInHand() : The item used.
+  ex: event block.place {\n    if block.type == Material.TNT && !player.hasPermission("server.tnt") {\n        event.cancel()\n    }\n}
+
+event block.burn = org.bukkit.event.block.BlockBurnEvent cancellable region : Fire destroys a block.
+  var block: Block = $.getBlock() : The burning block.
+  var source: Block? = $.getIgnitingBlock() : The fire, or null.
+
+event block.ignite = org.bukkit.event.block.BlockIgniteEvent cancellable region : A block catches fire.
+  var block: Block = $.getBlock() : The block.
+  var player: Player? = $.getPlayer() : The player who lit it, or null.
+  var cause: string = Texts.enumText($.getCause()) : How: lava, flint_and_steel, spread, lightning, fireball, ...
+
+event block.grow = org.bukkit.event.block.BlockGrowEvent cancellable region : A crop or plant grows.
+  var block: Block = $.getBlock() : The block.
+  var newType: Material = $.getNewState().getType() : The material after growing.
+
+event block.spread = org.bukkit.event.block.BlockSpreadEvent cancellable region : A block spreads (fire, grass, mushrooms, ...).
+  var block: Block = $.getBlock() : The block that changes.
+  var source: Block = $.getSource() : Where it spreads from.
+
+event block.fade = org.bukkit.event.block.BlockFadeEvent cancellable region : A block fades or melts (ice, snow, coral, fire).
+  var block: Block = $.getBlock() : The block.
+  var newType: Material = $.getNewState().getType() : The material after fading.
+
+event block.form = org.bukkit.event.block.BlockFormEvent cancellable region : A block forms (snow, ice, obsidian, concrete).
+  var block: Block = $.getBlock() : The block.
+  var newType: Material = $.getNewState().getType() : The formed material.
+
+event block.explode = org.bukkit.event.block.BlockExplodeEvent cancellable region : A block explodes (bed in the nether, respawn anchor, ...).
+  var block: Block = $.getBlock() : The exploding block.
+  var blocks: List<Block> = new ArrayList<Object>($.blockList()) : The blocks that will break.
+  prop yield: double rw : The fraction of broken blocks that drop items.
+    get: $.getYield()
+    set: $.setYield((float) Math.max(0, Math.min(1, v)))
+  fn clearBlocks() : Breaks no blocks.
+    do: $.blockList().clear()
+
+event block.redstone = org.bukkit.event.block.BlockRedstoneEvent region : A block's redstone current changes.
+  var block: Block = $.getBlock() : The block.
+  var oldCurrent: int = $.getOldCurrent() : The current before.
+  prop newCurrent: int rw : The current after; change it to override.
+    get: $.getNewCurrent()
+    set: $.setNewCurrent(Math.max(0, Math.min(15, v)))
+
+event block.flow = org.bukkit.event.block.BlockFromToEvent cancellable region : Water or lava flows (or a dragon egg teleports).
+  var block: Block = $.getBlock() : The source block.
+  var to: Block = $.getToBlock() : Where it flows to.
+
+event block.leavesDecay = org.bukkit.event.block.LeavesDecayEvent cancellable region : Leaves decay.
+  var block: Block = $.getBlock() : The leaves.
+
+event block.damage = org.bukkit.event.block.BlockDamageEvent cancellable region : A player starts breaking a block.
+  var player: Player = $.getPlayer() : The player.
+  var block: Block = $.getBlock() : The block.
+  var item: ItemStack = $.getItemInHand() : The item used.
+  prop instaBreak: bool rw : Whether the block breaks at once.
+    get: $.getInstaBreak()
+    set: $.setInstaBreak(v)
+
+event block.dispense = org.bukkit.event.block.BlockDispenseEvent cancellable region : A dispenser or dropper shoots an item.
+  var block: Block = $.getBlock() : The dispenser.
+  prop item: ItemStack rw : The dispensed item.
+    get: $.getItem()
+    set: $.setItem(v)
+
+event block.pistonExtend = org.bukkit.event.block.BlockPistonExtendEvent cancellable region : A piston pushes.
+  var block: Block = $.getBlock() : The piston.
+  var direction: BlockFace = $.getDirection() : The direction.
+  var blocks: List<Block> = new ArrayList<Object>($.getBlocks()) : The moved blocks.
+
+event block.pistonRetract = org.bukkit.event.block.BlockPistonRetractEvent cancellable region : A piston pulls back.
+  var block: Block = $.getBlock() : The piston.
+  var direction: BlockFace = $.getDirection() : The direction.
+  var blocks: List<Block> = new ArrayList<Object>($.getBlocks()) : The moved blocks.
+
+event block.fertilize = org.bukkit.event.block.BlockFertilizeEvent cancellable region : Bone meal is used on a block.
+  var block: Block = $.getBlock() : The block.
+  var player: Player? = $.getPlayer() : The player, or null (dispenser).
+
+event furnace.smelt = org.bukkit.event.inventory.FurnaceSmeltEvent cancellable region : A furnace finishes smelting an item.
+  var block: Block = $.getBlock() : The furnace.
+  var source: ItemStack = $.getSource() : The smelted item.
+  prop result: ItemStack rw : The result; change it to produce something else.
+    get: $.getResult()
+    set: $.setResult(v)
+
+event furnace.burn = org.bukkit.event.inventory.FurnaceBurnEvent cancellable region : A furnace burns a fuel item.
+  var block: Block = $.getBlock() : The furnace.
+  var fuel: ItemStack = $.getFuel() : The fuel.
+  prop burnTime: Duration rw : How long the fuel burns.
+    get: $.getBurnTime() * 50L
+    set: $.setBurnTime(Ticks.of(v))
+
+event inventory.moveItem = org.bukkit.event.inventory.InventoryMoveItemEvent cancellable region : A hopper or dropper moves an item between inventories.
+  var source: Inventory = $.getSource() : Where the item comes from.
+  var destination: Inventory = $.getDestination() : Where it goes.
+  prop item: ItemStack rw : The moved item.
+    get: $.getItem()
+    set: $.setItem(v)
+
+# ------------------------------------------------------------------ worlds and chunks
+
+event world.weatherChange = org.bukkit.event.weather.WeatherChangeEvent cancellable global : Rain starts or stops.
+  var world: World = $.getWorld() : The world.
+  var raining: bool = $.toWeatherState() : Whether it starts raining.
+
+event world.thunderChange = org.bukkit.event.weather.ThunderChangeEvent cancellable global : A thunderstorm starts or stops.
+  var world: World = $.getWorld() : The world.
+  var thundering: bool = $.toThunderState() : Whether the thunderstorm starts.
+
+event world.lightning = org.bukkit.event.weather.LightningStrikeEvent cancellable region : Lightning strikes.
+  var world: World = $.getWorld() : The world.
+  var location: Location = $.getLightning().getLocation() : Where it strikes.
+  var cause: string = Texts.enumText($.getCause()) : Why: weather, trident, command, ...
+
+event world.load = org.bukkit.event.world.WorldLoadEvent global : A world is loaded.
+  var world: World = $.getWorld() : The world.
+
+event world.unload = org.bukkit.event.world.WorldUnloadEvent cancellable global : A world is about to unload.
+  var world: World = $.getWorld() : The world.
+
+event world.timeSkip = org.bukkit.event.world.TimeSkipEvent cancellable global : The time jumps (sleeping, /time).
+  var world: World = $.getWorld() : The world.
+  var reason: string = Texts.enumText($.getSkipReason()) : command, custom or night_skip.
+  prop amount: long rw : The ticks skipped.
+    get: $.getSkipAmount()
+    set: $.setSkipAmount(v)
+
+event world.structureGrow = org.bukkit.event.world.StructureGrowEvent cancellable region : A tree or big mushroom grows.
+  var location: Location = $.getLocation() : Where it grows.
+  var player: Player? = $.getPlayer() : The player who used bone meal, or null.
+  var bonemeal: bool = $.isFromBonemeal() : Whether bone meal made it grow.
+
+event world.portalCreate = org.bukkit.event.world.PortalCreateEvent cancellable region : A portal is created.
+  var world: World = $.getWorld() : The world.
+  var entity: Entity? = $.getEntity() : Who created it, or null.
+  var reason: string = Texts.enumText($.getReason()) : fire, nether_pair or end_platform.
+
+event chunk.load = org.bukkit.event.world.ChunkLoadEvent region : A chunk is loaded.
+  var chunk: Chunk = $.getChunk() : The chunk.
+  var world: World = $.getWorld() : The world.
+  var newChunk: bool = $.isNewChunk() : Whether the chunk was just generated.
+
+event chunk.unload = org.bukkit.event.world.ChunkUnloadEvent region : A chunk is about to unload.
+  var chunk: Chunk = $.getChunk() : The chunk.
+  var world: World = $.getWorld() : The world.
+
+# ------------------------------------------------------------------ server
+
+event server.ping = com.destroystokyo.paper.event.server.PaperServerListPingEvent cancellable async : Someone's server list asks for the server's status (runs off the server thread).
+  var address: string = $.getAddress().getHostAddress() : The IP address asking.
+  prop motd: Component rw : The message of the day shown.
+    get: $.motd()
+    set: $.motd(v)
+  prop maxPlayers: int rw : The player limit shown.
+    get: $.getMaxPlayers()
+    set: $.setMaxPlayers(v)
+  prop onlinePlayers: int rw : The player count shown.
+    get: $.getNumPlayers()
+    set: $.setNumPlayers(v)
+  prop hidePlayers: bool rw : Whether the player count is hidden.
+    get: $.shouldHidePlayers()
+    set: $.setHidePlayers(v)
+  prop version: string rw : The version text shown.
+    get: $.getVersion()
+    set: $.setVersion(v)
+  ex: event server.ping {\n    event.motd = "<gradient:gold:yellow>My Server</gradient><newline><gray>{server.onlineCount} online"\n}
+
+event server.command = org.bukkit.event.server.ServerCommandEvent cancellable global : The console (or a command block) runs a command.
+  var sender: CommandSender = $.getSender() : Who runs it.
+  prop command: string rw : The command line without /.
+    get: $.getCommand()
+    set: $.setCommand(v)

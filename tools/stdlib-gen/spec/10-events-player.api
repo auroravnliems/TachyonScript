@@ -1,0 +1,292 @@
+# Player events. Handlers run on the thread of the player (region thread on Folia).
+
+area PlayerEvents
+
+# ------------------------------------------------------------------ members of existing event objects
+
+prop PlayerMoveEvent.from: Location : Where the player was.
+  get: $.getFrom()
+prop PlayerMoveEvent.to: Location rw : Where the player moves to; change it to move them somewhere else.
+  get: $.getTo()
+  set: $.setTo(v)
+prop PlayerMoveEvent.changedBlock: bool : Whether the player moved to another block (not only turned or moved inside the block).
+  get: $.hasChangedBlock()
+prop PlayerChatEvent.message: Component rw : The message; changing it changes what everyone sees.
+  get: $.message()
+  set: $.message(v)
+prop PlayerDeathEvent.keepLevel: bool rw : Whether the player keeps their experience level.
+  get: $.getKeepLevel()
+  set: $.setKeepLevel(v)
+prop PlayerDeathEvent.newLevel: int rw : The level the player has after respawning.
+  get: $.getNewLevel()
+  set: $.setNewLevel(Math.max(0, v))
+
+# ------------------------------------------------------------------ events
+
+event player.respawn = org.bukkit.event.player.PlayerRespawnEvent entity : A player respawns after dying.
+  var player: Player = $.getPlayer() : The respawning player.
+  prop respawnLocation: Location rw : Where the player respawns.
+    get: $.getRespawnLocation()
+    set: $.setRespawnLocation(v)
+  prop isBedSpawn: bool : Whether the player respawns at their bed.
+    get: $.isBedSpawn()
+  prop isAnchorSpawn: bool : Whether the player respawns at a respawn anchor.
+    get: $.isAnchorSpawn()
+  ex: event player.respawn {\n    event.respawnLocation = server.defaultWorld.spawnLocation\n}
+
+event player.teleport = org.bukkit.event.player.PlayerTeleportEvent cancellable entity : A player teleports (command, ender pearl, portal, plugin, ...).
+  var player: Player = $.getPlayer() : The teleporting player.
+  var from: Location = $.getFrom() : Where the player was.
+  var to: Location = $.getTo() : Where the player goes.
+  var cause: TeleportCause = $.getCause() : Why the player teleports.
+  prop destination: Location rw : Where the player goes; change it to send them elsewhere.
+    get: $.getTo()
+    set: $.setTo(v)
+
+event player.command = org.bukkit.event.player.PlayerCommandPreprocessEvent cancellable entity : A player runs a command (before the command itself runs).
+  var player: Player = $.getPlayer() : The player.
+  var command: string = $.getMessage().substring(1) : The command line without the leading /.
+  var label: string = Players.label($.getMessage()) : The command name in lower case, e.g. 'spawn'.
+  prop message: string rw : The whole command line with the /; change it to run another command.
+    get: $.getMessage()
+    set: $.setMessage(Players.withSlash(v))
+  ex: event player.command {\n    if label == "pl" || label == "plugins" {\n        event.cancel()\n        player.send("<red>No peeking!")\n    }\n}
+
+event player.interact = org.bukkit.event.player.PlayerInteractEvent cancellable entity : A player clicks: at the air, at a block, or steps on a pressure plate.
+  var player: Player = $.getPlayer() : The player.
+  var action: Action = $.getAction() : What the player did.
+  var block: Block? = $.getClickedBlock() : The clicked block, or null when clicking the air.
+  var face: BlockFace = $.getBlockFace() : The clicked side of the block.
+  var item: ItemStack? = $.getItem() : The item in the hand used, or null.
+  var hand: EquipmentSlot? = $.getHand() : The hand used (HAND or OFF_HAND), or null.
+  prop rightClick: bool : Whether it is a right click.
+    get: $.getAction().isRightClick()
+  prop leftClick: bool : Whether it is a left click.
+    get: $.getAction().isLeftClick()
+  prop mainHand: bool : Whether the main hand was used (the event fires once per hand).
+    get: $.getHand() == org.bukkit.inventory.EquipmentSlot.HAND
+  ex: event player.interact {\n    if event.rightClick && event.mainHand && item?.type == Material.BLAZE_ROD {\n        player.launchProjectile(EntityType.FIREBALL)\n    }\n}
+
+event player.interactEntity = org.bukkit.event.player.PlayerInteractEntityEvent cancellable entity : A player right-clicks an entity.
+  var player: Player = $.getPlayer() : The player.
+  var entity: Entity = $.getRightClicked() : The clicked entity.
+  var hand: EquipmentSlot = $.getHand() : The hand used.
+
+event player.drop = org.bukkit.event.player.PlayerDropItemEvent cancellable entity : A player drops an item.
+  var player: Player = $.getPlayer() : The player.
+  var item: Item = $.getItemDrop() : The dropped item entity.
+  var stack: ItemStack = $.getItemDrop().getItemStack() : The dropped items.
+
+event player.consume = org.bukkit.event.player.PlayerItemConsumeEvent cancellable entity : A player eats food or drinks a potion or milk.
+  var player: Player = $.getPlayer() : The player.
+  var item: ItemStack = $.getItem() : The consumed item.
+  prop consumed: ItemStack rw : The item that is consumed; change it to consume something else.
+    get: $.getItem()
+    set: $.setItem(v)
+
+event player.itemHeld = org.bukkit.event.player.PlayerItemHeldEvent cancellable entity : A player selects another hotbar slot.
+  var player: Player = $.getPlayer() : The player.
+  var previousSlot: int = $.getPreviousSlot() : The slot selected before.
+  var newSlot: int = $.getNewSlot() : The slot selected now.
+
+event player.swapHands = org.bukkit.event.player.PlayerSwapHandItemsEvent cancellable entity : A player swaps the items of their hands (F key).
+  var player: Player = $.getPlayer() : The player.
+  var mainHand: ItemStack? = Items.orNull($.getMainHandItem()) : The item going to the main hand.
+  var offHand: ItemStack? = Items.orNull($.getOffHandItem()) : The item going to the off hand.
+
+event player.toggleSneak = org.bukkit.event.player.PlayerToggleSneakEvent cancellable entity : A player starts or stops sneaking.
+  var player: Player = $.getPlayer() : The player.
+  var sneaking: bool = $.isSneaking() : Whether the player starts sneaking.
+
+event player.toggleSprint = org.bukkit.event.player.PlayerToggleSprintEvent cancellable entity : A player starts or stops sprinting.
+  var player: Player = $.getPlayer() : The player.
+  var sprinting: bool = $.isSprinting() : Whether the player starts sprinting.
+
+event player.toggleFlight = org.bukkit.event.player.PlayerToggleFlightEvent cancellable entity : A player starts or stops flying.
+  var player: Player = $.getPlayer() : The player.
+  var flying: bool = $.isFlying() : Whether the player starts flying.
+  ex: // double jump\nevent player.toggleFlight {\n    if player.gameMode == GameMode.SURVIVAL {\n        event.cancel()\n        player.allowFlight = false\n        player.velocity = player.direction.multiply(1.2).add(Vector(0, 0.8, 0))\n    }\n}
+
+event player.gameModeChange = org.bukkit.event.player.PlayerGameModeChangeEvent cancellable entity : A player's game mode changes.
+  var player: Player = $.getPlayer() : The player.
+  var gameMode: GameMode = $.getNewGameMode() : The new game mode.
+
+event player.levelChange = org.bukkit.event.player.PlayerLevelChangeEvent entity : A player's experience level changes.
+  var player: Player = $.getPlayer() : The player.
+  var oldLevel: int = $.getOldLevel() : The level before.
+  var newLevel: int = $.getNewLevel() : The level now.
+
+event player.expChange = org.bukkit.event.player.PlayerExpChangeEvent entity : A player gains experience points.
+  var player: Player = $.getPlayer() : The player.
+  prop amount: int rw : The experience points; change it to give more or less.
+    get: $.getAmount()
+    set: $.setAmount(v)
+
+event player.worldChange = org.bukkit.event.player.PlayerChangedWorldEvent entity : A player went to another world.
+  var player: Player = $.getPlayer() : The player.
+  var from: World = $.getFrom() : The world the player left.
+
+event player.bedEnter = org.bukkit.event.player.PlayerBedEnterEvent cancellable entity : A player tries to sleep in a bed.
+  var player: Player = $.getPlayer() : The player.
+  var bed: Block = $.getBed() : The bed.
+
+event player.bedLeave = org.bukkit.event.player.PlayerBedLeaveEvent cancellable entity : A player gets out of bed.
+  var player: Player = $.getPlayer() : The player.
+  var bed: Block = $.getBed() : The bed.
+
+event player.fish = org.bukkit.event.player.PlayerFishEvent cancellable entity : Something happens while fishing (casting, a bite, catching, ...).
+  var player: Player = $.getPlayer() : The player.
+  var caught: Entity? = $.getCaught() : What was caught (an item entity or a mob), or null.
+  var state: string = Texts.enumText($.getState()) : What happened: fishing, caught_fish, caught_entity, in_ground, failed_attempt, reel_in, bite.
+  prop exp: int rw : The experience dropped.
+    get: $.getExpToDrop()
+    set: $.setExpToDrop(Math.max(0, v))
+
+event player.bucketFill = org.bukkit.event.player.PlayerBucketFillEvent cancellable entity : A player fills a bucket.
+  var player: Player = $.getPlayer() : The player.
+  var block: Block = $.getBlock() : The block the liquid is taken from.
+  var bucket: Material = $.getBucket() : The bucket used.
+
+event player.bucketEmpty = org.bukkit.event.player.PlayerBucketEmptyEvent cancellable entity : A player empties a bucket.
+  var player: Player = $.getPlayer() : The player.
+  var block: Block = $.getBlock() : The block the liquid goes to.
+  var bucket: Material = $.getBucket() : The bucket used.
+
+event player.advancement = org.bukkit.event.player.PlayerAdvancementDoneEvent entity : A player completes an advancement.
+  var player: Player = $.getPlayer() : The player.
+  var advancement: string = $.getAdvancement().getKey().asString() : The advancement's key, e.g. 'minecraft:story/mine_diamond'.
+  prop message: Component? rw : The broadcast message; null for none.
+    get: $.message()
+    set: $.message(v)
+
+event player.portal = org.bukkit.event.player.PlayerPortalEvent cancellable entity : A player enters a portal.
+  var player: Player = $.getPlayer() : The player.
+  var from: Location = $.getFrom() : Where the player is.
+  var cause: TeleportCause = $.getCause() : The kind of portal.
+  prop destination: Location rw : Where the portal leads.
+    get: $.getTo()
+    set: $.setTo(v)
+
+event player.kick = org.bukkit.event.player.PlayerKickEvent cancellable entity : A player is kicked.
+  var player: Player = $.getPlayer() : The player.
+  var reason: Component = $.reason() : Why the player is kicked.
+  prop kickReason: Component rw : The message the player sees.
+    get: $.reason()
+    set: $.reason(v)
+  prop leaveMessage: Component rw : The message broadcast to other players.
+    get: $.leaveMessage()
+    set: $.leaveMessage(v)
+
+event player.preLogin = org.bukkit.event.player.AsyncPlayerPreLoginEvent async : A player is connecting (before they are in the world; runs off the server thread).
+  var name: string = $.getName() : The player's name.
+  var uuid: UUID = $.getUniqueId() : The player's UUID.
+  var address: string = $.getAddress().getHostAddress() : The player's IP address.
+  fn disallow(reason: Component) : Refuses the connection with a message.
+    do: $.disallow(org.bukkit.event.player.AsyncPlayerPreLoginEvent.Result.KICK_OTHER, reason)
+  fn allow() : Allows the connection again.
+    do: $.allow()
+  prop allowed: bool : Whether the player may join.
+    get: $.getLoginResult() == org.bukkit.event.player.AsyncPlayerPreLoginEvent.Result.ALLOWED
+  ex: event player.preLogin {\n    if name.startsWithIgnoreCase("bot") {\n        event.disallow("<red>Bots are not welcome")\n    }\n}
+
+event player.itemDamage = org.bukkit.event.player.PlayerItemDamageEvent cancellable entity : A player's tool or armor loses durability.
+  var player: Player = $.getPlayer() : The player.
+  var item: ItemStack = $.getItem() : The item.
+  prop damage: int rw : The durability lost.
+    get: $.getDamage()
+    set: $.setDamage(Math.max(0, v))
+
+event player.itemBreak = org.bukkit.event.player.PlayerItemBreakEvent entity : A player's tool or armor breaks.
+  var player: Player = $.getPlayer() : The player.
+  var item: ItemStack = $.getBrokenItem() : The broken item.
+
+event player.craft = org.bukkit.event.inventory.CraftItemEvent cancellable entity : A player takes the result of a crafting recipe.
+  var player: Player = Players.of($.getWhoClicked()) : The player.
+  var item: ItemStack = $.getRecipe().getResult() : The crafted item.
+  var inventory: Inventory = $.getInventory() : The crafting inventory.
+
+event player.enchant = org.bukkit.event.enchantment.EnchantItemEvent cancellable entity : A player enchants an item at an enchanting table.
+  var player: Player = $.getEnchanter() : The player.
+  var item: ItemStack = $.getItem() : The item.
+  var block: Block = $.getEnchantBlock() : The enchanting table.
+  prop cost: int rw : The levels the enchantment costs.
+    get: $.getExpLevelCost()
+    set: $.setExpLevelCost(Math.max(0, v))
+  prop enchantments: Map<Enchantment, int> : The enchantments that will be added.
+    get: new LinkedHashMap<Object, Object>($.getEnchantsToAdd())
+  fn addEnchantment(enchantment: Enchantment, level: int) : Adds (or changes) an enchantment that will be added.
+    do: $.getEnchantsToAdd().put(enchantment, level)
+
+event player.jump = com.destroystokyo.paper.event.player.PlayerJumpEvent cancellable entity : A player jumps.
+  var player: Player = $.getPlayer() : The player.
+  var from: Location = $.getFrom() : Where the jump starts.
+  var to: Location = $.getTo() : Where the player moves to.
+
+event player.armorChange = com.destroystokyo.paper.event.player.PlayerArmorChangeEvent entity : A player's armor changes.
+  var player: Player = $.getPlayer() : The player.
+  var slot: EquipmentSlot = $.getSlot() : The armor slot.
+  var oldItem: ItemStack = $.getOldItem() : The item before (air if empty).
+  var newItem: ItemStack = $.getNewItem() : The item now (air if empty).
+
+event player.launchProjectile = com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent cancellable entity : A player throws or shoots something with an item (snowball, ender pearl, trident, ...).
+  var player: Player = $.getPlayer() : The player.
+  var projectile: Projectile = $.getProjectile() : The projectile.
+  var item: ItemStack = $.getItemStack() : The item used.
+
+event player.signChange = org.bukkit.event.block.SignChangeEvent cancellable region : A player writes on a sign.
+  var player: Player = $.getPlayer() : The player.
+  var block: Block = $.getBlock() : The sign.
+  var lines: List<Component> = new ArrayList<Object>($.lines()) : The lines written.
+  fn setLine(index: int, text: Component) : Changes a line (0 to 3) before it is saved.
+    do: $.line(Math.max(0, Math.min(3, index)), text)
+
+event player.inventoryClick = org.bukkit.event.inventory.InventoryClickEvent cancellable entity : A player clicks a slot of an open inventory (menus made with Menu handle their own clicks).
+  var player: Player = Players.of($.getWhoClicked()) : The player.
+  var slot: int = $.getSlot() : The slot number in the clicked inventory.
+  var rawSlot: int = $.getRawSlot() : The slot number in the whole view (top inventory first).
+  var click: ClickType = $.getClick() : How the slot was clicked.
+  var item: ItemStack? = Items.orNull($.getCurrentItem()) : The item in the clicked slot, or null.
+  var cursor: ItemStack? = Items.orNull($.getCursor()) : The item on the cursor, or null.
+  var inventory: Inventory? = $.getClickedInventory() : The clicked inventory (null when clicking outside).
+  var topInventory: Inventory = $.getView().getTopInventory() : The inventory at the top of the view.
+  prop currentItem: ItemStack? rw : The item in the clicked slot.
+    get: Items.orNull($.getCurrentItem())
+    set: $.setCurrentItem(v)
+
+event player.inventoryDrag = org.bukkit.event.inventory.InventoryDragEvent cancellable entity : A player drags items over several slots.
+  var player: Player = Players.of($.getWhoClicked()) : The player.
+  var slots: List<int> = new ArrayList<Object>($.getRawSlots()) : The raw slots the items go to.
+  var inventory: Inventory = $.getInventory() : The top inventory.
+
+event player.inventoryOpen = org.bukkit.event.inventory.InventoryOpenEvent cancellable entity : A player opens an inventory.
+  var player: Player = Players.of($.getPlayer()) : The player.
+  var inventory: Inventory = $.getInventory() : The opened inventory.
+
+event player.inventoryClose = org.bukkit.event.inventory.InventoryCloseEvent entity : A player closes an inventory.
+  var player: Player = Players.of($.getPlayer()) : The player.
+  var inventory: Inventory = $.getInventory() : The closed inventory.
+
+event player.shear = org.bukkit.event.player.PlayerShearEntityEvent cancellable entity : A player shears an entity (sheep, mooshroom, ...).
+  var player: Player = $.getPlayer() : The player.
+  var entity: Entity = $.getEntity() : The sheared entity.
+
+event player.harvest = org.bukkit.event.player.PlayerHarvestBlockEvent cancellable entity : A player harvests a block without breaking it (berries, ...).
+  var player: Player = $.getPlayer() : The player.
+  var block: Block = $.getHarvestedBlock() : The harvested block.
+
+event player.resourcePack = org.bukkit.event.player.PlayerResourcePackStatusEvent entity : A player answers the resource pack prompt or finishes loading it.
+  var player: Player = $.getPlayer() : The player.
+  var status: string = Texts.enumText($.getStatus()) : successfully_loaded, declined, failed_download, accepted, downloaded, ...
+
+event player.exhaustion = org.bukkit.event.entity.EntityExhaustionEvent cancellable entity : A player gets hungrier (from moving, fighting, ...).
+  var player: Player = Players.of($.getEntity()) : The player.
+  prop exhaustion: double rw : How much exhaustion is added.
+    get: $.getExhaustion()
+    set: $.setExhaustion((float) Math.max(0, v))
+
+event player.foodChange = org.bukkit.event.entity.FoodLevelChangeEvent cancellable entity : A player's food level changes.
+  var player: Player = Players.of($.getEntity()) : The player.
+  var item: ItemStack? = $.getItem() : The eaten item, or null when the food level drops.
+  prop level: int rw : The new food level.
+    get: $.getFoodLevel()
+    set: $.setFoodLevel(Math.max(0, Math.min(20, v)))
