@@ -5,6 +5,7 @@ import dev.tachyonscript.engine.LoadReport;
 import dev.tachyonscript.engine.ScriptEngine;
 import dev.tachyonscript.engine.spi.CommandRegistry;
 import dev.tachyonscript.engine.storage.MemoryBackend;
+import dev.tachyonscript.engine.storage.StorageBackend;
 import dev.tachyonscript.language.diagnostic.DiagnosticRenderer;
 import dev.tachyonscript.stdlib.EventApi;
 import dev.tachyonscript.testkit.Fakes;
@@ -307,6 +308,62 @@ class EngineFeaturesTest {
     }
 
     @Test
+    void savedRecordsKeepTheirValuesWhenFieldsAreAdded() {
+        scripts.put("homes.tys", """
+                record Home(name: string, x: int)
+                persistent var homes: List<Home> = []
+                playerdata var favourite: Home? = null
+                command sethome(name: string, x: int) {
+                    homes.add(Home(name, x))
+                    if player != null {
+                        player.favourite = Home(name, x)
+                    }
+                }
+                """);
+        load();
+        Fakes.Player steve = platform.join("Steve");
+        engine.playerJoining(steve.uuid());
+        platform.command(steve, "sethome base 10");
+        platform.command(steve, "sethome mine -40");
+
+        // New fields: a default value (a new list for each record), and a nullable one.
+        String extended = """
+                record Home(name: string, x: int, visits: int = 7, tags: List<string> = [], note: string? = null)
+                persistent var homes: List<Home> = []
+                playerdata var favourite: Home? = null
+                command homes {
+                    homes[0].tags.add("first")
+                    for h in homes {
+                        sender.send("{h.name} {h.x} {h.visits} {h.tags} {h.note ?? "-"}")
+                    }
+                    let f = player?.favourite
+                    sender.send("favourite {f?.name ?? "none"} {f?.visits ?? 0}")
+                }
+                """;
+        scripts.put("homes.tys", extended);
+        load();
+        platform.command(steve, "homes");
+        assertEquals(List.of("base 10 7 [first] -", "mine -40 7 [] -", "favourite mine 7"),
+                steve.messages().subList(steve.messages().size() - 3, steve.messages().size()).stream()
+                        .map(String::valueOf).toList());
+        assertTrue(errors().isEmpty(), () -> String.join("\n", errors()));
+
+        // A restart loads records saved without the new fields the same way.
+        engine.shutdown();
+        storage.save(List.of(new StorageBackend.Row("homes", "", "homes", "[{\"name\":\"old\",\"x\":1}]")));
+        engine = platform.engine(EngineOptions.DEFAULT.withStorage(storage, 0));
+        scripts.put("homes.tys", extended + "\n// restarted\n");
+        load();
+        engine.playerJoining(steve.uuid());
+        platform.command(steve, "homes");
+        assertEquals(List.of("old 1 7 [first] -", "favourite mine 7"),
+                steve.messages().subList(steve.messages().size() - 2, steve.messages().size()).stream()
+                        .map(String::valueOf).toList());
+        assertTrue(platform.logs().stream().noneMatch(line -> line.contains("cannot be loaded")),
+                () -> String.join("\n", platform.logs()));
+    }
+
+    @Test
     void playerDataIsKeptPerPlayer() {
         scripts.put("coins.tys", """
                 playerdata var coins: int = 100
@@ -424,6 +481,62 @@ class EngineFeaturesTest {
                 new Fakes.Block(steve.location(), "minecraft:stone")));
         assertEquals(List.of("low", "high", "monitor true"), steve.messages());
         assertEquals(Set.of(1, 2, 3, 5), platform.activePriorities().get(EventApi.BLOCK_BREAK));
+    }
+
+    @Test
+    void profilesCommandsTasksAndScheduledBlocksLikeHandlers() {
+        scripts.put("mixed.tys", """
+                every 1 second {
+                    log("tick")
+                }
+                command ping {
+                    sender.send("pong")
+                }
+                event player.join {
+                    after 1 tick {
+                        player.send("later")
+                    }
+                }
+                """);
+        load();
+        engine.startProfiling();
+        Fakes.Player steve = platform.join("Steve");
+        join(steve);
+        platform.command(steve, "ping");
+        platform.scheduler().tick(20);
+        engine.stopProfiling();
+        List<String> rows = engine.profiler().report().byHandler().stream().map(row -> row.name()).toList();
+        assertTrue(rows.contains("mixed.tys event player.join"), rows::toString);
+        assertTrue(rows.contains("mixed.tys command /ping"), rows::toString);
+        assertTrue(rows.contains("mixed.tys every 1s (mixed.tys:1)"), rows::toString);
+        assertTrue(rows.stream().anyMatch(row -> row.startsWith("mixed.tys 'after' block at mixed.tys:8")), rows::toString);
+        assertEquals(List.of("pong", "later"), steve.messages());
+    }
+
+    @Test
+    void deathsCanBeCancelledLikeOnTheServer() {
+        scripts.put("second-chance.tys", """
+                event player.death {
+                    if victim.hasPermission("second.chance") {
+                        event.cancel()
+                    }
+                }
+                @ignoreCancelled
+                event player.death {
+                    victim.send("You died")
+                }
+                """);
+        load();
+        Fakes.Player lucky = platform.join("Alex").grant("second.chance");
+        Fakes.DeathEvent saved = new Fakes.DeathEvent(lucky, null);
+        platform.fire(engine, EventApi.PLAYER_DEATH, saved);
+        assertTrue(saved.isCancelled());
+        assertEquals(List.of(), lucky.messages());
+        Fakes.Player steve = platform.join("Steve");
+        Fakes.DeathEvent died = new Fakes.DeathEvent(steve, null);
+        platform.fire(engine, EventApi.PLAYER_DEATH, died);
+        assertFalse(died.isCancelled());
+        assertEquals(List.of("You died"), steve.messages());
     }
 
     @Test

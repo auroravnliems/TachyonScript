@@ -118,12 +118,14 @@ public final class Compiler {
 
         // 4. Bind, lower and verify in that order.
         Map<String, BoundModule> bound = new HashMap<>(available);
+        Set<String> known = new HashSet<>(available.keySet());
+        known.addAll(byName.keySet());
         for (Parsed file : order) {
             if (failed.contains(file.name())) {
                 results.put(file.file(), new CompiledModule(file.file(), file.name(), null, null));
                 continue;
             }
-            CompiledModule module = compileParsed(file, bound, failed, diagnostics, time, instructions);
+            CompiledModule module = compileParsed(file, bound, failed, known, diagnostics, time, instructions);
             if (module.succeeded()) {
                 bound.put(file.name(), module.bound());
             } else {
@@ -218,11 +220,12 @@ public final class Compiler {
     }
 
     private CompiledModule compileParsed(Parsed file, Map<String, BoundModule> modules, Set<String> failed,
-                                         DiagnosticCollector diagnostics, long[] time, int[] instructions) {
+                                         Set<String> known, DiagnosticCollector diagnostics, long[] time,
+                                         int[] instructions) {
         String phase = "type checking";
         try {
             long start = System.nanoTime();
-            BoundModule bound = Binder.bind(file.unit(), registry, diagnostics, modules, failed);
+            BoundModule bound = Binder.bind(file.unit(), registry, diagnostics, modules, failed, known);
             time[2] += System.nanoTime() - start;
             if (diagnostics.hasErrors(file.file())) {
                 return new CompiledModule(file.file(), file.name(), bound, null);

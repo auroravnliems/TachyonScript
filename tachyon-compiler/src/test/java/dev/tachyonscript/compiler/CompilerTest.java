@@ -102,6 +102,25 @@ class CompilerTest {
     }
 
     @Test
+    void explainsImportsOfModulesAnImportCannotName() {
+        // shop-items.tys has the module name 'shop-items': 'import shop_items' finds no module,
+        // and the error says how to make the script importable.
+        CompilationResult result = compile(
+                new SourceFile("shop-items.tys", "function price(): int {\n    return 5\n}"),
+                new SourceFile("shop.tys", "import shop_items\nimport shp\nevent player.join {\n"
+                        + "    log(\"{shop_items.price()}\")\n}"),
+                new SourceFile("shopkeeper.tys", "module shopkeeper"));
+        List<Diagnostic> errors = result.diagnostics().diagnostics();
+        assertEquals(List.of(DiagnosticCode.UNKNOWN_MODULE, DiagnosticCode.UNKNOWN_MODULE),
+                errors.stream().map(Diagnostic::code).toList());
+        String rendered = DiagnosticRenderer.plain().render(errors.get(0));
+        assertTrue(rendered.contains("The script shop-items.tys has the module name 'shop-items'"), rendered);
+        assertTrue(rendered.contains("Add 'module shop_items' at the top of that script."), rendered);
+        String suggested = DiagnosticRenderer.plain().render(errors.get(1));
+        assertTrue(suggested.contains("shop"), suggested);
+    }
+
+    @Test
     void rejectsDuplicateModuleNamesAndHugeFiles() {
         CompilationResult duplicate = compile(new SourceFile("a.tys", "module shared"), new SourceFile("b.tys", "module shared"));
         assertEquals(List.of(DiagnosticCode.DUPLICATE_DECLARATION),

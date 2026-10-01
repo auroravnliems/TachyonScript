@@ -19,6 +19,18 @@ Everything in `{...}` is inserted as plain text. A player named
 click actions. This is also true for chat messages, item names and anything else
 a player controls.
 
+Values can also go inside the text of a click action or an insertion, where they are
+inserted as plain text too:
+
+```tys
+event player.join {
+    player.send("<click:suggest_command:'/msg {player.name} '><aqua>[Reply]</aqua></click>")
+}
+```
+
+`text.command(text, command)`, `text.suggest`, `text.link`, `text.copy` and `text.hover`
+build the same clickable text from values without writing a template.
+
 Text that is only known while the script runs — a variable, a chat message, a
 string built with `+` from runtime values — is never formatted automatically,
 because it could contain tags typed by a player. Using it where a message is
@@ -39,9 +51,18 @@ allowed, e.g. "<gray>{message}").
 If the text is trusted MiniMessage, format it explicitly: text.mini(message)
 ```
 
-Text written in the script is formatted: literals, constants, literals joined with `+`,
-and choices between such texts (`player.flying ? "<green>Flying" : "<gray>Walking"`, or a
-`switch` whose values are all such texts).
+Text written in the script is formatted: literals, constants, literals and templates joined
+with `+`, and choices between such texts (`player.flying ? "<green>Flying" : "<gray>Walking"`,
+or a `switch` whose values are all such texts). Joining templates is how a long message is
+split over lines; it is formatted like the single template it spells, so the values inside
+`{...}` stay plain text:
+
+```tys
+event player.join {
+    player.send("<gold>Welcome back, {player.name}! "
+        + "<gray>You have played here since {time.format(player.firstPlayed, "dd/MM/yyyy")}.")
+}
+```
 
 ```tys
 event player.chat {

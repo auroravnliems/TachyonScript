@@ -11,6 +11,7 @@ import dev.tachyonscript.ir.IrPrinter;
 import dev.tachyonscript.language.diagnostic.Diagnostic;
 import dev.tachyonscript.language.diagnostic.DiagnosticRenderer;
 import dev.tachyonscript.language.diagnostic.Severity;
+import dev.tachyonscript.language.semantic.BoundModule;
 import dev.tachyonscript.language.util.Suggestions;
 import dev.tachyonscript.platform.paper.PlatformCapabilities;
 import dev.tachyonscript.runtime.code.Disassembler;
@@ -212,9 +213,8 @@ final class TysCommand implements CommandExecutor, TabCompleter {
                         .append(Component.text(" - failed to compile, not active", NamedTextColor.GRAY)));
                 continue;
             }
-            long handlers = script.linked().handlers().size();
             Component line = Component.text("  " + path, failed.contains(path) ? NamedTextColor.YELLOW : NamedTextColor.WHITE)
-                    .append(Component.text(" - " + handlers + (handlers == 1 ? " handler" : " handlers")
+                    .append(Component.text(" - " + ScriptSummary.contents(script.compiled().bound())
                             + (failed.contains(path) ? ", has errors (previous version active)" : ""), NamedTextColor.GRAY));
             send(sender, line);
         }
@@ -239,6 +239,8 @@ final class TysCommand implements CommandExecutor, TabCompleter {
         }
         send(sender, Component.text(path, ACCENT));
         field(sender, "Status", failed ? "has errors; the previous working version is active" : "active");
+        BoundModule bound = script.compiled().bound();
+        field(sender, "Module", bound.name() + (bound.imports().isEmpty() ? "" : " (imports " + String.join(", ", bound.imports()) + ")"));
         Map<String, Integer> events = new TreeMap<>();
         for (CompiledHandler handler : script.linked().handlers()) {
             events.merge(handler.event().name(), 1, Integer::sum);
@@ -246,6 +248,22 @@ final class TysCommand implements CommandExecutor, TabCompleter {
         List<String> eventList = new ArrayList<>();
         events.forEach((event, count) -> eventList.add(count == 1 ? event : event + " (" + count + ")"));
         field(sender, "Events", eventList.isEmpty() ? "none" : String.join(", ", eventList));
+        List<String> commands = ScriptSummary.commands(bound);
+        if (!commands.isEmpty()) {
+            field(sender, "Commands", String.join(", ", commands));
+        }
+        List<String> tasks = ScriptSummary.tasks(bound);
+        if (!tasks.isEmpty()) {
+            field(sender, "Tasks", String.join(", ", tasks));
+        }
+        List<String> placeholders = ScriptSummary.placeholders(bound);
+        if (!placeholders.isEmpty()) {
+            field(sender, "Placeholders", String.join(", ", placeholders));
+        }
+        String saved = ScriptSummary.savedVariables(bound);
+        if (!saved.isEmpty()) {
+            field(sender, "Saved variables", saved);
+        }
         int codeWords = 0;
         for (CompiledFunction function : script.linked().functions().values()) {
             codeWords += function.unit().code().length;

@@ -45,12 +45,14 @@ A player left the server.
 
 A player died.
 
+Cancelling it keeps the player alive: the server revives them instead (with full health).
+
 | Variable | Type | Description |
 |---|---|---|
 | `victim` | `Player` | The player who died. |
 | `killer` | `Player?` | The player who killed them, if any. |
 
-`event` is a [`PlayerDeathEvent`](#playerdeathevent).
+`event` is a [`PlayerDeathEvent`](#playerdeathevent); the event can be cancelled with `event.cancel()`.
 
 ### `player.chat`
 

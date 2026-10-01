@@ -27,11 +27,16 @@ import dev.tachyonscript.stdlib.ServerApi;
 import dev.tachyonscript.stdlib.StandardLibrary;
 import dev.tachyonscript.stdlib.TextApi;
 import dev.tachyonscript.stdlib.WorldApi;
+import dev.tachyonscript.stdlib.generated.DataApi;
 import dev.tachyonscript.stdlib.generated.EntitiesApi;
+import dev.tachyonscript.stdlib.generated.WorldEventsApi;
+import dev.tachyonscript.stdlib.generated.PlayerEventsApi;
+import dev.tachyonscript.stdlib.generated.PlayersApi;
 import dev.tachyonscript.stdlib.generated.WorldsApi;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -57,6 +62,7 @@ public final class TestPlatform implements Platform {
     private volatile Set<EventDeclaration> activeEvents = Set.of();
     private volatile Map<EventDeclaration, Set<Integer>> activePriorities = Map.of();
     private final Map<String, CommandRegistry.Command> commands = new LinkedHashMap<>();
+    private final Map<String, Map<String, Object>> blockTags = new HashMap<>();
     private final TestScheduler scheduler = new TestScheduler();
     private final Bindings bindings;
     private final SymbolRegistry registry = StandardLibrary.registry();
@@ -158,6 +164,18 @@ public final class TestPlatform implements Platform {
         players.remove(player);
         world.players().remove(player);
         player.invalidate();
+    }
+
+    /**
+     * Brings back a player who left: the same player (UUID, level, permissions...) is online
+     * again, like a player whose saved data the server loads when they rejoin.
+     */
+    public void rejoin(Fakes.Player player) {
+        if (!players.contains(player)) {
+            players.add(player);
+            world.players().add(player);
+        }
+        player.revalidate();
     }
 
     public List<Fakes.Player> onlinePlayers() {
@@ -308,7 +326,8 @@ public final class TestPlatform implements Platform {
         return new ArgumentTypes() {
             @Override
             public boolean supports(ClassType type) {
-                return type == MinecraftTypes.PLAYER || type == MinecraftTypes.WORLD || type == MinecraftTypes.GAME_MODE
+                return type == MinecraftTypes.PLAYER || type == MinecraftTypes.OFFLINE_PLAYER
+                        || type == MinecraftTypes.WORLD || type == MinecraftTypes.GAME_MODE
                         || bindings.keyedValues(type).isPresent();
             }
 
@@ -321,6 +340,14 @@ public final class TestPlatform implements Platform {
                         }
                     }
                     throw new InvalidArgument("Player '" + text + "' is not online.");
+                }
+                if (type == MinecraftTypes.OFFLINE_PLAYER) {
+                    for (Fakes.Player player : known) {
+                        if (player.name().equalsIgnoreCase(text)) {
+                            return player;
+                        }
+                    }
+                    throw new InvalidArgument("No player named '" + text + "' has played on this server.");
                 }
                 if (type == MinecraftTypes.WORLD) {
                     if (world.name().equals(text)) {
@@ -346,8 +373,8 @@ public final class TestPlatform implements Platform {
 
             @Override
             public List<String> suggest(ClassType type, String prefix, Object sender) {
-                if (type == MinecraftTypes.PLAYER) {
-                    return players.stream().map(Fakes.Player::name)
+                if (type == MinecraftTypes.PLAYER || type == MinecraftTypes.OFFLINE_PLAYER) {
+                    return (type == MinecraftTypes.PLAYER ? players : known).stream().map(Fakes.Player::name)
                             .filter(name -> name.toLowerCase(Locale.ROOT).startsWith(prefix.toLowerCase(Locale.ROOT))).toList();
                 }
                 if (type == MinecraftTypes.GAME_MODE) {
@@ -450,7 +477,7 @@ public final class TestPlatform implements Platform {
         b.bindGetter(EntityApi.OFFLINE_ONLINE, (NativeFunction.OfBool) a -> players.contains((Fakes.Player) a.getRef(0)));
         b.bindGetter(EntityApi.OFFLINE_PLAYER_ONLINE, (NativeFunction.OfRef) a ->
                 players.contains((Fakes.Player) a.getRef(0)) ? a.getRef(0) : null);
-        b.bindGetter(EntityApi.OFFLINE_PLAYED_BEFORE, (NativeFunction.OfBool) a -> true);
+        b.bindGetter(EntityApi.OFFLINE_PLAYED_BEFORE, (NativeFunction.OfBool) a -> ((Fakes.Player) a.getRef(0)).playedBefore());
         b.bind(EntityApi.OFFLINE_TO_STRING, (NativeFunction.OfRef) a -> ((Fakes.Player) a.getRef(0)).name());
         b.bind(ServerApi.OFFLINE_PLAYER_BY_NAME, (NativeFunction.OfRef) a -> {
             for (Fakes.Player player : known) {
@@ -469,6 +496,21 @@ public final class TestPlatform implements Platform {
             throw new dev.tachyonscript.api.natives.ScriptError("No player with UUID " + a.getRef(0) + " has played here.");
         });
         b.bindType(MinecraftTypes.OFFLINE_PLAYER, Fakes.Player.class);
+        // Locations are saved like on a server: world name, coordinates and rotation.
+        b.bindCodec(MinecraftTypes.LOCATION, new dev.tachyonscript.api.storage.Codec() {
+            @Override
+            public String encode(Object value) {
+                Fakes.Location l = (Fakes.Location) value;
+                return l.world().name() + "," + l.x() + "," + l.y() + "," + l.z() + "," + l.yaw() + "," + l.pitch();
+            }
+
+            @Override
+            public Object decode(String text) {
+                String[] parts = text.split(",");
+                return new Fakes.Location(world, Double.parseDouble(parts[1]), Double.parseDouble(parts[2]),
+                        Double.parseDouble(parts[3]), Float.parseFloat(parts[4]), Float.parseFloat(parts[5]));
+            }
+        });
         b.bindCodec(dev.tachyonscript.api.type.Types.COMPONENT, new dev.tachyonscript.api.storage.Codec() {
             @Override
             public String encode(Object value) {
@@ -515,6 +557,69 @@ public final class TestPlatform implements Platform {
         b.bindGetter(WorldApi.SPECTATOR, (NativeFunction.OfRef) a -> Fakes.GameMode.SPECTATOR);
         b.bind(WorldApi.GAME_MODE_TO_STRING, (NativeFunction.OfRef) a ->
                 ((Fakes.GameMode) a.getRef(0)).name().toLowerCase(Locale.ROOT));
+        // Generated members scripts use all the time: block coordinates, the Location
+        // constructors and entity types (a fake mob's type comes from its name, e.g. Zombie).
+        b.bindGetter(WorldsApi.WORLD_BORDER_SIZE, (NativeFunction.OfDouble) a -> ((Fakes.World) a.getRef(0)).borderSize());
+        b.bindSetter(WorldsApi.WORLD_BORDER_SIZE, a -> ((Fakes.World) a.getRef(0)).borderSize(a.getDouble(1)));
+        // Every simulated world spawns players at (0.5, 64, 0.5), where join puts them.
+        b.bindGetter(WorldsApi.WORLD_SPAWN_LOCATION, (NativeFunction.OfRef) a ->
+                new Fakes.Location((Fakes.World) a.getRef(0), 0.5, 64, 0.5, 0, 0));
+        b.bindGetter(WorldsApi.BLOCK_X, (NativeFunction.OfInt) a -> blockCoordinate(((Fakes.Block) a.getRef(0)).location().x()));
+        b.bindGetter(WorldsApi.BLOCK_Y, (NativeFunction.OfInt) a -> blockCoordinate(((Fakes.Block) a.getRef(0)).location().y()));
+        b.bindGetter(WorldsApi.BLOCK_Z, (NativeFunction.OfInt) a -> blockCoordinate(((Fakes.Block) a.getRef(0)).location().z()));
+        b.bindGetter(WorldsApi.LOCATION_BLOCK_X, (NativeFunction.OfInt) a -> blockCoordinate(((Fakes.Location) a.getRef(0)).x()));
+        b.bindGetter(WorldsApi.LOCATION_BLOCK_Y, (NativeFunction.OfInt) a -> blockCoordinate(((Fakes.Location) a.getRef(0)).y()));
+        b.bindGetter(WorldsApi.LOCATION_BLOCK_Z, (NativeFunction.OfInt) a -> blockCoordinate(((Fakes.Location) a.getRef(0)).z()));
+        b.bind(WorldsApi.LOCATION, (NativeFunction.OfRef) a ->
+                new Fakes.Location((Fakes.World) a.getRef(0), a.getDouble(1), a.getDouble(2), a.getDouble(3), 0, 0));
+        b.bind(WorldsApi.LOCATION_2, (NativeFunction.OfRef) a -> new Fakes.Location((Fakes.World) a.getRef(0),
+                a.getDouble(1), a.getDouble(2), a.getDouble(3), (float) a.getDouble(4), (float) a.getDouble(5)));
+        b.bindGetter(dev.tachyonscript.stdlib.generated.ItemsApi.MATERIAL_PRETTY_NAME, (NativeFunction.OfRef) a ->
+                prettyName(((Fakes.Keyed) a.getRef(0)).text()));
+        b.bindGetter(EntitiesApi.ENTITY_TYPE, (NativeFunction.OfRef) a -> new Fakes.Keyed("EntityType",
+                a.getRef(0) instanceof Fakes.Player ? "minecraft:player"
+                        : "minecraft:" + ((Fakes.Entity) a.getRef(0)).name().toLowerCase(Locale.ROOT).replace(' ', '_')));
+        // Distances as on a server: very large between different worlds.
+        b.bind(EntitiesApi.ENTITY_DISTANCE, (NativeFunction.OfDouble) a ->
+                distance(((Fakes.Entity) a.getRef(0)).location(), ((Fakes.Entity) a.getRef(1)).location()));
+        b.bind(EntitiesApi.ENTITY_DISTANCE_2, (NativeFunction.OfDouble) a ->
+                distance(((Fakes.Entity) a.getRef(0)).location(), (Fakes.Location) a.getRef(1)));
+        b.bindGetter(PlayerEventsApi.PLAYER_MOVE_EVENT_CHANGED_BLOCK, (NativeFunction.OfBool) a -> {
+            Fakes.MoveEvent e = (Fakes.MoveEvent) a.getRef(0);
+            return blockCoordinate(e.from.x()) != blockCoordinate(e.to.x())
+                    || blockCoordinate(e.from.y()) != blockCoordinate(e.to.y())
+                    || blockCoordinate(e.from.z()) != blockCoordinate(e.to.z());
+        });
+        // What players see and hear outside the chat is recorded with their messages (Fakes.Shown).
+        b.bind(PlayersApi.PLAYER_ACTION_BAR, (NativeFunction.OfVoid) a ->
+                ((Fakes.Player) a.getRef(0)).show("actionbar", a.getRef(1), null));
+        b.bind(PlayersApi.PLAYER_TITLE, (NativeFunction.OfVoid) a ->
+                ((Fakes.Player) a.getRef(0)).show("title", a.getRef(1), a.getRef(2)));
+        b.bind(PlayersApi.PLAYER_TITLE_2, (NativeFunction.OfVoid) a ->
+                ((Fakes.Player) a.getRef(0)).show("title", a.getRef(1), a.getRef(2)));
+        b.bind(PlayersApi.PLAYER_CLEAR_TITLE, (NativeFunction.OfVoid) a -> {
+        });
+        for (var sound : List.of(PlayersApi.PLAYER_PLAY_SOUND, PlayersApi.PLAYER_PLAY_SOUND_2, PlayersApi.PLAYER_PLAY_SOUND_3)) {
+            b.bind(sound, (NativeFunction.OfVoid) a ->
+                    ((Fakes.Player) a.getRef(0)).show("sound", ((Fakes.Keyed) a.getRef(1)).text(), null));
+        }
+        // A sound at a location is heard by the players within 16 blocks.
+        for (var sound : List.of(WorldsApi.LOCATION_PLAY_SOUND, WorldsApi.LOCATION_PLAY_SOUND_2)) {
+            b.bind(sound, (NativeFunction.OfVoid) a -> {
+                Fakes.Location at = (Fakes.Location) a.getRef(0);
+                for (Fakes.Player player : players) {
+                    if (distance(player.location(), at) <= 16) {
+                        player.show("sound", ((Fakes.Keyed) a.getRef(1)).text(), null);
+                    }
+                }
+            });
+        }
+        // Particles are not simulated: showing them does nothing.
+        for (var particles : List.of(PlayersApi.PLAYER_SPAWN_PARTICLE, PlayersApi.PLAYER_SPAWN_PARTICLE_2,
+                WorldsApi.LOCATION_SPAWN_PARTICLE, WorldsApi.LOCATION_SPAWN_PARTICLE_2)) {
+            b.bind(particles, (NativeFunction.OfVoid) a -> {
+            });
+        }
 
         // Server, broadcast, log
         b.bindGetter(ServerApi.PLAYERS, (NativeFunction.OfRef) a -> new ArrayList<Object>(players));
@@ -533,6 +638,13 @@ public final class TestPlatform implements Platform {
         b.bind(ServerApi.BROADCAST, (NativeFunction.OfVoid) a -> {
             broadcasts.add(a.getRef(0));
             players.forEach(player -> player.send(a.getRef(0)));
+        });
+        // broadcast(message, permission): the players with the permission, and the console.
+        b.bind(dev.tachyonscript.stdlib.generated.ServerUiApi.BROADCAST, (NativeFunction.OfVoid) a -> {
+            broadcasts.add(a.getRef(0));
+            players.stream().filter(player -> player.hasPermission(a.getString(1)))
+                    .forEach(player -> player.send(a.getRef(0)));
+            console.send(a.getRef(0));
         });
         for (var declaration : ServerApi.LOG) {
             String level = declaration.name().equals("log") ? "info" : declaration.simpleName();
@@ -557,6 +669,9 @@ public final class TestPlatform implements Platform {
                 ((Fakes.ChatEvent) a.getRef(0)).player);
         b.bind(EventApi.PLAYER_CHAT.variable("message").orElseThrow(), (NativeFunction.OfRef) a ->
                 ((Fakes.ChatEvent) a.getRef(0)).message);
+        b.bindGetter(PlayerEventsApi.PLAYER_CHAT_EVENT_MESSAGE, (NativeFunction.OfRef) a ->
+                ((Fakes.ChatEvent) a.getRef(0)).shown);
+        b.bindSetter(PlayerEventsApi.PLAYER_CHAT_EVENT_MESSAGE, a -> ((Fakes.ChatEvent) a.getRef(0)).shown = a.getRef(1));
         b.bind(EventApi.PLAYER_MOVE.variable("player").orElseThrow(), (NativeFunction.OfRef) a ->
                 ((Fakes.MoveEvent) a.getRef(0)).player);
         b.bind(EventApi.PLAYER_MOVE.variable("from").orElseThrow(), (NativeFunction.OfRef) a ->
@@ -567,6 +682,25 @@ public final class TestPlatform implements Platform {
                 ((Fakes.BlockBreakEvent) a.getRef(0)).player);
         b.bind(EventApi.BLOCK_BREAK.variable("block").orElseThrow(), (NativeFunction.OfRef) a ->
                 ((Fakes.BlockBreakEvent) a.getRef(0)).block);
+        b.bind(WorldEventsApi.BLOCK_PLACE_EVENT.variable("player").orElseThrow(), (NativeFunction.OfRef) a ->
+                ((Fakes.BlockPlaceEvent) a.getRef(0)).player);
+        b.bind(WorldEventsApi.BLOCK_PLACE_EVENT.variable("block").orElseThrow(), (NativeFunction.OfRef) a ->
+                ((Fakes.BlockPlaceEvent) a.getRef(0)).block);
+        b.bind(WorldEventsApi.BLOCK_PLACE_EVENT.variable("against").orElseThrow(), (NativeFunction.OfRef) a ->
+                ((Fakes.BlockPlaceEvent) a.getRef(0)).block);
+        // Block tags are kept by position, like the chunk storage of the server.
+        b.bind(DataApi.BLOCK_TAG, (NativeFunction.OfRef) a ->
+                blockTags(a.getRef(0)).get(a.getString(1)) instanceof String text ? text : null);
+        b.bind(DataApi.BLOCK_INT_TAG, (NativeFunction.OfRef) a ->
+                blockTags(a.getRef(0)).get(a.getString(1)) instanceof Integer number ? number : null);
+        b.bind(DataApi.BLOCK_DOUBLE_TAG, (NativeFunction.OfRef) a ->
+                blockTags(a.getRef(0)).get(a.getString(1)) instanceof Double number ? number : null);
+        b.bind(DataApi.BLOCK_HAS_TAG, (NativeFunction.OfBool) a -> blockTags(a.getRef(0)).containsKey(a.getString(1)));
+        b.bind(DataApi.BLOCK_SET_TAG, (NativeFunction.OfVoid) a -> blockTags(a.getRef(0)).put(a.getString(1), a.getString(2)));
+        b.bind(DataApi.BLOCK_SET_TAG_2, (NativeFunction.OfVoid) a -> blockTags(a.getRef(0)).put(a.getString(1), a.getInt(2)));
+        b.bind(DataApi.BLOCK_SET_TAG_3, (NativeFunction.OfVoid) a -> blockTags(a.getRef(0)).put(a.getString(1), a.getDouble(2)));
+        b.bind(DataApi.BLOCK_REMOVE_TAG, (NativeFunction.OfVoid) a -> blockTags(a.getRef(0)).remove(a.getString(1)));
+        b.bind(DataApi.BLOCK_CLEAR_TAGS, (NativeFunction.OfVoid) a -> blockTags(a.getRef(0)).clear());
         b.bind(EventApi.ENTITY_DAMAGE.variable("entity").orElseThrow(), (NativeFunction.OfRef) a ->
                 ((Fakes.DamageEvent) a.getRef(0)).entity);
         b.bind(EventApi.ENTITY_DAMAGE.variable("cause").orElseThrow(), (NativeFunction.OfRef) a ->
@@ -586,5 +720,33 @@ public final class TestPlatform implements Platform {
         b.bindGetter(EventApi.DAMAGE, (NativeFunction.OfDouble) a -> ((Fakes.DamageEvent) a.getRef(0)).damage);
         b.bindSetter(EventApi.DAMAGE, a -> ((Fakes.DamageEvent) a.getRef(0)).damage = a.getDouble(1));
         return b.build();
+    }
+
+    /** A readable name of a key such as {@code diamond_sword}: "Diamond Sword", like on a server. */
+    private static String prettyName(String key) {
+        StringBuilder out = new StringBuilder();
+        for (String word : key.split("_")) {
+            if (!word.isEmpty()) {
+                out.append(out.isEmpty() ? "" : " ").append(Character.toUpperCase(word.charAt(0))).append(word.substring(1));
+            }
+        }
+        return out.toString();
+    }
+
+    /** The block coordinate containing a coordinate, like Location.getBlockX(). */
+    private Map<String, Object> blockTags(Object block) {
+        Fakes.Location at = ((Fakes.Block) block).location();
+        String key = at.world().name() + ":" + blockCoordinate(at.x()) + ":" + blockCoordinate(at.y()) + ":"
+                + blockCoordinate(at.z());
+        return blockTags.computeIfAbsent(key, k -> new HashMap<>());
+    }
+
+    private static int blockCoordinate(double coordinate) {
+        return (int) Math.floor(coordinate);
+    }
+
+    /** The distance between two locations, or {@code Double.MAX_VALUE} in different worlds (like Paper). */
+    private static double distance(Fakes.Location from, Fakes.Location to) {
+        return from.world() != to.world() ? Double.MAX_VALUE : from.distance(to);
     }
 }

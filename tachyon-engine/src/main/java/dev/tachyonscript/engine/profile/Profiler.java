@@ -1,6 +1,6 @@
 package dev.tachyonscript.engine.profile;
 
-import dev.tachyonscript.runtime.event.CompiledHandler;
+import dev.tachyonscript.runtime.interpreter.CompiledFunction;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -8,12 +8,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.LongAdder;
 
 /**
- * Collects execution statistics while enabled. When disabled, the dispatcher does not read
- * the clock at all, so profiling has no cost unless someone asked for it.
+ * Collects execution statistics while enabled: one entry per script function that ran from the
+ * outside (event handlers, commands, tasks, scheduled blocks, placeholders, callbacks). When
+ * disabled, the engine does not read the clock at all, so profiling has no cost unless someone
+ * asked for it.
  */
 public final class Profiler {
 
-    /** Statistics of one handler. */
+    /** Statistics of one handler, command, task, block or other script entry point. */
     public static final class Entry {
         private final String script;
         private final String handler;
@@ -49,7 +51,7 @@ public final class Profiler {
 
     private volatile boolean enabled;
     private volatile long startedAt;
-    private final ConcurrentHashMap<CompiledHandler, Entry> entries = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<CompiledFunction, Entry> entries = new ConcurrentHashMap<>();
 
     public boolean isEnabled() {
         return enabled;
@@ -66,8 +68,8 @@ public final class Profiler {
         enabled = false;
     }
 
-    public void record(CompiledHandler handler, long nanos) {
-        Entry entry = entries.computeIfAbsent(handler, h -> new Entry(h.function().source().path(), h.function().displayName()));
+    public void record(CompiledFunction function, long nanos) {
+        Entry entry = entries.computeIfAbsent(function, f -> new Entry(f.source().path(), f.displayName()));
         entry.calls.increment();
         entry.nanos.add(nanos);
         if (nanos > entry.maxNanos) {

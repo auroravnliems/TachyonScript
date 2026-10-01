@@ -18,8 +18,12 @@ application {
 
 // The tests compile every example in the documentation and the wiki and check that the
 // generated reference is current, so the documentation is an input of the test task.
+// The wiki is its own repository (TachyonScript.wiki): the tests read it from wiki/ next to the
+// sources, or from the checkout given with -Ptachyon.wiki=<folder>; without one they skip it.
+val wiki = rootProject.file(providers.gradleProperty("tachyon.wiki").getOrElse("wiki"))
 tasks.test {
-    inputs.files(rootProject.fileTree("docs") { include("**/*.md") }, rootProject.fileTree("wiki") { include("**/*.md") },
+    systemProperty("tachyon.wiki", wiki.absolutePath)
+    inputs.files(rootProject.fileTree("docs") { include("**/*.md") }, fileTree(wiki) { include("**/*.md") },
         rootProject.files("README.md"))
         .withPropertyName("documentation")
         .withPathSensitivity(PathSensitivity.RELATIVE)

@@ -257,6 +257,25 @@ class BinderTest {
     }
 
     @Test
+    void messagesSplitOverLinesWithPlusAreOneTemplate() {
+        // A long message split with '+' is formatted like the single template it spells.
+        Bound joined = bindBody("""
+                player.send("<gray>Hello {player.name}, "
+                    + "welcome back! " + "Your name has {player.name.length} letters.")
+                let ok = player.name.length > 3
+                player.send(ok ? "<green>Long: " + "{player.name}" : "<red>Short")""");
+        assertEquals(List.of(), joined.errors(), joined::rendered);
+        assertTrue(joined.tree().contains("(template \"<gray>Hello \" ")
+                && joined.tree().contains(" \", welcome back! Your name has \" "), joined::tree);
+        // Text built from a variable is still refused, joined or not.
+        Bound unsafe = bindBody("let name = player.name\nplayer.send(\"<red>Hi \" + name)");
+        assertEquals(List.of(DiagnosticCode.UNSAFE_TEXT_FORMATTING), unsafe.errors(), unsafe::rendered);
+        // Where a string is expected, '+' still joins strings.
+        Bound text = bindBody("let s: string = \"a {player.name}\" + \"b\"\nlog(s)");
+        assertEquals(List.of(), text.errors(), text::rendered);
+    }
+
+    @Test
     void hintsWhenInterpolatedTextContainsTags() {
         Bound bound = bindBody("let prefix = \"<red>[VIP]\"\nplayer.send(\"{prefix} hi\")");
         assertEquals(List.of(DiagnosticCode.INTERPOLATION_NOT_FORMATTED), bound.codes(), bound::rendered);
@@ -286,6 +305,20 @@ class BinderTest {
                 bind("event player.join {\n    return 5\n}").errors());
         assertEquals("(function double(int): int { (return (multiply:int value 2:int)) })",
                 clean("function double(value: int): int {\n    return value * 2\n}"));
+    }
+
+    @Test
+    void aSyntaxErrorInAReturnIsNotAlsoAMissingReturn() {
+        DiagnosticCollector diagnostics = new DiagnosticCollector();
+        SourceFile file = new SourceFile("test.tys",
+                "function valid(name: string): bool {\n    return name.matches(\"[a-z]{1,16}\")\n}\n"
+                        + "function other(): int {\n    let x = 1\n}");
+        SourceUnit unit = Parser.parse(Lexer.lex(file, diagnostics), diagnostics);
+        Binder.bind(unit, TestRegistry.REGISTRY, diagnostics);
+        // '{1,16}' starts an interpolation: one syntax error, no "must return" for the broken
+        // function; a function that really lacks its return still gets the error.
+        assertEquals(List.of(DiagnosticCode.EXPECTED_TOKEN, DiagnosticCode.MISSING_RETURN),
+                diagnostics.diagnostics().stream().filter(Diagnostic::isError).map(Diagnostic::code).toList());
     }
 
     @Test

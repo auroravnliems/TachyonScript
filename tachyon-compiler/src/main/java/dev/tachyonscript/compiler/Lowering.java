@@ -88,6 +88,9 @@ public final class Lowering {
         for (BoundFunction value : module.defaults().values()) {
             functions.add(lowerFunction(value, IrFunction.Kind.PLAYERDATA_DEFAULT));
         }
+        for (BoundFunction value : module.fieldDefaults().values()) {
+            functions.add(lowerFunction(value, IrFunction.Kind.RECORD_DEFAULT));
+        }
         while (!lambdas.isEmpty()) {
             functions.add(lowerLambda(lambdas.poll()));
         }

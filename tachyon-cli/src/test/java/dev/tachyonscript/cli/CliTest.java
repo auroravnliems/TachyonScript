@@ -14,6 +14,7 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 class CliTest {
 
@@ -72,6 +73,19 @@ class CliTest {
     }
 
     @Test
+    void aFileIsCheckedOnItsOwnAndSaysSoWhenAnImportIsMissing() throws IOException {
+        script("bank.tys", "module bank\n\nfunction balance(): int {\n    return 5\n}\n");
+        Path shop = script("shop.tys", "import bank\n\nevent player.join {\n    player.send(\"{bank.balance()}\")\n}\n");
+        assertEquals(Cli.COMPILE_ERRORS, run("check", shop.toString()));
+        assertTrue(out().contains("[TYS0206]"), out());
+        assertTrue(out().contains("was checked on its own"), out());
+        assertFalse(out().contains("Did you mean"), "a script is never suggested as its own import: " + out());
+        out.reset();
+        assertEquals(Cli.OK, run("check", directory.toString()));
+        assertTrue(out().contains("Checked 2 files: 0 errors"), out());
+    }
+
+    @Test
     void dumpsEveryStage() throws IOException {
         Path file = script("join.tys", "event player.join {\n    player.send(\"Hello {player.name}!\")\n}\n");
         assertEquals(Cli.OK, run("dump", "tokens", file.toString()));
@@ -112,7 +126,9 @@ class CliTest {
 
     @Test
     void wikiReferenceIsUpToDate() throws IOException {
-        Path reference = Path.of("../wiki/API-Reference.md");
+        Path wiki = Path.of(System.getProperty("tachyon.wiki", "../wiki"));
+        assumeTrue(Files.isDirectory(wiki), "no wiki checkout at " + wiki + " (set -Ptachyon.wiki=<folder>)");
+        Path reference = wiki.resolve("API-Reference.md");
         String generated = ReferenceGenerator.generate(StandardLibrary.registry(), ReferenceGenerator.Target.WIKI);
         assertEquals(generated, Files.readString(reference).replace("\r\n", "\n"),
                 "wiki/API-Reference.md is out of date; regenerate it with "

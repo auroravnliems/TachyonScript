@@ -7,6 +7,7 @@ import dev.tachyonscript.compiler.CompiledModule;
 import dev.tachyonscript.compiler.Compiler;
 import dev.tachyonscript.ir.IrPrinter;
 import dev.tachyonscript.language.diagnostic.Diagnostic;
+import dev.tachyonscript.language.diagnostic.DiagnosticCode;
 import dev.tachyonscript.language.diagnostic.DiagnosticCollector;
 import dev.tachyonscript.language.diagnostic.DiagnosticRenderer;
 import dev.tachyonscript.language.lexer.LexResult;
@@ -53,7 +54,7 @@ public final class Cli {
             Commands:
               check <path>...                         Type-check scripts; a directory is read like the
                                                       plugin's scripts directory (recursively, skipping
-                                                      names that start with '-')
+                                                      names that start with '-'), a file on its own
               dump tokens|ast|bound|ir|code <file>    Print the output of one compiler stage
               docs [--wiki]                           Print the standard library reference (Markdown;
                                                       --wiki: the API-Reference page of the wiki)
@@ -143,8 +144,17 @@ public final class Cli {
             }
             CompilationResult result = new Compiler(registry).compile(batch.files());
             DiagnosticRenderer renderer = new DiagnosticRenderer(color, batch.displayPrefix());
+            boolean unknownModule = false;
             for (Diagnostic diagnostic : result.diagnostics().sorted()) {
                 out.println(renderer.render(diagnostic));
+                unknownModule |= diagnostic.code() == DiagnosticCode.UNKNOWN_MODULE;
+            }
+            if (unknownModule && !Files.isDirectory(path)) {
+                // A file is compiled on its own, so the modules it imports are not part of the check.
+                Path parent = path.toAbsolutePath().getParent();
+                out.println("Note: " + argument + " was checked on its own. To include the modules it imports, "
+                        + "check its folder: tys check " + (parent == null ? "." : Batch.slashes(parent)));
+                out.println();
             }
             files += batch.files().size();
             errors += result.diagnostics().errorCount();

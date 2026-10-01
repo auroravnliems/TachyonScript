@@ -202,6 +202,14 @@ class LanguageFeaturesTest {
                     total = 1
                 }
                 """, List.of(DiagnosticCode.CAPTURED_VARIABLE_CHANGES), "let totalNow = total");
+        // The variable counts as used: no 'never used' warning next to the error.
+        assertCodes("""
+                function f() {
+                    var total = 0
+                    server.players.forEach(p => log("{total}"))
+                    total = 1
+                }
+                """, List.of(DiagnosticCode.CAPTURED_VARIABLE_CHANGES));
         assertErrors("""
                 function f(x: int) {
                     let g = () => {
@@ -373,6 +381,15 @@ class LanguageFeaturesTest {
         assertErrors("command bad(values: List<int>) {\n}", List.of(DiagnosticCode.INVALID_COMMAND), "cannot take a parameter");
         assertErrors("@permision(\"x\")\ncommand bad {\n}", List.of(DiagnosticCode.INVALID_ANNOTATION), "@permission");
         assertErrors("command Bad {\n}", List.of(DiagnosticCode.INVALID_COMMAND), "bad");
+        // An invalid parameter is still known in the body: one error, no follow-up 'unknown name'.
+        assertErrors("command bad(amount: int = 1, name: string) {\n    sender.send(\"{name} {amount}\")\n}",
+                List.of(DiagnosticCode.INVALID_COMMAND), "Required parameters must come before optional ones");
+        assertErrors("command bad(text: string..., count: int) {\n    sender.send(\"{text} {count}\")\n}",
+                List.of(DiagnosticCode.INVALID_COMMAND), "Only the last parameter");
+        assertErrors("function one(): int {\n    return 1\n}\ncommand bad(count: int = one()) {\n    sender.send(\"{count}\")\n}",
+                List.of(DiagnosticCode.NOT_CONSTANT), "must be a constant");
+        assertErrors("command bad(values: List<int>) {\n    sender.send(\"{values}\")\n}",
+                List.of(DiagnosticCode.INVALID_COMMAND), "cannot take a parameter");
     }
 
     @Test

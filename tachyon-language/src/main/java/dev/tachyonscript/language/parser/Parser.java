@@ -639,11 +639,40 @@ public final class Parser {
         Token token = current();
         Token next = peek(1);
         if (token.isIdentifier("after") || token.isIdentifier("every")) {
-            return startsExpression(next) && !isAssignmentToken(next) && !next.is(TokenKind.LPAREN)
+            if (next.is(TokenKind.LPAREN)) {
+                // 'after (delay) { }' with a parenthesized delay. A call of a function named
+                // 'after' is never followed by a block (or 'for') on the same statement.
+                return blockFollows();
+            }
+            return startsExpression(next) && !isAssignmentToken(next)
                     && !next.is(TokenKind.LBRACKET) && !next.is(TokenKind.DOT) && !next.is(TokenKind.QUESTION_DOT);
         }
         if (token.isIdentifier("async") || token.isIdentifier("sync")) {
             return next.is(TokenKind.LBRACE);
+        }
+        return false;
+    }
+
+    /** Whether a '{' or 'for' follows at bracket depth 0 before the current statement ends. */
+    private boolean blockFollows() {
+        int depth = 0;
+        for (int distance = 1; index + distance < tokens.size(); distance++) {
+            switch (peek(distance).kind()) {
+                case LPAREN, LBRACKET -> depth++;
+                case RPAREN, RBRACKET -> depth--;
+                case LBRACE, FOR -> {
+                    if (depth == 0) {
+                        return true;
+                    }
+                }
+                case NEWLINE, SEMICOLON, RBRACE, EOF -> {
+                    if (depth <= 0) {
+                        return false;
+                    }
+                }
+                default -> {
+                }
+            }
         }
         return false;
     }

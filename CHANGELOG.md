@@ -35,6 +35,10 @@ Language level 2: everything a server usually scripts, without addons.
 - A choice between texts written in the script is a message, like a single literal:
   `player.send(ok ? "<green>Yes" : "<red>No {player.name}")`, and `switch` expressions
   whose values are all such texts.
+- Templates joined with `+` are a message too, formatted like the single template they spell:
+  a long message can be split over lines (`"<gold>Hi {player.name}! " + "<gray>Rules: {url}"`).
+  Before, only joined literals were; a join with a template was refused (TYS0234). A join with
+  a variable is still refused.
 - Constants of keyed types are checked at compile time: `Material.DIAMOND`,
   `Sound.ENTITY_PLAYER_LEVELUP`, `EntityType.ZOMBIE`, `PotionEffectType.SPEED`, ...
 - A list or map literal passed to a function is typed by the parameter when every
@@ -50,6 +54,17 @@ Language level 2: everything a server usually scripts, without addons.
   players shows their names. Records do the same for their fields
   (`Visit(who=Steve, where=world 0.5, 64, 0.5, stay=1m 30s)`), and so do `log(value)` and
   `json.stringify` for players, locations, materials and other server objects.
+- Importing a script whose file name is not a valid module name (`shop-items.tys` is the module
+  `shop-items`, which `import` cannot write) explains that and suggests `module shop_items`;
+  other unknown imports suggest every module of the load, also those not compiled yet. Uses of
+  a failed import are no longer reported again as unknown names.
+- A variable used in a lambda or scheduled block although it changes later is reported once
+  (TYS0236), without an extra warning that the variable is never used.
+- `after (delay) { }` and `every (delay) ... { }` accept a delay that starts with a parenthesis
+  (it was read as a call of a function named `after`). A call `after(x)` is still a call.
+- An invalid command parameter (a required one after optional ones, `string...` that is not
+  last, a default value that is not a constant) is reported once; the command body no longer
+  adds an `Unknown name` error for every use of that parameter.
 - A runtime error of a function calling itself shows the repeated call once
   (`... 127 more calls at the same place`) instead of one line per call.
 - Compiler hints no longer suggest functions that do not exist (`cooldown(...)` for a
@@ -57,6 +72,11 @@ Language level 2: everything a server usually scripts, without addons.
   (`?.[...]` for indexing a value that may be `null`); a map literal with mixed types suggests
   `Map<string, any>`. Calling a function value that may be `null` (for example one looked up
   in a map) reports TYS0216 with a null check to add.
+- A syntax error inside a function or placeholder (for example `{1,16}` in a regular
+  expression, which starts an interpolation) is no longer followed by a second error saying the
+  function must return a value: the parser skipped the broken `return`, so that error only
+  repeated the first one. Default values of record fields are checked even when no
+  `Record(...)` call uses them yet.
 
 ### Standard library
 
@@ -79,11 +99,18 @@ Language level 2: everything a server usually scripts, without addons.
   script, so SQL injection is a compile error (`TYS0235`).
 - Everything a script creates (timers, menus, boss bars, sidebars, permission
   attachments) belongs to it and is cleaned up when it is reloaded.
+- `player.death` can be cancelled, like `entity.death`: Paper then revives the player
+  instead. `@ignoreCancelled` is accepted on it (it was rejected, although
+  `event.cancel()` compiled).
 
 ### Engine, platform and plugin
 
 - Saved variables are cached in memory, player data is loaded while players connect,
   and changes are written in the background (SQLite by default, MySQL/MariaDB or memory).
+- A field added to a record that is already saved no longer loses the data: a saved record
+  without the field takes the field's default value (`visits: int = 0`, `tags: List<string> = []`)
+  or `null` for a `T?` field. Before, only nullable fields could be added; any other new field made
+  the whole variable (every home of every player, say) start again from its initial value.
 - Command registry with live updates of players' command lists; event dispatch by
   priority with `ignoreCancelled`; per-script resources and callbacks.
 - Paper platform: region-aware threading for entities, blocks and inventories;
@@ -94,9 +121,26 @@ Language level 2: everything a server usually scripts, without addons.
 - Script commands have `/help` pages (description, usage, aliases and sub-commands) that
   follow reloads; Paper builds its help index only at startup, so they are added by
   TachyonScript.
+- `broadcast(message, permission)` reaches every online player with the permission, and the
+  console. It used `Bukkit.broadcast`, which only reaches senders *subscribed* to the permission:
+  a permission that only scripts check (registered by no plugin) reached nobody — not even
+  operators — unless a permissions plugin granted it by name. The broadcast event is still fired.
 - Opening or closing a player's inventory screen while an inventory event of that player is
   handled (a menu click, `onOpen`/`onClose`, `player.inventory*` handlers) happens right after
   the event, as the server requires, instead of during it.
+- Values inside click actions and insertions of message templates are filled in:
+  `"<click:run_command:'/tpaccept {player.name}'>[Accept]</click>"` runs
+  `/tpaccept Steve` (it ran `/tpaccept <tys_arg_0>` before). The value goes in as plain text,
+  like everywhere else in a message; `text.command(...)` and the other `text.*` click helpers
+  still build clickable text from values without a template.
+- `/tys profile` and the slow-execution warning cover every script execution: commands,
+  `every`/`at` tasks, `after` blocks, placeholders, `on load` and callbacks (menu clicks, web
+  and database answers), not only event handlers.
+- `tys check <file>` checks the file on its own; when one of its imports is then missing, it
+  says so and suggests checking the folder, which is checked like the scripts folder.
+- `/tys scripts` says what each script declares (`2 handlers, 4 commands, 1 task`) and
+  `/tys info` adds the module name and imports, commands, tasks, placeholders and saved
+  variables. A script with only commands was listed as `0 handlers`.
 - The unused `commands.messages.usage` entry was removed from the default configuration
   (it is still accepted).
 - Verified on a live Paper 1.21.11 server with a self-test script and the wiki's recipes.

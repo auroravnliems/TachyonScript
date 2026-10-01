@@ -33,6 +33,7 @@ public final class Fakes {
     public static final class World {
         private final String name;
         private long time;
+        private double borderSize = 59_999_968;
         private final List<Player> players = new ArrayList<>();
 
         public World(String name) {
@@ -49,6 +50,15 @@ public final class Fakes {
 
         public void time(long value) {
             time = value;
+        }
+
+        /** Width of the world border (Minecraft's default is 59,999,968 blocks). */
+        public double borderSize() {
+            return borderSize;
+        }
+
+        public void borderSize(double value) {
+            borderSize = value;
         }
 
         public List<Player> players() {
@@ -77,6 +87,17 @@ public final class Fakes {
 
     /** A block; {@code type} is its material key, e.g. {@code minecraft:stone}. */
     public record Block(Location location, String type) {
+    }
+
+    /**
+     * Something a player saw or heard outside the chat: {@code actionbar} (the text above the
+     * hotbar), {@code title} (with its {@code subtitle}) or {@code sound} (the sound's key).
+     */
+    public record Shown(String kind, Object text, Object subtitle) {
+        @Override
+        public String toString() {
+            return String.valueOf(text);
+        }
     }
 
     /**
@@ -128,6 +149,11 @@ public final class Fakes {
         public void invalidate() {
             valid = false;
         }
+
+        /** Makes the entity valid again (a player who rejoins). */
+        public void revalidate() {
+            valid = true;
+        }
     }
 
     public static class LivingEntity extends Entity {
@@ -167,10 +193,21 @@ public final class Fakes {
         private Object displayName;
         private Object kickReason;
         private boolean op;
+        private boolean playedBefore = true;
 
         public Player(String name, Location location) {
             super(name, location);
             this.displayName = name;
+        }
+
+        /** Whether the player had joined before (false for a first join); true unless set. */
+        public boolean playedBefore() {
+            return playedBefore;
+        }
+
+        public Player playedBefore(boolean value) {
+            playedBefore = value;
+            return this;
         }
 
         @Override
@@ -178,8 +215,14 @@ public final class Fakes {
             messages.add(message);
         }
 
+        /** Chat messages, and (as {@link Shown}) what the player saw or heard outside the chat, in order. */
         public List<Object> messages() {
             return messages;
+        }
+
+        /** Records an action bar, a title or a sound for this player. */
+        public void show(String kind, Object text, Object subtitle) {
+            messages.add(new Shown(kind, text, subtitle));
         }
 
         public Player grant(String permission) {
@@ -318,7 +361,7 @@ public final class Fakes {
         }
     }
 
-    public static final class DeathEvent {
+    public static final class DeathEvent extends CancellableEvent {
         public final Player victim;
         public final Player killer;
         public Object deathMessage;
@@ -334,10 +377,13 @@ public final class Fakes {
     public static final class ChatEvent extends CancellableEvent {
         public final Player player;
         public final String message;
+        /** What everyone sees ({@code event.message}); the typed message unless a script changed it. */
+        public Object shown;
 
         public ChatEvent(Player player, String message) {
             this.player = player;
             this.message = message;
+            this.shown = message;
         }
     }
 
@@ -358,6 +404,16 @@ public final class Fakes {
         public final Block block;
 
         public BlockBreakEvent(Player player, Block block) {
+            this.player = player;
+            this.block = block;
+        }
+    }
+
+    public static final class BlockPlaceEvent extends CancellableEvent {
+        public final Player player;
+        public final Block block;
+
+        public BlockPlaceEvent(Player player, Block block) {
             this.player = player;
             this.block = block;
         }

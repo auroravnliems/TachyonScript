@@ -44,6 +44,10 @@ placeholder votes {
 * **Editing a script keeps the data.** Values are stored under the script's module name
   and the variable's name; reloading, even with a different initial value, keeps them.
   Renaming the variable starts fresh.
+* **Records can grow.** A field added to a saved record gets its default value in the
+  records saved before it existed (`record Home(spot: Location, visits: int = 0)`), or
+  `null` for a `T?` field. A new field with neither makes the saved value unreadable: the
+  variable starts from its initial value, with a warning in the console.
 
 ## Where it is stored
 

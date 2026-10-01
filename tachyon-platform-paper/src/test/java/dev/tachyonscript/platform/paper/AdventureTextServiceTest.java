@@ -3,6 +3,7 @@ package dev.tachyonscript.platform.paper;
 import dev.tachyonscript.api.natives.Arguments;
 import dev.tachyonscript.runtime.spi.MessageTemplate;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
@@ -112,6 +113,70 @@ class AdventureTextServiceTest {
         Component name = Component.text("Steve", NamedTextColor.AQUA);
         Component rendered = (Component) template.render(new Values(name));
         assertEquals("Name: Steve", plain(rendered));
+    }
+
+    /** The first click action of a component tree, or null. */
+    private static ClickEvent clickOf(Component component) {
+        if (component.clickEvent() != null) {
+            return component.clickEvent();
+        }
+        for (Component child : component.children()) {
+            ClickEvent click = clickOf(child);
+            if (click != null) {
+                return click;
+            }
+        }
+        return null;
+    }
+
+    /** The first insertion text of a component tree, or null. */
+    private static String insertionOf(Component component) {
+        if (component.insertion() != null) {
+            return component.insertion();
+        }
+        for (Component child : component.children()) {
+            String insertion = insertionOf(child);
+            if (insertion != null) {
+                return insertion;
+            }
+        }
+        return null;
+    }
+
+    @Test
+    void putsValuesIntoClickActionsAsPlainText() {
+        MessageTemplate template = text.compile(List.of("<click:run_command:'/tpaccept ", "'>[Accept ", "]</click>"));
+        assertEquals("TreeTemplate", template.getClass().getSimpleName());
+        Component rendered = (Component) template.render(new Values("Steve", "Steve"));
+        assertEquals(ClickEvent.runCommand("/tpaccept Steve"), clickOf(rendered));
+        assertEquals("[Accept Steve]", plain(rendered));
+        // A value is data wherever it goes: tags in it are neither parsed nor able to end the argument.
+        Component tricky = (Component) template.render(new Values("x'><click:run_command:'/op me'>", "y"));
+        assertEquals(ClickEvent.runCommand("/tpaccept x'><click:run_command:'/op me'>"), clickOf(tricky));
+        // Components go in as their plain text.
+        Component named = (Component) template.render(new Values(Component.text("Alex", NamedTextColor.AQUA), "Alex"));
+        assertEquals(ClickEvent.runCommand("/tpaccept Alex"), clickOf(named));
+    }
+
+    @Test
+    void fillsSuggestionsLinksAndInsertionsToo() {
+        MessageTemplate suggest = text.compile(List.of("<click:suggest_command:'/msg ", " '>Reply to ", "</click>"));
+        assertEquals(ClickEvent.suggestCommand("/msg Steve "), clickOf((Component) suggest.render(new Values("Steve", "Steve"))));
+        MessageTemplate link = text.compile(List.of("<click:open_url:'https://example.com/u/", "'>profile</click>"));
+        assertEquals(ClickEvent.openUrl("https://example.com/u/Steve"), clickOf((Component) link.render(new Values("Steve"))));
+        MessageTemplate insert = text.compile(List.of("<insert:'/tp ", "'>", "</insert>"));
+        Component inserted = (Component) insert.render(new Values("Steve", "Steve"));
+        assertEquals("/tp Steve", insertionOf(inserted));
+        assertEquals("Steve", plain(inserted));
+    }
+
+    @Test
+    void fillsClickActionsWhenTemplatesFallBack() {
+        MessageTemplate template = text.compile(List.of("<gradient:red:blue><click:run_command:'/warp ", "'>Go to ", "</click></gradient>"));
+        assertEquals("ParsingTemplate", template.getClass().getSimpleName());
+        Component rendered = (Component) template.render(new Values("spawn", "spawn"));
+        assertEquals(ClickEvent.runCommand("/warp spawn"), clickOf(rendered));
+        assertEquals("Go to spawn", plain(rendered));
     }
 
     @Test

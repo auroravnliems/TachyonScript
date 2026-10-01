@@ -25,13 +25,17 @@ import java.util.Map;
  * @param initializer   initializes the script variables (and saved variables without a saved
  *                      value); {@code null} when the module has no top-level variables
  * @param defaults      for each {@code playerdata var}: the function computing its initial value
+ * @param fieldDefaults for each record field with a default value: the function computing it, by
+ *                      function key ({@code $field:Record.field}); saved records written before
+ *                      the field existed get their value from it
  * @param imports       names of the modules this one imports
  */
 public record BoundModule(SourceFile file, String name, List<BoundFunction> functions, List<BoundEventHandler> handlers,
                           List<ConstantSymbol> constants, List<GlobalSymbol> globals, List<RecordSymbol> records,
                           List<BoundCommand> commands, List<BoundTask> tasks, List<BoundFunction> loadHooks,
                           List<BoundFunction> unloadHooks, List<BoundPlaceholder> placeholders, BoundFunction initializer,
-                          Map<GlobalSymbol, BoundFunction> defaults, List<String> imports) {
+                          Map<GlobalSymbol, BoundFunction> defaults, Map<String, BoundFunction> fieldDefaults,
+                          List<String> imports) {
 
     public BoundModule {
         functions = List.copyOf(functions);
@@ -45,6 +49,7 @@ public record BoundModule(SourceFile file, String name, List<BoundFunction> func
         unloadHooks = List.copyOf(unloadHooks);
         placeholders = List.copyOf(placeholders);
         defaults = Collections.unmodifiableMap(new LinkedHashMap<>(defaults));
+        fieldDefaults = Collections.unmodifiableMap(new LinkedHashMap<>(fieldDefaults));
         imports = List.copyOf(imports);
     }
 

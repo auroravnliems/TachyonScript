@@ -1330,6 +1330,8 @@ final class BodyBinder {
             }
             LocalSymbol origin = outer.origin();
             if (origin.isMutable() && origin.kind() == LocalSymbol.Kind.VARIABLE && assignedNames.contains(origin.name())) {
+                // The variable is used (wrongly): no 'never used' warning on top of this error.
+                outer.markRead();
                 module.report(module.diagnostic(DiagnosticCode.CAPTURED_VARIABLE_CHANGES, span,
                                 "This block uses '" + origin.name() + "', which is changed after it is declared.")
                         .label(origin.declaration(), "declared here")
@@ -1913,6 +1915,10 @@ final class BodyBinder {
         }
         if (module.types().isTypeName(name)) {
             return new PathResult.TypeName(name);
+        }
+        if (module.failedImports().contains(name)) {
+            // The import itself was reported; do not add an error for every use.
+            return new PathResult.Failed(identifier.span());
         }
         return new PathResult.Unknown(identifier);
     }
@@ -2621,7 +2627,8 @@ final class BodyBinder {
     private Argument prebind(Expression syntax) {
         Expression expression = unwrap(syntax);
         if (expression instanceof Expression.Template || isTextChoice(expression)
-                && (expression instanceof Expression.Conditional || expression instanceof Expression.Switch)) {
+                && (expression instanceof Expression.Conditional || expression instanceof Expression.Switch
+                || expression instanceof Expression.Binary)) {
             return new Argument.Deferred(syntax, Types.STRING, true, false, false, -1);
         }
         if (expression instanceof Expression.ListLiteral list && list.elements().isEmpty()) {
@@ -2672,12 +2679,59 @@ final class BodyBinder {
         return switch (unwrap(syntax)) {
             case Expression.Literal literal -> literal.kind() == Expression.LiteralKind.STRING;
             case Expression.Template ignored -> true;
+            case Expression.Binary binary -> joinedText(binary) != null;
             case Expression.Conditional conditional -> isTextChoice(conditional.whenTrue())
                     && isTextChoice(conditional.whenFalse());
             case Expression.Switch choice -> choice.defaultValue() != null && isTextChoice(choice.defaultValue())
                     && choice.arms().stream().allMatch(arm -> isTextChoice(arm.value()));
             default -> false;
         };
+    }
+
+    /**
+     * Texts written in the script joined with '+' — usually a long message split over lines,
+     * {@code "<gray>Hello {player.name}, " + "welcome to {server.name}!"} — as the single template
+     * they spell; null if any piece is not a string literal or template. Where a message is
+     * expected, the join is formatted like one template: the values inside stay plain text.
+     */
+    private static Expression.Template joinedText(Expression.Binary binary) {
+        if (binary.operator() != BinaryOperator.ADD) {
+            return null;
+        }
+        List<String> segments = new ArrayList<>();
+        List<Expression> parts = new ArrayList<>();
+        return appendText(binary, segments, parts) ? new Expression.Template(segments, parts, binary.span()) : null;
+    }
+
+    private static boolean appendText(Expression syntax, List<String> segments, List<Expression> parts) {
+        switch (unwrap(syntax)) {
+            case Expression.Binary binary when binary.operator() == BinaryOperator.ADD -> {
+                return appendText(binary.left(), segments, parts) && appendText(binary.right(), segments, parts);
+            }
+            case Expression.Literal literal when literal.kind() == Expression.LiteralKind.STRING -> {
+                appendSegment(segments, (String) literal.value());
+                return true;
+            }
+            case Expression.Template template -> {
+                appendSegment(segments, template.segments().getFirst());
+                for (int i = 0; i < template.parts().size(); i++) {
+                    parts.add(template.parts().get(i));
+                    segments.add(template.segments().get(i + 1));
+                }
+                return true;
+            }
+            default -> {
+                return false;
+            }
+        }
+    }
+
+    private static void appendSegment(List<String> segments, String text) {
+        if (segments.isEmpty()) {
+            segments.add(text);
+        } else {
+            segments.set(segments.size() - 1, segments.getLast() + text);
+        }
     }
 
     private static int argumentCost(Argument argument, Type parameter) {
@@ -2972,6 +3026,12 @@ final class BodyBinder {
 
     private BoundExpression bindBinary(Expression.Binary binary, Type expected) {
         BinaryOperator operator = binary.operator();
+        if (expected != null && expected.nonNullable() == Types.COMPONENT) {
+            Expression.Template joined = joinedText(binary);
+            if (joined != null) {
+                return bindTemplate(joined, expected);
+            }
+        }
         if (operator.isLogical()) {
             return bindCondition(binary).expression();
         }

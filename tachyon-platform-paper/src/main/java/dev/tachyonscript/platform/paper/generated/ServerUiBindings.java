@@ -68,7 +68,7 @@ public final class ServerUiBindings {
         b.bind(ServerUiApi.BROADCAST, (NativeFunction.OfVoid) a -> {
             net.kyori.adventure.text.Component message = (net.kyori.adventure.text.Component) a.getRef(0);
             String permission = a.getString(1);
-            Bukkit.broadcast(message, permission);
+            ServerInfo.broadcast(message, permission);
         });
         // 07-server.api:16
         b.bindGetter(ServerUiApi.SERVER_TPS, (NativeFunction.OfDouble) a -> {

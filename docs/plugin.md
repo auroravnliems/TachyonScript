@@ -36,11 +36,11 @@ The plugin folder then contains:
 |---------|------------|-------------|
 | `/tys help` | `tachyonscript.admin` | Lists the commands you may use |
 | `/tys reload [script]` | `tachyonscript.reload` | Recompiles changed scripts (or the given one) and activates them |
-| `/tys scripts` | `tachyonscript.admin` | Lists scripts and their handlers |
-| `/tys info <script>` | `tachyonscript.admin` | Events, functions and size of a script |
+| `/tys scripts` | `tachyonscript.admin` | Lists scripts and what each declares (handlers, commands, tasks, placeholders) |
+| `/tys info <script>` | `tachyonscript.admin` | Module name, events, commands, tasks, placeholders, saved variables and size of a script |
 | `/tys errors` | `tachyonscript.admin` | Compile errors of the last load and runtime errors since then |
 | `/tys status` | `tachyonscript.admin` | Storage, databases, script commands and placeholders |
-| `/tys profile start\|stop\|report` | `tachyonscript.profile` | Measures time spent per handler |
+| `/tys profile start\|stop\|report` | `tachyonscript.profile` | Measures time spent per handler, command, task, scheduled block and placeholder |
 | `/tys dump <script> [ir\|code]` | `tachyonscript.debug` | Prints the compiled form to the console |
 | `/tys version` | `tachyonscript.admin` | Versions, server type and loaded addons |
 

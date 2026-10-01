@@ -55,13 +55,16 @@ public final class Binder implements BodyBinder.ConstantResolver {
     private final Map<Expression, BoundExpression> defaults = new IdentityHashMap<>();
 
     private final Set<String> failedModules;
+    /** Every module name of the compilation, for suggestions on unknown imports. */
+    private final Set<String> knownModules;
 
     private Binder(SourceUnit unit, SymbolRegistry registry, DiagnosticCollector diagnostics,
-                   Map<String, BoundModule> available, Set<String> failedModules) {
+                   Map<String, BoundModule> available, Set<String> failedModules, Set<String> knownModules) {
         this.unit = unit;
         this.context = new ModuleContext(unit.file(), moduleName(unit), registry, diagnostics);
         this.available = available;
         this.failedModules = failedModules;
+        this.knownModules = knownModules;
     }
 
     /** Binds {@code unit} against {@code registry}; problems are reported to {@code diagnostics}. */
@@ -83,7 +86,17 @@ public final class Binder implements BodyBinder.ConstantResolver {
      */
     public static BoundModule bind(SourceUnit unit, SymbolRegistry registry, DiagnosticCollector diagnostics,
                                    Map<String, BoundModule> modules, Set<String> failedModules) {
-        return new Binder(unit, registry, diagnostics, modules, failedModules).run();
+        return bind(unit, registry, diagnostics, modules, failedModules, Set.of());
+    }
+
+    /**
+     * Binds {@code unit}; {@code knownModules} are the names of every module being compiled or
+     * available, bound or not yet, so that an unknown import can suggest the right one.
+     */
+    public static BoundModule bind(SourceUnit unit, SymbolRegistry registry, DiagnosticCollector diagnostics,
+                                   Map<String, BoundModule> modules, Set<String> failedModules,
+                                   Set<String> knownModules) {
+        return new Binder(unit, registry, diagnostics, modules, failedModules, knownModules).run();
     }
 
     /** Module name: the {@code module} declaration, or the file path without extension. */
@@ -185,7 +198,31 @@ public final class Binder implements BodyBinder.ConstantResolver {
         }
         return new BoundModule(unit.file(), context.moduleName(), functions, handlers, constantList, globals,
                 new ArrayList<>(context.records().values()), commands, tasks, loadHooks, unloadHooks, placeholders,
-                initializer, playerDefaults, importedModules(unit));
+                initializer, playerDefaults, fieldDefaults(), importedModules(unit));
+    }
+
+    /**
+     * For each record field with a default value, a function computing it: a saved record written
+     * before the field was added gets the field's value from it when it is loaded. Binding them
+     * also checks default values that no {@code Record(...)} call uses yet.
+     */
+    private Map<String, BoundFunction> fieldDefaults() {
+        Map<String, BoundFunction> fieldDefaults = new LinkedHashMap<>();
+        for (RecordSymbol record : context.records().values()) {
+            for (RecordSymbol.Field field : record.fields()) {
+                Expression syntax = field.syntax() == null ? null : field.syntax().defaultValue();
+                if (syntax == null || field.type().isError()) {
+                    continue;
+                }
+                String key = "$field:" + record.name() + "." + field.name();
+                String what = "field '" + field.name() + "' of " + record.name();
+                BoundExpression value = defaultValue(syntax, field.type(), what);
+                fieldDefaults.put(key, new BoundFunction(key, "default value of " + what, List.of(), field.type(),
+                        new BoundStatement.Block(List.of(new BoundStatement.Return(value, syntax.span())), syntax.span()),
+                        syntax.span(), null));
+            }
+        }
+        return fieldDefaults;
     }
 
     // ------------------------------------------------------------------ imports
@@ -202,14 +239,12 @@ public final class Binder implements BodyBinder.ConstantResolver {
                 context.report(context.diagnostic(DiagnosticCode.UNKNOWN_MODULE, anImport.module().span(),
                                 "Module '" + target + "' has errors, so it cannot be imported.")
                         .note("Fix the errors reported for that module first.").build());
+                forgetImport(anImport, target);
                 continue;
             }
             if (module == null) {
-                context.report(context.diagnostic(DiagnosticCode.UNKNOWN_MODULE, anImport.module().span(),
-                                "Unknown module '" + target + "'.")
-                        .suggestions(Suggestions.closest(target, available.keySet(), 3))
-                        .note("A module is a script file: import economy reads economy.tys (or a file declaring "
-                                + "'module economy'). The imported file must compile without errors.").build());
+                reportUnknownModule(target, anImport);
+                forgetImport(anImport, target);
                 continue;
             }
             if (anImport.names().isEmpty()) {
@@ -244,6 +279,51 @@ public final class Binder implements BodyBinder.ConstantResolver {
                 }
             }
         }
+    }
+
+    /** Remembers the names a failed import would have brought, so their uses are not reported again. */
+    private void forgetImport(Declaration.Import anImport, String target) {
+        if (anImport.names().isEmpty()) {
+            context.failedImports().add(anImport.alias() != null ? anImport.alias().name()
+                    : target.substring(target.lastIndexOf('.') + 1));
+        } else {
+            anImport.names().forEach(name -> context.failedImports().add(name.name()));
+        }
+    }
+
+    /**
+     * Reports an import of a module that does not exist. A script whose file name is not a valid
+     * module name (such as {@code shop-items.tys}) cannot be imported by that name: say so.
+     */
+    private void reportUnknownModule(String target, Declaration.Import anImport) {
+        Set<String> names = new java.util.TreeSet<>(available.keySet());
+        names.addAll(knownModules);
+        names.remove(context.moduleName());
+        String unimportable = null;
+        List<String> importable = new ArrayList<>();
+        for (String name : names) {
+            if (isImportableName(name)) {
+                importable.add(name);
+            } else if (name.replaceAll("[^A-Za-z0-9_.]", "_").equals(target)) {
+                unimportable = name;
+            }
+        }
+        var builder = context.diagnostic(DiagnosticCode.UNKNOWN_MODULE, anImport.module().span(),
+                "Unknown module '" + target + "'.");
+        if (unimportable != null) {
+            builder.note("The script " + unimportable.replace('.', '/') + ".tys has the module name '" + unimportable
+                    + "', which an import cannot write. Add 'module " + target + "' at the top of that script.");
+        } else {
+            builder.suggestions(Suggestions.closest(target, importable, 3))
+                    .note("A module is a script file: import economy reads economy.tys (or a file declaring "
+                            + "'module economy'). The imported file must compile without errors.");
+        }
+        context.report(builder.build());
+    }
+
+    /** Whether an import can name a module: identifiers separated by dots. */
+    private static boolean isImportableName(String name) {
+        return name.matches("[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*");
     }
 
     // ------------------------------------------------------------------ collection
@@ -736,7 +816,7 @@ public final class Binder implements BodyBinder.ConstantResolver {
                 BodyBinder.allAssignedNames(function.body()));
         BoundStatement.Block body = binder.bindBlock(function.body(), true);
         if (symbol.returnType() != PrimitiveType.VOID && !symbol.returnType().isError()
-                && Reachability.completesNormally(body)) {
+                && Reachability.completesNormally(body) && !context.hasSyntaxErrorsAt(function.body().span())) {
             int end = Math.max(function.body().span().start(), function.body().span().end() - 1);
             context.report(context.diagnostic(DiagnosticCode.MISSING_RETURN, new Span(end, function.body().span().end()),
                             capitalize(owner) + " must return a value of type "
@@ -840,6 +920,7 @@ public final class Binder implements BodyBinder.ConstantResolver {
             Type type = context.types().resolve(parameter.type(), false);
             if (type.isError()) {
                 failed = true;
+                declareInvalidParameter(root, name, type, parameter);
                 continue;
             }
             if (!isArgumentType(type.nonNullable())) {
@@ -849,6 +930,7 @@ public final class Binder implements BodyBinder.ConstantResolver {
                                 + "OfflinePlayer, World, GameMode and Minecraft constants such as Material.")
                         .build());
                 failed = true;
+                declareInvalidParameter(root, name, type, parameter);
                 continue;
             }
             if (parameter.rest() && (i != declaration.parameters().size() - 1 || type.nonNullable() != Types.STRING)) {
@@ -856,6 +938,7 @@ public final class Binder implements BodyBinder.ConstantResolver {
                                 "Only the last parameter can take the rest of the command, and it must be a string.")
                         .note("Example: command msg(target: Player, message: string...) { }").build());
                 failed = true;
+                declareInvalidParameter(root, name, type, parameter);
                 continue;
             }
             Object defaultValue = null;
@@ -873,11 +956,13 @@ public final class Binder implements BodyBinder.ConstantResolver {
                                 .note("Leave the parameter empty with '?' and decide in the body: "
                                         + name + ": " + type.nonNullable().displayName() + "?").build());
                         failed = true;
+                        declareInvalidParameter(root, name, type, parameter);
                         continue;
                     }
                     defaultValue = constant;
                 } else {
                     failed = true;
+                    declareInvalidParameter(root, name, type, parameter);
                     continue;
                 }
                 optional = true;
@@ -887,6 +972,7 @@ public final class Binder implements BodyBinder.ConstantResolver {
                                 "Required parameters must come before optional ones.")
                         .note("Move '" + name + "' before the parameters that have '?' or a default value.").build());
                 failed = true;
+                declareInvalidParameter(root, name, type, parameter);
                 continue;
             }
             sawOptional |= optional;
@@ -911,6 +997,16 @@ public final class Binder implements BodyBinder.ConstantResolver {
         BoundFunction function = new BoundFunction("command " + joined, display, parameters, PrimitiveType.VOID, body,
                 declaration.span(), null);
         return new BoundCommand(path, commandParameters, options, function, declaration.span());
+    }
+
+    /**
+     * Declares a parameter that was reported as invalid, so that the command body still knows it
+     * and does not add an 'unknown name' error for every use.
+     */
+    private static void declareInvalidParameter(Scope root, String name, Type type, Declaration.Parameter parameter) {
+        if (root.lookupHere(name) == null) {
+            root.declare(new LocalSymbol(name, type, false, LocalSymbol.Kind.PARAMETER, parameter.name().span(), null));
+        }
     }
 
     private boolean isArgumentType(Type type) {
@@ -1052,7 +1148,7 @@ public final class Binder implements BodyBinder.ConstantResolver {
         BodyBinder binder = new BodyBinder(context, this, root, Types.STRING, null, display, null,
                 BodyBinder.allAssignedNames(declaration.body()));
         BoundStatement.Block body = binder.bindBlock(declaration.body(), true);
-        if (Reachability.completesNormally(body)) {
+        if (Reachability.completesNormally(body) && !context.hasSyntaxErrorsAt(declaration.body().span())) {
             int end = Math.max(declaration.body().span().start(), declaration.body().span().end() - 1);
             context.report(context.diagnostic(DiagnosticCode.MISSING_RETURN, new Span(end, declaration.body().span().end()),
                             "Placeholder '" + name + "' must return the text to show on every path.")

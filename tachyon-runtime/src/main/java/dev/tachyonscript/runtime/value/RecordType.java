@@ -12,16 +12,32 @@ import java.util.Objects;
  */
 public final class RecordType {
 
+    /** Computes the declared default value of a field, or returns {@link #NO_DEFAULT}. */
+    @FunctionalInterface
+    public interface FieldDefaults {
+        Object compute(RecordType type, int field);
+    }
+
+    /** Returned by {@link #defaultValue} for a field declared without a default value. */
+    public static final Object NO_DEFAULT = new Object();
+
     private final String module;
     private final String name;
     private final List<String> fieldNames;
     private final List<Type> fieldTypes;
+    private final FieldDefaults defaults;
 
+    /** A record type whose field defaults are not available (they are only needed to load saved records). */
     public RecordType(RecordRef ref) {
+        this(ref, (type, field) -> NO_DEFAULT);
+    }
+
+    public RecordType(RecordRef ref, FieldDefaults defaults) {
         this.module = ref.module();
         this.name = ref.name();
         this.fieldNames = ref.fieldNames();
         this.fieldTypes = ref.fieldTypes();
+        this.defaults = defaults;
     }
 
     public String module() {
@@ -47,6 +63,15 @@ public final class RecordType {
 
     public int fieldCount() {
         return fieldNames.size();
+    }
+
+    /**
+     * The default value declared for a field ({@code record Home(uses: int = 0)}), computed now,
+     * or {@link #NO_DEFAULT}. Loading a saved record that lacks the field (it was written before
+     * the field was added) uses it.
+     */
+    public Object defaultValue(int field) {
+        return defaults.compute(this, field);
     }
 
     /** Whether {@code ref} describes this type (same key and the same fields). */

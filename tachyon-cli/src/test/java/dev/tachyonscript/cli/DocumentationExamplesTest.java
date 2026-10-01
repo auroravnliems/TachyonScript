@@ -41,7 +41,7 @@ class DocumentationExamplesTest {
     void everyExampleCompiles() throws IOException {
         List<Example> examples = examples(Path.of("../docs"));
         examples.addAll(examples(Path.of("../README.md")));
-        examples.addAll(examples(Path.of("../wiki")));
+        examples.addAll(examples(Path.of(System.getProperty("tachyon.wiki", "../wiki"))));
         assertTrue(examples.size() >= 15, "found only " + examples.size() + " examples");
         List<String> failures = new ArrayList<>();
         Compiler compiler = new Compiler(StandardLibrary.registry());

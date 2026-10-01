@@ -89,7 +89,9 @@ command warp.list {
 }
 ```
 
-All sub-commands of a command must be in the same script.
+Sub-commands of one command may come from several scripts; keeping them in one script is
+easier to read. When two scripts declare the same command (or sub-command), the one in the
+script that comes first by path is used and the console shows a warning.
 
 ## Messages
 

@@ -12,7 +12,7 @@ fn server.dispatch(command: string): bool global modifies : Runs a command as th
 fn server.player(uuid: UUID): Player? : The online player with a UUID, or null.
   do: Bukkit.getPlayer(uuid)
 fn broadcast(message: Component, permission: string) : Sends a message to every player with a permission (and the console).
-  do: Bukkit.broadcast(message, permission)
+  do: ServerInfo.broadcast(message, permission)
 prop server.tps: double : Ticks per second over the last minute (20 is perfect).
   get: ServerInfo.tps()
 prop server.mspt: double : Average milliseconds per tick (below 50 keeps 20 TPS).

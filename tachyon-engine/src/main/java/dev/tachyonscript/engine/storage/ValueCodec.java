@@ -28,7 +28,8 @@ import java.util.Map;
  *
  * <p>The text is JSON: numbers, booleans and text as themselves, lists as arrays, maps as
  * arrays of {@code [key, value]} pairs (keys need not be text), records as objects by field
- * name (so fields can be reordered or added with a default of null), Minecraft constants by
+ * name (so fields can be reordered, and added: a field missing from the saved text takes its
+ * declared default value, or null if its type is nullable), Minecraft constants by
  * key ({@code minecraft:diamond}) and other platform values through the codec the platform
  * binds for their type (locations, items, worlds, UUIDs, formatted text).
  */
@@ -185,8 +186,15 @@ public final class ValueCodec {
             for (int i = 0; i < values.length; i++) {
                 String name = recordType.fieldNames().get(i);
                 Type fieldType = recordType.fieldTypes().get(i);
-                if (!fields.containsKey(name) && !fieldType.isNullable()) {
-                    throw new IllegalArgumentException("Saved " + type.name() + " has no field '" + name + "'");
+                if (!fields.containsKey(name)) {
+                    // Saved before the field was added: its default value, or null.
+                    Object fallback = recordType.defaultValue(i);
+                    if (fallback == RecordType.NO_DEFAULT && !fieldType.isNullable()) {
+                        throw new IllegalArgumentException("Saved " + type.name() + " has no field '" + name
+                                + "' (give the field a default value to load older data)");
+                    }
+                    values[i] = fallback == RecordType.NO_DEFAULT ? null : fallback;
+                    continue;
                 }
                 values[i] = fromJson(fields.get(name), fieldType, records);
             }

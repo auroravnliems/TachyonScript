@@ -92,7 +92,7 @@ public final class ScriptEngine {
     private final Databases databases;
     private final CommandManager commands;
     private final ReentrantLock loadLock = new ReentrantLock();
-    private final Map<CompiledHandler, Long> slowReported = new ConcurrentHashMap<>();
+    private final Map<CompiledFunction, Long> slowReported = new ConcurrentHashMap<>();
     private volatile Generation current;
     private volatile boolean timed;
     private volatile Map<String, Placeholder> placeholders = Map.of();
@@ -507,6 +507,7 @@ public final class ScriptEngine {
 
     /** Runs a function of a script, reporting script errors (never throws). */
     Object runSafely(LoadedScript script, CompiledFunction function, Object... arguments) {
+        long start = timed ? System.nanoTime() : 0;
         try {
             return Interpreter.call(function, arguments);
         } catch (ScriptRuntimeException error) {
@@ -514,8 +515,33 @@ public final class ScriptEngine {
         } catch (RuntimeException error) {
             platform.logger().error("Internal error while running " + function.displayName() + " of " + script.path()
                     + ": " + error);
+        } finally {
+            if (start != 0) {
+                measured(function, start);
+            }
         }
         return null;
+    }
+
+    /** Whether executions are being timed (for the profiler or the slow-execution warning). */
+    boolean timed() {
+        return timed;
+    }
+
+    /**
+     * Records one execution that started at {@code start} ({@link System#nanoTime()}): for the
+     * profiler, and for the slow-execution warning when it is an outermost execution.
+     */
+    void measured(CompiledFunction function, long start) {
+        long elapsed = System.nanoTime() - start;
+        if (profiler.isEnabled()) {
+            profiler.record(function, elapsed);
+        }
+        long threshold = options.slowThresholdNanos();
+        // Only outermost executions: nested ones are part of their caller's time.
+        if (threshold > 0 && elapsed > threshold && ExecutionStack.current().depth() == 0) {
+            reportSlow(function, elapsed);
+        }
     }
 
     private void onGlobalThread(Runnable action) {
@@ -615,8 +641,6 @@ public final class ScriptEngine {
     }
 
     private void dispatchTimed(CompiledHandler[] handlers, Object event) {
-        boolean profiling = profiler.isEnabled();
-        long threshold = options.slowThresholdNanos();
         for (CompiledHandler handler : handlers) {
             if (handler.ignoreCancelled() && platform.events().isCancelled(event)) {
                 continue;
@@ -627,29 +651,21 @@ public final class ScriptEngine {
             } catch (ScriptRuntimeException error) {
                 errors.report(handler, error);
             }
-            long elapsed = System.nanoTime() - start;
-            if (profiling) {
-                profiler.record(handler, elapsed);
-            }
-            // Only outermost executions: nested ones are part of their caller's time.
-            if (threshold > 0 && elapsed > threshold && ExecutionStack.current().depth() == 0) {
-                reportSlow(handler, elapsed);
-            }
+            measured(handler.function(), start);
         }
     }
 
-    private void reportSlow(CompiledHandler handler, long elapsed) {
+    private void reportSlow(CompiledFunction function, long elapsed) {
         long now = System.nanoTime();
-        Long last = slowReported.get(handler);
+        Long last = slowReported.get(function);
         if (last != null && now - last < SLOW_REPORT_INTERVAL_NANOS) {
             return;
         }
-        slowReported.put(handler, now);
-        var source = handler.function().source();
-        long span = handler.function().unit().span();
-        int line = source.line(dev.tachyonscript.ir.Spans.start(span));
-        platform.logger().warn(String.format(Locale.ROOT, "Slow script execution: %s:%d, event %s, %.2f ms",
-                source.path(), line, handler.event().name(), elapsed / 1e6));
+        slowReported.put(function, now);
+        var source = function.source();
+        int line = source.line(dev.tachyonscript.ir.Spans.start(function.unit().span()));
+        platform.logger().warn(String.format(Locale.ROOT, "Slow script execution: %s:%d, %s, %.2f ms",
+                source.path(), line, function.displayName(), elapsed / 1e6));
     }
 
     /** Paths of scripts in the active generation that handle {@code event}. */
@@ -777,12 +793,17 @@ public final class ScriptEngine {
         if (script == null || !script.isActive()) {
             return null;
         }
+        long start = timed ? System.nanoTime() : 0;
         try {
             return Interpreter.callClosure(closure, arguments);
         } catch (ScriptRuntimeException error) {
             errors.report(script.path(), error);
         } catch (RuntimeException error) {
             platform.logger().error("Internal error while running " + closure.describe() + ": " + error);
+        } finally {
+            if (start != 0) {
+                measured(closure.function(), start);
+            }
         }
         return null;
     }
@@ -793,12 +814,17 @@ public final class ScriptEngine {
     }
 
     private void runBlock(LoadedScript script, Closure block, Object... arguments) {
+        long start = timed ? System.nanoTime() : 0;
         try {
             Interpreter.callClosure(block, arguments);
         } catch (ScriptRuntimeException error) {
             errors.report(script.path(), error);
         } catch (RuntimeException error) {
             platform.logger().error("Internal error while running " + block.describe() + ": " + error);
+        } finally {
+            if (start != 0) {
+                measured(block.function(), start);
+            }
         }
     }
 

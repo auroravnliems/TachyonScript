@@ -3,9 +3,13 @@ package dev.tachyonscript.plugin;
 import dev.tachyonscript.api.addon.TachyonAddon;
 import dev.tachyonscript.api.registry.Bindings;
 import dev.tachyonscript.api.registry.SymbolRegistry;
+import dev.tachyonscript.compiler.CompilationResult;
+import dev.tachyonscript.compiler.Compiler;
 import dev.tachyonscript.engine.EngineOptions;
 import dev.tachyonscript.engine.LoadMode;
+import dev.tachyonscript.language.semantic.BoundModule;
 import dev.tachyonscript.language.source.SourceFile;
+import dev.tachyonscript.stdlib.StandardLibrary;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -167,5 +171,43 @@ class PluginSupportTest {
             assertTrue(plugin.isConfigurationSection("permissions.tachyonscript." + permission), permission);
         }
         assertFalse(plugin.getString("version").contains("${"), "version is expanded at build time");
+    }
+
+    @Test
+    void scriptSummariesDescribeCommandsTasksAndSavedVariables() {
+        String code = """
+                import helpers
+                persistent var visits: int = 0
+                playerdata var coins: int = 0
+                event player.join {
+                    visits += 1
+                }
+                command warp {
+                }
+                command warp.set(name: string) {
+                }
+                every 5 minutes {
+                }
+                at "08:30" {
+                }
+                placeholder visits {
+                    return "{visits}"
+                }
+                """;
+        CompilationResult result = new Compiler(StandardLibrary.registry()).compile(List.of(
+                new SourceFile("shop/main.tys", code), new SourceFile("helpers.tys", "function unused() {\n}\n")));
+        assertTrue(result.succeeded(), () -> result.diagnostics().sorted().toString());
+        BoundModule shop = result.modules().stream().filter(m -> m.name().equals("shop.main")).findFirst()
+                .orElseThrow().bound();
+        assertEquals("1 handler, 2 commands, 2 tasks, 1 placeholder", ScriptSummary.contents(shop));
+        assertEquals(List.of("/warp", "/warp set"), ScriptSummary.commands(shop));
+        assertEquals(List.of("every 5m", "at 08:30"), ScriptSummary.tasks(shop));
+        assertEquals(List.of("%tys_visits%"), ScriptSummary.placeholders(shop));
+        assertEquals("1 persistent, 1 playerdata", ScriptSummary.savedVariables(shop));
+        assertEquals(List.of("helpers"), shop.imports());
+        BoundModule helpers = result.modules().stream().filter(m -> m.name().equals("helpers")).findFirst()
+                .orElseThrow().bound();
+        assertEquals("no handlers or commands", ScriptSummary.contents(helpers));
+        assertEquals("", ScriptSummary.savedVariables(helpers));
     }
 }

@@ -38,6 +38,8 @@ public final class BoundPrinter {
         }
         module.defaults().forEach((global, function) -> out.append("(default ").append(global.name()).append(' ')
                 .append(print(function.body())).append(")\n"));
+        module.fieldDefaults().forEach((key, function) -> out.append("(field-default ")
+                .append(key.substring("$field:".length())).append(' ').append(print(function.body())).append(")\n"));
         for (BoundFunction function : module.functions()) {
             out.append(print(function)).append('\n');
         }

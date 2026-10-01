@@ -27,7 +27,9 @@ public final class IrFunction {
         /** Initializes the top-level variables of a module. */
         INITIALIZER,
         /** Computes the initial value of a {@code playerdata var}. */
-        PLAYERDATA_DEFAULT
+        PLAYERDATA_DEFAULT,
+        /** Computes the default value of a record field (for saved records written before the field existed). */
+        RECORD_DEFAULT
     }
 
     private final String key;

@@ -345,6 +345,12 @@ class ParserTest {
         assertEquals("(every (duration 1 seconds) for player { (call a) })", expression("every 1 second for player {\n        a()\n    }"));
         assertEquals("(async { (call a) })", expression("async {\n        a()\n    }"));
         assertEquals("(sync {})", expression("sync {}"));
+        // A parenthesized delay is still a delay...
+        assertEquals("(after (paren (duration 2 seconds)) { (call a) })", expression("after (2 seconds) {\n        a()\n    }"));
+        assertEquals("(every (* (paren (duration 1 seconds)) 2) for player {})",
+                expression("every (1 second) * 2 for player {}"));
+        // ...while a call of a function named 'after' stays a call.
+        assertEquals("(call after 1)", expression("after(1)"));
         // The words stay usable as names.
         assertEquals("(= after 1)", expression("after = 1"));
     }

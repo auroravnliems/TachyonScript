@@ -8,6 +8,7 @@ import dev.tachyonscript.ir.FunctionRef;
 import dev.tachyonscript.ir.GlobalRef;
 import dev.tachyonscript.ir.RecordRef;
 import dev.tachyonscript.runtime.interpreter.CompiledFunction;
+import dev.tachyonscript.runtime.interpreter.Interpreter;
 import dev.tachyonscript.runtime.link.LinkEnvironment;
 import dev.tachyonscript.runtime.link.LinkedModule;
 import dev.tachyonscript.runtime.value.GlobalCell;
@@ -93,10 +94,21 @@ final class ModuleEnvironment implements LinkEnvironment {
     @Override
     public synchronized RecordType record(RecordRef ref) {
         if (own(ref.module())) {
-            return records.computeIfAbsent(ref.name(), name -> new RecordType(ref));
+            return records.computeIfAbsent(ref.name(), name -> new RecordType(ref, this::fieldDefault));
         }
         LinkedModule other = linked(ref.module());
         return other == null ? null : other.records().get(ref.name());
+    }
+
+    /** The declared default value of a field of one of this script's records, computed now. */
+    private Object fieldDefault(RecordType type, int field) {
+        LinkedModule module = script.linked();
+        if (module == null) {
+            return RecordType.NO_DEFAULT;
+        }
+        return module.function("$field:" + type.name() + "." + type.fieldNames().get(field))
+                .map(function -> Interpreter.call(function))
+                .orElse(RecordType.NO_DEFAULT);
     }
 
     /** The runtime descriptor of a script record type (for decoding saved values). */

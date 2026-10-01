@@ -70,7 +70,8 @@ Version: 0.2.0-SNAPSHOT (language level 2).
   owner's next tick; reading the value immediately afterwards returns the old value.
 * Operations returning a new entity (`spawn`, `dropItem`) called from another region's
   thread on Folia report an error; use `after 1 tick for <entity> { }`.
-* The profiler measures whole handlers, not individual statements.
+* The profiler measures whole executions (handlers, commands, tasks, blocks, placeholders),
+  not individual statements.
 * Modules are not published to a Maven repository; addons compile against the plugin jar.
 
 ## Next milestones

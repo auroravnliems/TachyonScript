@@ -41,8 +41,12 @@ public final class EventApi {
     public static final EventDeclaration PLAYER_DEATH = EventDeclaration.builder("player.death", PLAYER_DEATH_EVENT)
             .variable("victim", PLAYER, "The player who died.")
             .variable("killer", Types.nullable(PLAYER), "The player who killed them, if any.")
+            .cancellable()
             .threading(ThreadingRequirement.ENTITY)
-            .doc("A player died.").build();
+            .documentation(new Documentation("A player died.",
+                    "Cancelling it keeps the player alive: the server revives them instead (with full health).",
+                    List.of(), "0.1.0"))
+            .build();
 
     public static final EventDeclaration PLAYER_CHAT = EventDeclaration.builder("player.chat", PLAYER_CHAT_EVENT)
             .variable("player", PLAYER, "The player who sent the message.")

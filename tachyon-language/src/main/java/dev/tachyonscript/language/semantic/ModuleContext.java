@@ -9,9 +9,11 @@ import dev.tachyonscript.language.source.SourceFile;
 import dev.tachyonscript.language.source.Span;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * State shared while binding one file: registry, diagnostics, module-level symbols of this
@@ -33,6 +35,8 @@ final class ModuleContext {
     private final Map<String, BoundModule> moduleAliases = new LinkedHashMap<>();
     /** {@code import { a } from m}: name to the imported symbol (constant, global, record or overloads). */
     private final Map<String, Object> importedNames = new LinkedHashMap<>();
+    /** Names of imports that failed (already reported): their uses are not reported again. */
+    private final Set<String> failedImports = new HashSet<>();
     private final Map<ClassType, RecordSymbol> recordsByType = new LinkedHashMap<>();
     /** Top-level variables declared further down, while the initializers are bound: name to declaration. */
     private final Map<String, Span> pendingGlobals = new LinkedHashMap<>();
@@ -126,6 +130,10 @@ final class ModuleContext {
         return moduleAliases;
     }
 
+    Set<String> failedImports() {
+        return failedImports;
+    }
+
     Map<String, Object> importedNames() {
         return importedNames;
     }
@@ -154,6 +162,22 @@ final class ModuleContext {
 
     Diagnostic.Builder diagnostic(DiagnosticCode code, Span span, String message) {
         return Diagnostic.builder(code, file, span, message);
+    }
+
+    /**
+     * Whether a lexical or syntax error ({@code TYS00xx}, {@code TYS01xx}) was reported inside
+     * {@code span}: the parser skipped part of that code, so a check about what the code lacks
+     * (such as a missing {@code return}) would only repeat the same mistake.
+     */
+    boolean hasSyntaxErrorsAt(Span span) {
+        for (Diagnostic diagnostic : diagnostics.diagnostics()) {
+            String id = diagnostic.code().id();
+            if (diagnostic.isError() && diagnostic.file() == file && (id.startsWith("TYS00") || id.startsWith("TYS01"))
+                    && diagnostic.span().start() >= span.start() && diagnostic.span().end() <= span.end()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Whether an error inside {@code span} of this file was already reported. */

@@ -240,11 +240,16 @@ final class CommandManager {
         if (!entry.script().isActive()) {
             return;
         }
+        long start = engine.timed() ? System.nanoTime() : 0;
         try {
             Interpreter.call(entry.function(), call);
         } catch (ScriptRuntimeException error) {
             engine.errors().report(entry.script().path(), error);
             send(sender, messages.error(), Map.of());
+        } finally {
+            if (start != 0) {
+                engine.measured(entry.function(), start);
+            }
         }
     }
 
