@@ -56,6 +56,28 @@ class LanguageRuntimeTest {
     }
 
     @Test
+    void lambdasInFinallyCompileOnceAndRunOnEveryExit() {
+        LinkedModule module = start("""
+                function run(n: int): int {
+                    try {
+                        if n == 0 { return 10 }
+                        if n == 1 { throw "expected" }
+                    } catch e {
+                        log(e.message)
+                        return 20
+                    } finally {
+                        [n].forEach(x => log("clean {x}"))
+                    }
+                    return 30
+                }
+                """);
+        assertEquals(10, call(module, "run(int)", 0));
+        assertEquals(20, call(module, "run(int)", 1));
+        assertEquals(30, call(module, "run(int)", 2));
+        assertEquals(List.of("clean 0", "expected", "clean 1", "clean 2"), ScriptHarness.LOG);
+    }
+
+    @Test
     void functionValuesCanBeStoredPassedAndCalled() {
         LinkedModule module = start("""
                 function twice(f: function(int): int, x: int): int {

@@ -10,6 +10,9 @@ Language level 2: everything a server usually scripts, without addons.
 
 ### Language
 
+- Lambdas and scheduled blocks inside `finally` compile once even though cleanup is emitted
+  at every exit. They used to fail with TYS0900 (duplicate lambda function key); cleanup
+  still runs on normal completion, return and caught errors.
 - Commands: `command name(args) { }` with typed arguments (numbers, `bool`,
   `Duration`, players, offline players, worlds, game modes, materials and other keyed
   types), default values, optional (`T?`) and rest (`string...`) arguments,
@@ -104,6 +107,14 @@ Language level 2: everything a server usually scripts, without addons.
   `event.cancel()` compiled).
 
 ### Engine, platform and plugin
+
+- The test platform models chest menus, item names/lore/main hand and player command clicks.
+  Both `Player.give` overloads record material, amount and name per receiver, so commands
+  that change saved data before giving an item can finish in book scenarios. Inventory
+  stacking, full-inventory drops and world physics still require Paper tests.
+  Menu close/open requests are deferred during a click; reloading their owner closes them.
+  Text files are held in memory and HTTP uses recorded requests with configurable replies,
+  without making network connections, so integration scripts can be exercised safely.
 
 - Saved variables are cached in memory, player data is loaded while players connect,
   and changes are written in the background (SQLite by default, MySQL/MariaDB or memory).

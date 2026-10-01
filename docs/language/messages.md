@@ -87,6 +87,13 @@ let info = text.hover("<gray>[?]", "<yellow>Requests expire after 60 seconds")
 player.send(text.join([accept, info], " "))
 ```
 
+## Permission broadcasts
+
+`broadcast(message, permission)` checks `hasPermission` on each online player and also
+sends to the console. The permission need not be registered by a plugin; operators follow
+the server's normal permission rules. Paper's `BroadcastMessageEvent` can cancel the
+broadcast or change its message and recipients, just as with ordinary broadcasts.
+
 ## Titles, action bars and the tab list
 
 ```tys-body

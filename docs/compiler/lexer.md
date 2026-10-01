@@ -10,8 +10,9 @@ pass with no regular expressions.
 * **Identifiers**: ASCII letters, digits and `_`, not starting with a digit.
   Other letters are rejected with a hint to use strings for such text.
 * **Reserved keywords**: `let var const function return if else while for in
-  break continue true false null is as` and, reserved for planned error
-  handling, `try catch throw`. Words such as `event`, `module`, `import` and
+  break continue true false null is as try catch finally throw switch case default`.
+  Error handling and switch are implemented in 0.2. Words such as `event`, `module`,
+  `import`, `record`, `persistent`, `playerdata`, `placeholder` and
   `command` are *contextual*: they are keywords only where a declaration can
   start, so they remain usable as names elsewhere (`event.cancel()`).
   After `.` any word is a member name, which is how `block.break` works.

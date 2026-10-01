@@ -28,7 +28,9 @@ import dev.tachyonscript.language.semantic.RecordSymbol;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Lowers a {@link BoundModule} (free of errors) to an {@link IrModule}.
@@ -46,6 +48,7 @@ public final class Lowering {
     private final BoundModule module;
     private final List<IrFunction> functions = new ArrayList<>();
     private final Deque<BoundExpression.Lambda> lambdas = new ArrayDeque<>();
+    private final Set<String> queuedLambdaKeys = new HashSet<>();
 
     private Lowering(BoundModule module) {
         this.module = module;
@@ -160,7 +163,11 @@ public final class Lowering {
 
     /** Queues a lambda for lowering and returns the reference its closure is created with. */
     FunctionRef lambda(BoundExpression.Lambda lambda) {
-        lambdas.add(lambda);
+        // finally is emitted at every exit. Each exit creates its own closure, but the
+        // shared bound lambda must still have exactly one function body in this module.
+        if (queuedLambdaKeys.add(lambda.key())) {
+            lambdas.add(lambda);
+        }
         List<Type> parameters = new ArrayList<>();
         lambda.captures().forEach(capture -> parameters.add(capture.type()));
         lambda.parameters().forEach(parameter -> parameters.add(parameter.type()));

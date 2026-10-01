@@ -3,6 +3,11 @@
 A menu is a chest inventory whose slots run script functions when they are clicked.
 Players cannot take or put items in a menu unless it allows it.
 
+The Java test platform also models chest menus and click callbacks, including deferred
+close/open ordering, handler retention when `menu.inventory.set` changes an item, and
+closing menus when their owning script is retired. It is a behavioural test double;
+inventory packets, drag gestures and Bukkit event integration still need a Paper test.
+
 ```tys
 playerdata var coins: int = 100
 
@@ -78,3 +83,11 @@ A menu can be shown to several players and updated while they look at it
 (`menu.set(...)` changes what they see). It belongs to the script that created it:
 when that script is reloaded, every open copy is closed, so a player never keeps a
 menu whose buttons do nothing. Menus nobody looks at are freed automatically.
+
+## Testing basic items
+
+The in-memory test platform models chest slots/clicks, item names/lore, hands and
+both Player.give overloads. Given items are recorded by receiver, material, amount
+and name, so a command can be checked after it changes saved data. It does not
+simulate inventory stacking, full-inventory drops or world physics; test those
+on a Paper copy with a client. This is separate from compiler-only examples.

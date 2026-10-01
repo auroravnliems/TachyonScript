@@ -256,8 +256,10 @@ mode any failure keeps the whole previous generation. Event threads read the
 current generation once per event, so dispatch needs no locks, and an event is
 handled entirely by one generation.
 
-Planned: commands and scheduled tasks will belong to a generation too and be
-retired with it; persistent data (`playerdata`, `persistent`) will survive reloads.
+Commands, scheduled tasks, callbacks and owned resources belong to loaded scripts.
+Retiring a changed script cancels its tasks and closes owned menus; stale callbacks
+are ignored. Unchanged scripts may be reused in the new generation. Saved variables
+(`playerdata`, `persistent var`) survive reloads in the engine's data store.
 
 ## 8. Threading and ownership (Paper and Folia)
 
@@ -274,10 +276,11 @@ owns the entity and otherwise schedules it on the entity's scheduler (Folia) or
 the main thread (Paper); `global(action)` does the same for world-wide state such
 as the time of day. Teleports use `teleportAsync` on Folia.
 
-Each native declaration also states its requirement (`ThreadingRequirement`:
-`GLOBAL`, `ENTITY`, `REGION`, `ASYNC`, ...). The compiler does not use it yet;
-scheduling constructs (`after`, `every`, `async`) will be built on the same
-abstraction.
+Each native declaration states its requirement (`ThreadingRequirement`: `GLOBAL`,
+`ENTITY`, `REGION`, `ASYNC`, ...). Scheduling constructs (`after`, `every`, `async`,
+`sync`) use the platform scheduler. The compiler does not currently enforce these
+requirements statically. Bindings check ownership at runtime, reject unsafe reads and
+schedule supported writes on the owner; the declaration records the requirement for tools.
 
 ## 9. Text and MiniMessage
 
@@ -307,11 +310,12 @@ rejected as a whole with a message naming it; the others load normally. The
 result is frozen into the immutable registry every compilation uses. See
 [`addons/getting-started.md`](addons/getting-started.md).
 
-## 11. Storage (planned)
+## 11. Storage
 
-Persistent variables (`playerdata`, `persistent global`) follow
+Saved variables (`playerdata var`, `persistent var`) follow
 memory cache → dirty tracking → asynchronous batched writes → pluggable backend
-(SQLite, MySQL/MariaDB). Script code never waits for a database; keys are stable
+(SQLite, MySQL/MariaDB). Reading saved variables uses the cache; database sync
+operations are separate APIs restricted to asynchronous blocks. Keys are stable
 schema identifiers derived from module and variable names, never compiler IDs.
 
 ## 12. Bytecode backend (planned)

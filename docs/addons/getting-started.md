@@ -30,12 +30,15 @@ started, which gives every plugin the chance to register addons in `onEnable`.
 
 ## 2. Declare and implement
 
+Choose names that do not already belong to the standard library: `player.toggleSneak`
+is built in since 0.2, so this addon adds `coins.sneak`.
+
 Everything an addon adds is two things: a **declaration** (name, types,
 documentation — what the compiler sees) and a **binding** (the Java code that runs).
 See [ADR 0003](../decisions/0003-declarations-and-bindings.md) for why.
 
 This addon adds a `coins` property to players, a `pay` method, and a
-`player.sneak` event backed by Bukkit's `PlayerToggleSneakEvent`:
+`coins.sneak` event backed by Bukkit's `PlayerToggleSneakEvent`:
 
 ```java
 package com.example.coins;
@@ -75,12 +78,12 @@ public final class CoinsAddon implements TachyonAddon {
             .doc("Gives coins to another player; false if the player has too few.")
             .build();
 
-    static final ClassType SNEAK_EVENT = ClassType.builder("PlayerSneakEvent")
+    static final ClassType SNEAK_EVENT = ClassType.builder("CoinsSneakEvent")
             .supertypes(MinecraftTypes.CANCELLABLE)
             .doc("A player started or stopped sneaking.")
             .build();
 
-    static final EventDeclaration PLAYER_SNEAK = EventDeclaration.builder("player.sneak", SNEAK_EVENT)
+    static final EventDeclaration PLAYER_SNEAK = EventDeclaration.builder("coins.sneak", SNEAK_EVENT)
             .variable("player", MinecraftTypes.PLAYER, "The player.")
             .variable("sneaking", Types.BOOL, "Whether the player is now sneaking.")
             .cancellable()
@@ -182,7 +185,7 @@ After the server starts, the console lists the addon:
 Scripts can now use it:
 
 ```tys-addon
-event player.sneak {
+event coins.sneak {
     if sneaking {
         player.coins += 1
         player.send("<gold>+1 coin ({player.coins} total)")

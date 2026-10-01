@@ -1,5 +1,11 @@
 # Integrations
 
+In `TestPlatform`, text files live only in memory. HTTP requests are recorded and receive
+the configured status/body on the next simulated tick; no network connection is opened.
+Use `platform.interactions().http(status, body)` and `.requests()` in Java tests. A real
+connection failure is represented by status `-1`; the test can supply that response too.
+This tests script decisions, not HTTP transport or Paper filesystem confinement.
+
 ## Vault: economy, chat and groups
 
 With [Vault](https://www.spigotmc.org/resources/vault.34315/) and an economy plugin

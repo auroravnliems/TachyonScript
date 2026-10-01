@@ -62,6 +62,11 @@ An argument is optional when it has a default value or a nullable type (`Player?
 
 ## Sub-commands
 
+On Paper, a root command hidden by its permission can be rejected by Minecraft as
+`Unknown or incomplete command` before TachyonScript handles it. In that case,
+`@permissionMessage` and `commands.messages.no-permission` cannot replace the
+server's message. Test with an authorized sender as well as an ordinary player.
+
 A dotted name declares a sub-command. Running the group alone lists its sub-commands:
 
 ```tys

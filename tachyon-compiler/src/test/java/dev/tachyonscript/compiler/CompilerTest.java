@@ -132,6 +132,25 @@ class CompilerTest {
     }
 
     @Test
+    void scheduledCleanupInFinallyDoesNotDuplicateLambdaKeys() {
+        CompilationResult result = compile(new SourceFile("cleanup.tys", """
+                var pending: Map<UUID, bool> = {}
+                @playerOnly
+                command save {
+                    let id = player.uuid
+                    async {
+                        try { log("working {id}") }
+                        catch e { log(e.message) }
+                        finally { sync { pending.remove(id) } }
+                    }
+                }
+                """));
+        assertTrue(result.succeeded(), () -> render(result));
+        var functions = result.modules().getFirst().ir().functions();
+        assertEquals(functions.size(), functions.stream().map(f -> f.key()).distinct().count());
+    }
+
+    @Test
     void compilesEverySampleOfTheLanguage() {
         String source = """
                 const PREFIX = "<gold>[Server]</gold> "

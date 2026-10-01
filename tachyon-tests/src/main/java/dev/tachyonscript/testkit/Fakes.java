@@ -195,6 +195,11 @@ public final class Fakes {
         private boolean op;
         private boolean playedBefore = true;
 
+        /** Revoke a permission while a menu is open, as a permissions plugin can do. */
+        public void revoke(String permission) {
+            permissions.remove(permission);
+        }
+
         public Player(String name, Location location) {
             super(name, location);
             this.displayName = name;

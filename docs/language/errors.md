@@ -62,7 +62,9 @@ command pay(target: Player, amount: int) {
 
 `e.message` is the message, `e.kind` what went wrong (`script`, `thrown`, `division`,
 `index`, `null`, `cast`, `native`) and `e.location` where (`pay.tys:5`). A `finally`
-block runs however the `try` block is left.
+block runs however the `try` block is left. It may contain a lambda or a scheduled block
+such as `sync { ... }`: each exit creates a closure, while the function body is compiled
+once. A scheduled cleanup still runs at the scheduled time, not immediately.
 
 ## Limits
 

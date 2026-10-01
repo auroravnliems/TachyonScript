@@ -64,6 +64,7 @@ public final class TestPlatform implements Platform {
     private final Map<String, CommandRegistry.Command> commands = new LinkedHashMap<>();
     private final Map<String, Map<String, Object>> blockTags = new HashMap<>();
     private final TestScheduler scheduler = new TestScheduler();
+    private final TestInteractions interactions = new TestInteractions(this);
     private final Bindings bindings;
     private final SymbolRegistry registry = StandardLibrary.registry();
     private final EngineLogger logger = new EngineLogger() {
@@ -87,7 +88,8 @@ public final class TestPlatform implements Platform {
     private final Set<String> stubbed = new java.util.TreeSet<>();
 
     public TestPlatform() {
-        Bindings.Builder all = Bindings.builder().include(StandardLibrary.coreBindings()).include(platformBindings());
+        Bindings.Builder all = Bindings.builder().include(StandardLibrary.coreBindings()).include(platformBindings())
+                .include(interactions.bindings());
         // Everything without a fake still links: calling it fails with a clear message. The engine
         // implements databases itself, so those are left to it.
         Set<String> engine = new java.util.HashSet<>();
@@ -135,7 +137,9 @@ public final class TestPlatform implements Platform {
 
     /** An engine running on this platform. */
     public ScriptEngine engine(EngineOptions options) {
-        return new ScriptEngine(registry, this, options, InternalErrorHandler.IGNORE);
+        ScriptEngine engine = new ScriptEngine(registry, this, options, InternalErrorHandler.IGNORE);
+        interactions.engine(engine);
+        return engine;
     }
 
     public ScriptEngine engine() {
@@ -161,6 +165,7 @@ public final class TestPlatform implements Platform {
     }
 
     public void leave(Fakes.Player player) {
+        interactions.close(player);
         players.remove(player);
         world.players().remove(player);
         player.invalidate();
@@ -180,6 +185,10 @@ public final class TestPlatform implements Platform {
 
     public List<Fakes.Player> onlinePlayers() {
         return Collections.unmodifiableList(players);
+    }
+
+    public TestInteractions interactions() {
+        return interactions;
     }
 
     public Fakes.Console console() {
