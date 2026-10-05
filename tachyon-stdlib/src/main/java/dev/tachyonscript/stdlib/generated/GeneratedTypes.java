@@ -132,18 +132,21 @@ public final class GeneratedTypes {
     public static final ClassType TNTPRIMED = ClassType.builder("TNTPrimed").supertypes(MinecraftTypes.ENTITY)
             .documentation(new Documentation("Lit TNT.", "", List.of(), "0.2.0")).build();
     // 02-types.api:56
-    public static final ClassType TEXT_DISPLAY = ClassType.builder("TextDisplay").supertypes(MinecraftTypes.ENTITY)
+    public static final ClassType DISPLAY = ClassType.builder("Display").supertypes(MinecraftTypes.ENTITY)
+            .documentation(new Documentation("Base type of text, item and block displays.", "", List.of(), "0.2.0")).build();
+    // 02-types.api:57
+    public static final ClassType TEXT_DISPLAY = ClassType.builder("TextDisplay").supertypes(DISPLAY)
             .documentation(new Documentation("A floating text (a hologram line).", "", List.of(), "0.2.0")).build();
-    // 02-types.api:60
+    // 02-types.api:61
     public static final ClassType BOSS_BAR = ClassType.builder("BossBar")
             .documentation(new Documentation("A boss bar at the top of the screen, shown to chosen players.", "", List.of(), "0.2.0")).build();
-    // 02-types.api:61
+    // 02-types.api:62
     public static final ClassType SIDEBAR = ClassType.builder("Sidebar")
             .documentation(new Documentation("A scoreboard sidebar shown to chosen players.", "", List.of(), "0.2.0")).build();
-    // 02-types.api:62
+    // 02-types.api:63
     public static final ClassType MENU = ClassType.builder("Menu")
             .documentation(new Documentation("A chest menu (GUI) with click handlers per slot.", "", List.of(), "0.2.0")).build();
-    // 02-types.api:63
+    // 02-types.api:64
     public static final ClassType MENU_CLICK = ClassType.builder("MenuClick")
             .documentation(new Documentation("A click in a menu.", "", List.of(), "0.2.0")).build();
     // 10-events-player.api:26
@@ -455,9 +458,45 @@ public final class GeneratedTypes {
     // 11-events-world.api:372
     public static final ClassType SERVER_COMMAND_EVENT = ClassType.builder("ServerCommandEvent").supertypes(MinecraftTypes.CANCELLABLE)
             .documentation(new Documentation("The event object of server.command handlers.", "", List.of(), "0.2.0")).build();
+    // 12-extensions.api:4
+    public static final ClassType STATISTIC = ClassType.builder("Statistic").keyed()
+            .documentation(new Documentation("A Minecraft statistic, with material or entity parameters where required.", "", List.of(), "0.2.0")).build();
+    // 12-extensions.api:5
+    public static final ClassType DYE_COLOR = ClassType.builder("DyeColor").keyed()
+            .documentation(new Documentation("One of Minecraft's sixteen dye colors.", "", List.of(), "0.2.0")).build();
+    // 12-extensions.api:6
+    public static final ClassType SIGN_SIDE = ClassType.builder("SignSide").keyed()
+            .documentation(new Documentation("The front or back of a sign.", "", List.of(), "0.2.0")).build();
+    // 12-extensions.api:7
+    public static final ClassType BILLBOARD = ClassType.builder("Billboard").keyed()
+            .documentation(new Documentation("The axes on which a display faces its viewer.", "", List.of(), "0.2.0")).build();
+    // 12-extensions.api:8
+    public static final ClassType ITEM_DISPLAY_TRANSFORM = ClassType.builder("ItemDisplayTransform").keyed()
+            .documentation(new Documentation("The model transform of an item display.", "", List.of(), "0.2.0")).build();
+    // 12-extensions.api:9
+    public static final ClassType TEXT_ALIGNMENT = ClassType.builder("TextAlignment").keyed()
+            .documentation(new Documentation("Text alignment inside a text display.", "", List.of(), "0.2.0")).build();
+    // 12-extensions.api:10
+    public static final ClassType BLOCK_DATA = ClassType.builder("BlockData")
+            .documentation(new Documentation("Typed block state data. Copying and merging create independent values.", "", List.of(), "0.2.0")).build();
+    // 12-extensions.api:11
+    public static final ClassType ITEM_DISPLAY = ClassType.builder("ItemDisplay").supertypes(DISPLAY)
+            .documentation(new Documentation("An entity displaying an item model.", "", List.of(), "0.2.0")).build();
+    // 12-extensions.api:12
+    public static final ClassType BLOCK_DISPLAY = ClassType.builder("BlockDisplay").supertypes(DISPLAY)
+            .documentation(new Documentation("An entity displaying a block model.", "", List.of(), "0.2.0")).build();
+    // 12-extensions.api:13
+    public static final ClassType QUATERNION = ClassType.builder("Quaternion")
+            .documentation(new Documentation("A normalized quaternion describing a rotation.", "", List.of(), "0.2.0")).build();
+    // 12-extensions.api:14
+    public static final ClassType BRIGHTNESS = ClassType.builder("Brightness")
+            .documentation(new Documentation("A display's block and sky light override, each from 0 to 15.", "", List.of(), "0.2.0")).build();
+    // 12-extensions.api:15
+    public static final ClassType BOUNDING_BOX = ClassType.builder("BoundingBox")
+            .documentation(new Documentation("An axis-aligned box. Operations return new boxes.", "", List.of(), "0.2.0")).build();
 
     /** Every generated type, supertypes first (registration order). */
-    public static final List<ClassType> ALL = List.of(MATERIAL, ENTITY_TYPE, SOUND, PARTICLE, POTION_EFFECT_TYPE, ENCHANTMENT, BIOME, ATTRIBUTE, BLOCK_FACE, ITEM_FLAG, EQUIPMENT_SLOT, CLICK_TYPE, INVENTORY_TYPE, ACTION, DAMAGE_CAUSE, SPAWN_REASON, TELEPORT_CAUSE, DIFFICULTY, ENVIRONMENT, BAR_COLOR, BAR_STYLE, VECTOR, COLOR, ITEM_STACK, POTION_EFFECT, CHUNK, INVENTORY, PLAYER_INVENTORY, ITEM, MOB, AGEABLE, ANIMALS, TAMEABLE, MONSTER, ARMOR_STAND, PROJECTILE, EXPERIENCE_ORB, FALLING_BLOCK, TNTPRIMED, TEXT_DISPLAY, BOSS_BAR, SIDEBAR, MENU, MENU_CLICK, PLAYER_RESPAWN_EVENT, PLAYER_TELEPORT_EVENT, PLAYER_COMMAND_PREPROCESS_EVENT, PLAYER_INTERACT_EVENT, PLAYER_INTERACT_ENTITY_EVENT, PLAYER_DROP_ITEM_EVENT, PLAYER_ITEM_CONSUME_EVENT, PLAYER_ITEM_HELD_EVENT, PLAYER_SWAP_HAND_ITEMS_EVENT, PLAYER_TOGGLE_SNEAK_EVENT, PLAYER_TOGGLE_SPRINT_EVENT, PLAYER_TOGGLE_FLIGHT_EVENT, PLAYER_GAME_MODE_CHANGE_EVENT, PLAYER_LEVEL_CHANGE_EVENT, PLAYER_EXP_CHANGE_EVENT, PLAYER_CHANGED_WORLD_EVENT, PLAYER_BED_ENTER_EVENT, PLAYER_BED_LEAVE_EVENT, PLAYER_FISH_EVENT, PLAYER_BUCKET_FILL_EVENT, PLAYER_BUCKET_EMPTY_EVENT, PLAYER_ADVANCEMENT_DONE_EVENT, PLAYER_PORTAL_EVENT, PLAYER_KICK_EVENT, ASYNC_PLAYER_PRE_LOGIN_EVENT, PLAYER_ITEM_DAMAGE_EVENT, PLAYER_ITEM_BREAK_EVENT, CRAFT_ITEM_EVENT, ENCHANT_ITEM_EVENT, PLAYER_JUMP_EVENT, PLAYER_ARMOR_CHANGE_EVENT, PLAYER_LAUNCH_PROJECTILE_EVENT, SIGN_CHANGE_EVENT, INVENTORY_CLICK_EVENT, INVENTORY_DRAG_EVENT, INVENTORY_OPEN_EVENT, INVENTORY_CLOSE_EVENT, PLAYER_SHEAR_ENTITY_EVENT, PLAYER_HARVEST_BLOCK_EVENT, PLAYER_RESOURCE_PACK_STATUS_EVENT, ENTITY_EXHAUSTION_EVENT, FOOD_LEVEL_CHANGE_EVENT, ENTITY_DAMAGE_BY_ENTITY_EVENT, CREATURE_SPAWN_EVENT, ENTITY_TARGET_EVENT, ENTITY_TAME_EVENT, ENTITY_BREED_EVENT, ENTITY_REGAIN_HEALTH_EVENT, ENTITY_SHOOT_BOW_EVENT, ENTITY_COMBUST_EVENT, ENTITY_CHANGE_BLOCK_EVENT, ENTITY_TELEPORT_EVENT, ENTITY_TOGGLE_GLIDE_EVENT, ENTITY_RESURRECT_EVENT, ENTITY_POTION_EFFECT_EVENT, ENTITY_MOUNT_EVENT, ENTITY_DISMOUNT_EVENT, ENTITY_INTERACT_EVENT, ENTITY_TRANSFORM_EVENT, ENTITY_EXPLODE_EVENT, EXPLOSION_PRIME_EVENT, PROJECTILE_LAUNCH_EVENT, PROJECTILE_HIT_EVENT, ENTITY_PICKUP_ITEM_EVENT, ITEM_SPAWN_EVENT, ITEM_DESPAWN_EVENT, ITEM_MERGE_EVENT, HANGING_BREAK_EVENT, HANGING_PLACE_EVENT, VEHICLE_ENTER_EVENT, VEHICLE_EXIT_EVENT, VEHICLE_DESTROY_EVENT, BLOCK_PLACE_EVENT, BLOCK_BURN_EVENT, BLOCK_IGNITE_EVENT, BLOCK_GROW_EVENT, BLOCK_SPREAD_EVENT, BLOCK_FADE_EVENT, BLOCK_FORM_EVENT, BLOCK_EXPLODE_EVENT, BLOCK_REDSTONE_EVENT, BLOCK_FROM_TO_EVENT, LEAVES_DECAY_EVENT, BLOCK_DAMAGE_EVENT, BLOCK_DISPENSE_EVENT, BLOCK_PISTON_EXTEND_EVENT, BLOCK_PISTON_RETRACT_EVENT, BLOCK_FERTILIZE_EVENT, FURNACE_SMELT_EVENT, FURNACE_BURN_EVENT, INVENTORY_MOVE_ITEM_EVENT, WEATHER_CHANGE_EVENT, THUNDER_CHANGE_EVENT, LIGHTNING_STRIKE_EVENT, WORLD_LOAD_EVENT, WORLD_UNLOAD_EVENT, TIME_SKIP_EVENT, STRUCTURE_GROW_EVENT, PORTAL_CREATE_EVENT, CHUNK_LOAD_EVENT, CHUNK_UNLOAD_EVENT, PAPER_SERVER_LIST_PING_EVENT, SERVER_COMMAND_EVENT);
+    public static final List<ClassType> ALL = List.of(MATERIAL, ENTITY_TYPE, SOUND, PARTICLE, POTION_EFFECT_TYPE, ENCHANTMENT, BIOME, ATTRIBUTE, BLOCK_FACE, ITEM_FLAG, EQUIPMENT_SLOT, CLICK_TYPE, INVENTORY_TYPE, ACTION, DAMAGE_CAUSE, SPAWN_REASON, TELEPORT_CAUSE, DIFFICULTY, ENVIRONMENT, BAR_COLOR, BAR_STYLE, VECTOR, COLOR, ITEM_STACK, POTION_EFFECT, CHUNK, INVENTORY, PLAYER_INVENTORY, ITEM, MOB, AGEABLE, ANIMALS, TAMEABLE, MONSTER, ARMOR_STAND, PROJECTILE, EXPERIENCE_ORB, FALLING_BLOCK, TNTPRIMED, DISPLAY, TEXT_DISPLAY, BOSS_BAR, SIDEBAR, MENU, MENU_CLICK, PLAYER_RESPAWN_EVENT, PLAYER_TELEPORT_EVENT, PLAYER_COMMAND_PREPROCESS_EVENT, PLAYER_INTERACT_EVENT, PLAYER_INTERACT_ENTITY_EVENT, PLAYER_DROP_ITEM_EVENT, PLAYER_ITEM_CONSUME_EVENT, PLAYER_ITEM_HELD_EVENT, PLAYER_SWAP_HAND_ITEMS_EVENT, PLAYER_TOGGLE_SNEAK_EVENT, PLAYER_TOGGLE_SPRINT_EVENT, PLAYER_TOGGLE_FLIGHT_EVENT, PLAYER_GAME_MODE_CHANGE_EVENT, PLAYER_LEVEL_CHANGE_EVENT, PLAYER_EXP_CHANGE_EVENT, PLAYER_CHANGED_WORLD_EVENT, PLAYER_BED_ENTER_EVENT, PLAYER_BED_LEAVE_EVENT, PLAYER_FISH_EVENT, PLAYER_BUCKET_FILL_EVENT, PLAYER_BUCKET_EMPTY_EVENT, PLAYER_ADVANCEMENT_DONE_EVENT, PLAYER_PORTAL_EVENT, PLAYER_KICK_EVENT, ASYNC_PLAYER_PRE_LOGIN_EVENT, PLAYER_ITEM_DAMAGE_EVENT, PLAYER_ITEM_BREAK_EVENT, CRAFT_ITEM_EVENT, ENCHANT_ITEM_EVENT, PLAYER_JUMP_EVENT, PLAYER_ARMOR_CHANGE_EVENT, PLAYER_LAUNCH_PROJECTILE_EVENT, SIGN_CHANGE_EVENT, INVENTORY_CLICK_EVENT, INVENTORY_DRAG_EVENT, INVENTORY_OPEN_EVENT, INVENTORY_CLOSE_EVENT, PLAYER_SHEAR_ENTITY_EVENT, PLAYER_HARVEST_BLOCK_EVENT, PLAYER_RESOURCE_PACK_STATUS_EVENT, ENTITY_EXHAUSTION_EVENT, FOOD_LEVEL_CHANGE_EVENT, ENTITY_DAMAGE_BY_ENTITY_EVENT, CREATURE_SPAWN_EVENT, ENTITY_TARGET_EVENT, ENTITY_TAME_EVENT, ENTITY_BREED_EVENT, ENTITY_REGAIN_HEALTH_EVENT, ENTITY_SHOOT_BOW_EVENT, ENTITY_COMBUST_EVENT, ENTITY_CHANGE_BLOCK_EVENT, ENTITY_TELEPORT_EVENT, ENTITY_TOGGLE_GLIDE_EVENT, ENTITY_RESURRECT_EVENT, ENTITY_POTION_EFFECT_EVENT, ENTITY_MOUNT_EVENT, ENTITY_DISMOUNT_EVENT, ENTITY_INTERACT_EVENT, ENTITY_TRANSFORM_EVENT, ENTITY_EXPLODE_EVENT, EXPLOSION_PRIME_EVENT, PROJECTILE_LAUNCH_EVENT, PROJECTILE_HIT_EVENT, ENTITY_PICKUP_ITEM_EVENT, ITEM_SPAWN_EVENT, ITEM_DESPAWN_EVENT, ITEM_MERGE_EVENT, HANGING_BREAK_EVENT, HANGING_PLACE_EVENT, VEHICLE_ENTER_EVENT, VEHICLE_EXIT_EVENT, VEHICLE_DESTROY_EVENT, BLOCK_PLACE_EVENT, BLOCK_BURN_EVENT, BLOCK_IGNITE_EVENT, BLOCK_GROW_EVENT, BLOCK_SPREAD_EVENT, BLOCK_FADE_EVENT, BLOCK_FORM_EVENT, BLOCK_EXPLODE_EVENT, BLOCK_REDSTONE_EVENT, BLOCK_FROM_TO_EVENT, LEAVES_DECAY_EVENT, BLOCK_DAMAGE_EVENT, BLOCK_DISPENSE_EVENT, BLOCK_PISTON_EXTEND_EVENT, BLOCK_PISTON_RETRACT_EVENT, BLOCK_FERTILIZE_EVENT, FURNACE_SMELT_EVENT, FURNACE_BURN_EVENT, INVENTORY_MOVE_ITEM_EVENT, WEATHER_CHANGE_EVENT, THUNDER_CHANGE_EVENT, LIGHTNING_STRIKE_EVENT, WORLD_LOAD_EVENT, WORLD_UNLOAD_EVENT, TIME_SKIP_EVENT, STRUCTURE_GROW_EVENT, PORTAL_CREATE_EVENT, CHUNK_LOAD_EVENT, CHUNK_UNLOAD_EVENT, PAPER_SERVER_LIST_PING_EVENT, SERVER_COMMAND_EVENT, STATISTIC, DYE_COLOR, SIGN_SIDE, BILLBOARD, ITEM_DISPLAY_TRANSFORM, TEXT_ALIGNMENT, BLOCK_DATA, ITEM_DISPLAY, BLOCK_DISPLAY, QUATERNION, BRIGHTNESS, BOUNDING_BOX);
 
     private GeneratedTypes() {
     }
@@ -489,6 +528,12 @@ public final class GeneratedTypes {
         tables.put(ENVIRONMENT, GeneratedKeys.load("environment.txt"));
         tables.put(BAR_COLOR, GeneratedKeys.load("barcolor.txt"));
         tables.put(BAR_STYLE, GeneratedKeys.load("barstyle.txt"));
+        tables.put(STATISTIC, GeneratedKeys.load("statistic.txt"));
+        tables.put(DYE_COLOR, GeneratedKeys.load("dyecolor.txt"));
+        tables.put(SIGN_SIDE, GeneratedKeys.load("signside.txt"));
+        tables.put(BILLBOARD, GeneratedKeys.load("billboard.txt"));
+        tables.put(ITEM_DISPLAY_TRANSFORM, GeneratedKeys.load("itemdisplaytransform.txt"));
+        tables.put(TEXT_ALIGNMENT, GeneratedKeys.load("textalignment.txt"));
         return tables;
     }
 }

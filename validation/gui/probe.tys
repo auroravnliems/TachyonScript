@@ -1,0 +1,51 @@
+function showProbe(player: Player, taking: bool, overrideClick: bool) {
+    let menu = Menu(1, "GUI probe")
+    menu.allowTaking = taking
+    menu.set(0, ItemStack(Material.DIAMOND, 8), click => {
+        click.player.send("GUI_CALLBACK")
+        if overrideClick { click.cancelled = false }
+    })
+    menu.open(player)
+}
+
+@playerOnly
+command lockedgui { showProbe(player, false, false) }
+@playerOnly
+command takinggui { showProbe(player, true, false) }
+@playerOnly
+command overridegui { showProbe(player, false, true) }
+
+@priority(LOWEST)
+event player.inventoryClick { player.send("GUI_GENERIC_CLICK LOWEST"); event.cancelled = false }
+@priority(LOW)
+event player.inventoryClick { player.send("GUI_GENERIC_CLICK LOW"); event.cancelled = false }
+event player.inventoryClick {
+    player.send("GUI_GENERIC_CLICK NORMAL")
+    event.cancel()
+    if slot >= 0 && item != null { event.cancelled = false }
+}
+@priority(HIGH)
+event player.inventoryClick { player.send("GUI_GENERIC_CLICK HIGH"); event.cancelled = false }
+@priority(HIGHEST)
+event player.inventoryClick { player.send("GUI_GENERIC_CLICK HIGHEST"); event.cancelled = false }
+@priority(MONITOR)
+event player.inventoryClick { player.send("GUI_GENERIC_CLICK MONITOR"); event.cancelled = false }
+
+@priority(LOWEST)
+event player.inventoryDrag { player.send("GUI_GENERIC_DRAG LOWEST"); event.uncancel() }
+@priority(LOW)
+event player.inventoryDrag { player.send("GUI_GENERIC_DRAG LOW"); event.cancelled = false }
+event player.inventoryDrag { player.send("GUI_GENERIC_DRAG NORMAL"); event.cancel(); event.uncancel() }
+@priority(HIGH)
+event player.inventoryDrag { player.send("GUI_GENERIC_DRAG HIGH"); event.cancelled = false }
+@priority(HIGHEST)
+event player.inventoryDrag { player.send("GUI_GENERIC_DRAG HIGHEST"); event.cancelled = false }
+@priority(MONITOR)
+event player.inventoryDrag { player.send("GUI_GENERIC_DRAG MONITOR"); event.cancelled = false }
+
+@ignoreCancelled
+@priority(HIGHEST)
+event player.inventoryClick { player.send("GUI_GENERIC_IGNORE_CLICK") }
+@ignoreCancelled
+@priority(HIGHEST)
+event player.inventoryDrag { player.send("GUI_GENERIC_IGNORE_DRAG") }

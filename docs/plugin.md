@@ -24,6 +24,7 @@ The plugin folder then contains:
 | Path | Content |
 |------|---------|
 | `config.yml` | the configuration below |
+| `disabled-scripts.properties` | persistent operator stop switches, managed by `/tys disable` and `/tys enable` |
 | `scripts/` | the scripts |
 | `data.db` | saved variables (`persistent var`, `playerdata var`) with the default SQLite storage |
 | `databases/` | SQLite files opened by scripts with `Database.sqlite(...)` |
@@ -35,7 +36,10 @@ The plugin folder then contains:
 | Command | Permission | Description |
 |---------|------------|-------------|
 | `/tys help` | `tachyonscript.admin` | Lists the commands you may use |
-| `/tys reload [script]` | `tachyonscript.reload` | Recompiles changed scripts (or the given one) and activates them |
+| `/tys reload [script\|all]` | `tachyonscript.reload` | Applies all changes, or only the selected file and necessary importers |
+| `/tys disable [script\|all]` | `tachyonscript.manage` | Emergency stop, defaults to all; `diable` is an alias |
+| `/tys enable <script\|all>` | `tachyonscript.manage` | Saves the enable switch and reloads the selected scripts |
+| `/tys performance <ms\|off>` | `tachyonscript.profile` | Changes slow warnings live and saves the setting |
 | `/tys scripts` | `tachyonscript.admin` | Lists scripts and what each declares (handlers, commands, tasks, placeholders) |
 | `/tys info <script>` | `tachyonscript.admin` | Module name, events, commands, tasks, placeholders, saved variables and size of a script |
 | `/tys errors` | `tachyonscript.admin` | Compile errors of the last load and runtime errors since then |
@@ -43,6 +47,7 @@ The plugin folder then contains:
 | `/tys profile start\|stop\|report` | `tachyonscript.profile` | Measures time spent per handler, command, task, scheduled block and placeholder |
 | `/tys dump <script> [ir\|code]` | `tachyonscript.debug` | Prints the compiled form to the console |
 | `/tys version` | `tachyonscript.admin` | Versions, server type and loaded addons |
+| `/tys security <action>` | `tachyonscript.security.admin` | Inspect, scan, approve and quarantine; see [security](security.md) |
 
 `tachyonscript.*` grants everything. All permissions default to operators. Commands
 declared by scripts have their own permissions (`@permission("...")`) and their own
@@ -64,6 +69,27 @@ or entirely by the new scripts. A reloaded script's `on unload` code runs, its t
 stop, its menus close and its boss bars and sidebars disappear; saved variables keep
 their values.
 
+`/tys reload <script>` reads only that file from disk. Importers that need recompiling
+use their currently active source, as do all other dependencies. Unrelated edits,
+new files and deletions are left for a later reload. The selected file is recompiled
+even when unchanged. If the selected group cannot compile/link, the entire group
+keeps its old versions, including in lenient mode. Unrelated timers, variables and
+runtime-error history stay intact. `/tys reload all` explicitly applies all disk changes.
+
+## Emergency stop
+
+Use `/tys disable shop.tys` for a faulty shop, or `/tys disable` to stop all scripts.
+Disabling also stops transitive importers, revokes old exports/callbacks, cancels
+timers and releases resources. It skips `on unload` script code so a faulty cleanup
+hook cannot keep paying rewards. Already completed external effects are not undone.
+The stop survives reload/restart; an all-stop also blocks newly added scripts.
+
+After fixing and checking the code, use `/tys enable shop.tys`. Importers disabled
+alongside it need enabling separately, or use `/tys enable all`. A global stop
+requires `enable all`. `/tys scripts` and `/tys info` show operator-disabled status.
+The state file must be writable: failed persistence still stops execution in this
+process and reports the save failure; a failed enable save keeps the stop gate closed.
+
 ## Configuration
 
 ```yaml
@@ -73,7 +99,8 @@ safety:
   recursion-limit: 128           # maximum nesting of script function calls
   max-execution-time-ms: 1000    # a single execution is stopped after this
 performance:
-  slow-execution-warning-ms: 5   # log executions slower than this; 0 disables
+  slow-execution-warnings: false # opt in; old 5/10 ms thresholds do not enable it
+  slow-execution-warning-ms: 50  # tick-thread threshold; 0 also disables
 runtime:
   backend: interpreter           # the bytecode backend is planned
 
@@ -118,7 +145,10 @@ debug:
   enabled: false                 # Java causes in error reports, log.debug output
 ```
 
-Invalid values are reported and replaced by defaults. Changes need a restart.
+Invalid values are reported and replaced by defaults. Manual config edits need a
+restart. `/tys performance 50` and `/tys performance off` apply immediately and save
+the settings. Slow warnings measure only outermost tick-thread executions, at most
+once per function per 30 seconds. Async work remains available in `/tys profile`.
 
 ## Errors
 

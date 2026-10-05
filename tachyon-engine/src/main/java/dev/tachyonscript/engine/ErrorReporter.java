@@ -8,6 +8,7 @@ import dev.tachyonscript.runtime.event.CompiledHandler;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -103,10 +104,16 @@ public final class ErrorReporter {
         sites.clear();
     }
 
+    /** A single-file reload preserves the error history of other running scripts. */
+    public void clear(Set<String> paths) {
+        sites.entrySet().removeIf(entry -> paths.stream().anyMatch(path ->
+                entry.getValue().location.equals(path) || entry.getValue().location.startsWith(path + ":")));
+    }
+
     private static String location(ScriptRuntimeException error, CompiledHandler handler) {
         if (!error.frames().isEmpty()) {
             ScriptFrame frame = error.frames().getFirst();
-            return frame.path() + ":" + frame.line();
+            return frame.path() + ":" + frame.line() + ":" + frame.column();
         }
         return handler == null ? "" : handler.module();
     }

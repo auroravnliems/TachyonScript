@@ -28,6 +28,7 @@ public final class GeneratedLibrary {
         DataApi.register(builder);
         PlayerEventsApi.register(builder);
         WorldEventsApi.register(builder);
+        ExtensionsApi.register(builder);
         GeneratedTypes.keyTables().forEach(builder::keys);
     }
 

@@ -1,0 +1,9 @@
+NONE minecraft:none
+THIRDPERSON_LEFTHAND minecraft:thirdperson_lefthand
+THIRDPERSON_RIGHTHAND minecraft:thirdperson_righthand
+FIRSTPERSON_LEFTHAND minecraft:firstperson_lefthand
+FIRSTPERSON_RIGHTHAND minecraft:firstperson_righthand
+HEAD minecraft:head
+GUI minecraft:gui
+GROUND minecraft:ground
+FIXED minecraft:fixed

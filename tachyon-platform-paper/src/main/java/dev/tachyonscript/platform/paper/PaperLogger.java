@@ -20,11 +20,11 @@ public final class PaperLogger implements EngineLogger {
 
     @Override
     public void warn(String message) {
-        logger.warning(message);
+        message.lines().forEach(logger::warning);
     }
 
     @Override
     public void error(String message) {
-        logger.severe(message);
+        message.lines().forEach(logger::severe);
     }
 }

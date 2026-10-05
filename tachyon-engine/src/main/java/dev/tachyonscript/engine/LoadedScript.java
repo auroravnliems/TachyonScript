@@ -3,6 +3,7 @@ package dev.tachyonscript.engine;
 import dev.tachyonscript.compiler.CompiledModule;
 import dev.tachyonscript.engine.spi.Scheduler;
 import dev.tachyonscript.runtime.link.LinkedModule;
+import dev.tachyonscript.runtime.interpreter.ExecutionGuard;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -12,6 +13,7 @@ import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
+import dev.tachyonscript.security.ScriptRevocation;
 
 /**
  * A loaded version of one script: its compiled and linked module, and everything it started
@@ -21,7 +23,7 @@ import java.util.function.Consumer;
  *
  * <p>Unchanged scripts keep their loaded version across reloads, with their variables and tasks.
  */
-public final class LoadedScript {
+public final class LoadedScript implements ExecutionGuard {
 
     /** Lifecycle of a loaded version. */
     public enum State {
@@ -38,6 +40,11 @@ public final class LoadedScript {
     private final CompiledModule compiled;
     private LinkedModule linked;
     private volatile State state = State.PREPARED;
+    private volatile boolean revoked;
+    private final ScriptRevocation securityToken;
+    private final long securityEpoch;
+    private final java.util.function.IntSupplier taskLimit;
+    private final java.util.function.BooleanSupplier enabled;
     private final Set<Scheduler.Handle> scheduled = ConcurrentHashMap.newKeySet();
     private final List<Scheduler.Handle> declaredTasks = new ArrayList<>();
     /**
@@ -47,9 +54,27 @@ public final class LoadedScript {
     private final Map<Object, Consumer<Object>> resources = Collections.synchronizedMap(new WeakHashMap<>());
 
     LoadedScript(String path, String hash, CompiledModule compiled) {
+        this(path, hash, compiled, new ScriptRevocation(false));
+    }
+
+    LoadedScript(String path, String hash, CompiledModule compiled, ScriptRevocation securityToken) {
+        this(path, hash, compiled, securityToken, () -> 1024);
+    }
+
+    LoadedScript(String path, String hash, CompiledModule compiled, ScriptRevocation securityToken,
+                 java.util.function.IntSupplier taskLimit) {
+        this(path, hash, compiled, securityToken, taskLimit, () -> true);
+    }
+
+    LoadedScript(String path, String hash, CompiledModule compiled, ScriptRevocation securityToken,
+                 java.util.function.IntSupplier taskLimit, java.util.function.BooleanSupplier enabled) {
         this.path = path;
         this.hash = hash;
         this.compiled = compiled;
+        this.securityToken = securityToken;
+        this.securityEpoch = securityToken.epoch();
+        this.taskLimit = taskLimit;
+        this.enabled = enabled;
     }
 
     /** Path relative to the scripts directory. */
@@ -85,21 +110,30 @@ public final class LoadedScript {
     }
 
     public boolean isActive() {
-        return state == State.ACTIVE;
+        return state == State.ACTIVE && !securityRevoked();
     }
 
+    @Override public boolean securityRevoked() { return revoked || !enabled.getAsBoolean() || securityToken.blocked() || securityToken.epoch() != securityEpoch; }
+    void revokeSecurity() { revoked = true; }
+
     void activate() {
+        if (securityRevoked()) throw new IllegalStateException("Cannot activate a security-revoked script");
         state = State.ACTIVE;
     }
 
     // ------------------------------------------------------------------ started work
 
     /** Remembers work started by the script so it is cancelled when the script is retired. */
-    public void track(Scheduler.Handle handle) {
-        if (state == State.RETIRED) {
+    public synchronized void track(Scheduler.Handle handle) {
+        if (state == State.RETIRED || securityRevoked()) {
             handle.cancel();
         } else {
             scheduled.add(handle);
+            if (scheduled.size() + declaredTasks.size() > taskLimit.getAsInt()) {
+                scheduled.remove(handle); handle.cancel();
+                throw new dev.tachyonscript.api.natives.ScriptError("Per-script pending task limit exceeded.");
+            }
+            if ((state == State.RETIRED || securityRevoked()) && scheduled.remove(handle)) handle.cancel();
         }
     }
 
@@ -108,12 +142,19 @@ public final class LoadedScript {
     }
 
     /** Number of scheduled blocks and tasks currently waiting to run. */
-    public int scheduledCount() {
+    public synchronized int scheduledCount() {
         return scheduled.size() + declaredTasks.size();
     }
 
-    void declaredTask(Scheduler.Handle handle) {
-        declaredTasks.add(handle);
+    synchronized void declaredTask(Scheduler.Handle handle) {
+        if (state == State.RETIRED || securityRevoked()) handle.cancel();
+        else {
+            if (scheduled.size() + declaredTasks.size() >= taskLimit.getAsInt()) {
+                handle.cancel();
+                throw new dev.tachyonscript.api.natives.ScriptError("Per-script pending task limit exceeded.");
+            }
+            declaredTasks.add(handle);
+        }
     }
 
     /**
@@ -122,11 +163,14 @@ public final class LoadedScript {
      * resource is held weakly; {@code release} must not keep a reference to it.
      */
     public void own(Object resource, Consumer<Object> release) {
-        if (state == State.RETIRED) {
+        if (state == State.RETIRED || securityRevoked()) {
             release.accept(resource);
             return;
         }
-        resources.put(resource, release);
+        synchronized (resources) {
+            if (state == State.RETIRED || securityRevoked()) release.accept(resource);
+            else resources.put(resource, release);
+        }
     }
 
     /** Number of resources the script still owns. */
@@ -139,14 +183,14 @@ public final class LoadedScript {
      *
      * @param failures receives errors thrown by release actions (the others still run)
      */
-    void retire(Consumer<RuntimeException> failures) {
+    synchronized void retire(Consumer<RuntimeException> failures) {
         state = State.RETIRED;
         for (Scheduler.Handle handle : declaredTasks) {
-            handle.cancel();
+            try { handle.cancel(); } catch (RuntimeException e) { failures.accept(e); }
         }
         declaredTasks.clear();
         for (Scheduler.Handle handle : List.copyOf(scheduled)) {
-            handle.cancel();
+            try { handle.cancel(); } catch (RuntimeException e) { failures.accept(e); }
         }
         scheduled.clear();
         List<Map.Entry<Object, Consumer<Object>>> owned;

@@ -62,11 +62,14 @@ record TachyonSettings(LoadMode mode, int recursionLimit, long maxExecutionMilli
         int recursion = (int) positive(config.getInt("safety.recursion-limit", 128), 128, "safety.recursion-limit", logger);
         long maxTime = positive(config.getLong("safety.max-execution-time-ms", 1000), 1000,
                 "safety.max-execution-time-ms", logger);
-        long slow = config.getLong("performance.slow-execution-warning-ms", 5);
+        long slow = config.getLong("performance.slow-execution-warning-ms", 50);
         if (slow < 0) {
-            logger.warning("performance.slow-execution-warning-ms must not be negative; using 5.");
-            slow = 5;
+            logger.warning("performance.slow-execution-warning-ms must not be negative; using 50.");
+            slow = 50;
         }
+        // Explicit opt-in also silences legacy configs with a 5/10 ms threshold.
+        if (!config.getBoolean("performance.slow-execution-warnings", false)) slow = 0;
+        slow = Math.min(slow, Long.MAX_VALUE / 1_000_000L);
         String backend = config.getString("runtime.backend", "interpreter");
         if (!backend.equalsIgnoreCase("interpreter")) {
             logger.warning("runtime.backend '" + backend + "' is not available yet; using 'interpreter'.");

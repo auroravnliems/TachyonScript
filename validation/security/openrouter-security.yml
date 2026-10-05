@@ -1,0 +1,27 @@
+# Merge this security section into plugins/TachyonScript/config.yml.
+# Export OPENROUTER_API_KEY for the server process; do not put the key in this file.
+security:
+  enabled: true
+  provider: qwen
+  ai:
+    enabled: true
+    required: true
+    endpoint: "https://openrouter.ai/api/v1/chat/completions"
+    model: "qwen/qwen3-coder"
+    api-key: "${OPENROUTER_API_KEY}"
+    connect-timeout-ms: 5000
+    read-timeout-ms: 60000
+    max-retries: 2
+    max-request-bytes: 1048576
+    max-response-bytes: 262144
+    max-review-parts: 32
+    max-output-tokens: 4096
+    confidence:
+      warn: 0.80
+      auto-disable: 0.95
+  discord:
+    enabled: true
+    webhook: "${TACHYON_SECURITY_DISCORD_WEBHOOK}"
+    include-source-snippets: true
+    timeout-ms: 10000
+    max-retries: 2

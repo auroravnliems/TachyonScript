@@ -40,6 +40,7 @@ public final class PaperContext {
     private final Threading threads;
     private final ScriptFiles files;
     private final WebClient web;
+    private final dev.tachyonscript.platform.paper.lib.TransientMetadata metadata = new dev.tachyonscript.platform.paper.lib.TransientMetadata();
     private volatile ScriptEngine engine;
 
     PaperContext(Plugin plugin, Threading threads) {
@@ -74,24 +75,35 @@ public final class PaperContext {
     public WebClient web() {
         return web;
     }
+    public dev.tachyonscript.platform.paper.lib.TransientMetadata metadata() { return metadata; }
+    public dev.tachyonscript.security.SecurityOptions securityOptions() {
+        ScriptEngine current = engine;
+        return current == null ? dev.tachyonscript.security.SecurityOptions.defaults() : current.security().options();
+    }
 
     // ------------------------------------------------------------------ threads
 
     public void forEntity(Entity entity, Runnable action) {
-        threads.forEntity(entity, action);
+        threads.forEntity(entity, guarded(action));
     }
 
     /** Runs on the thread owning a location, block, chunk or entity. */
     public void forRegion(Object target, Runnable action) {
         if (target instanceof Entity entity) {
-            threads.forEntity(entity, action);
+            threads.forEntity(entity, guarded(action));
         } else {
-            threads.forRegion(location(target), action);
+            threads.forRegion(location(target), guarded(action));
         }
     }
 
     public void global(Runnable action) {
-        threads.global(action);
+        threads.global(guarded(action));
+    }
+
+    private static Runnable guarded(Runnable action) {
+        Object owner = dev.tachyonscript.runtime.interpreter.ExecutionStack.current().owner();
+        if (!(owner instanceof dev.tachyonscript.runtime.interpreter.ExecutionGuard guard)) return action;
+        return () -> { if (!guard.securityRevoked()) action.run(); };
     }
 
     /** Runs on the thread owning an inventory's holder (a player, a block); at once for virtual inventories. */
@@ -140,8 +152,13 @@ public final class PaperContext {
                     + "own thread). Run it from a handler of that region, or inside 'after 1 tick for <entity> { }'.");
         }
         CompletableFuture<T> result = new CompletableFuture<>();
+        Object scriptOwner = dev.tachyonscript.runtime.interpreter.ExecutionStack.current().owner();
         schedule.accept(() -> {
             try {
+                if (scriptOwner instanceof dev.tachyonscript.runtime.interpreter.ExecutionGuard guard && guard.securityRevoked())
+                    throw new dev.tachyonscript.runtime.error.ScriptRuntimeException(
+                            dev.tachyonscript.runtime.error.ScriptRuntimeException.Kind.SECURITY_REVOKED,
+                            "Script security approval was revoked before its queued platform operation.", null);
                 result.complete(action.get());
             } catch (RuntimeException | Error e) {
                 result.completeExceptionally(e);

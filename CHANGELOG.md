@@ -4,9 +4,34 @@ All notable changes are listed here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/) once 1.0 is released.
 
-## [Unreleased] — 0.2.0-SNAPSHOT
+## [0.5.1-SNAPSHOT] — 2026-10-05
 
-Language level 2: everything a server usually scripts, without addons.
+Patch update from 0.5.0-SNAPSHOT; language level and IR format remain at 2.
+
+### GUI isolation, operator controls and library extensions
+
+- ScriptMenu views are excluded from generic inventory click/drag dispatch at every
+  priority, including their bottom inventory and outside clicks. Menu callbacks,
+  `allowTaking` and explicit `MenuClick.cancelled` overrides retain their contracts.
+  Ordinary inventories and external plugin GUIs retain mutable generic cancellation.
+- Targeted reload reads only selected files and uses active sources for importers;
+  unrelated disk changes remain unapplied. Failed selected groups roll back together.
+- Persistent `/tys disable [script|all]` (alias `diable`) and `/tys enable <script|all>`
+  provide emergency controls, including dependent scripts, resource cleanup and
+  revocation of old callbacks. Emergency stop skips script unload hooks.
+- Server diagnostics use compact source/caret output with line/column locations.
+  Slow warnings default to off; opt-in threshold is 50 ms on tick threads, with
+  30-second throttling. `/tys performance <ms|off>` changes and saves this live.
+- Added typed statistics, transient metadata with writer lifetime cleanup, BlockData,
+  sign sides, display transforms, normalized Quaternion, Brightness and copied
+  BoundingBox operations. Finite float conversion and extreme rotations are checked.
+- [Skript source audit](docs/skript-audit/README.md) records reviewed decisions and
+  remaining gaps; this is not a claim of full language or API parity.
+
+## [0.5.0-SNAPSHOT]
+
+Earlier work retained in this update. Language level 2: everything a server
+usually scripts, without addons.
 
 ### Language
 

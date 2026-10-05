@@ -1,0 +1,4 @@
+FIXED minecraft:fixed
+VERTICAL minecraft:vertical
+HORIZONTAL minecraft:horizontal
+CENTER minecraft:center

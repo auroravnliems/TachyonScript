@@ -1,0 +1,8 @@
+// TEST FIXTURE ONLY: player input reaches a privileged console command.
+
+event player.chat {
+    let cmd = "say " + message
+    server.dispatch(cmd)
+}
+on load { log("LIVE_SECURITY_UNSAFE_INITIALIZER") }
+function exported(): int { return 7 }

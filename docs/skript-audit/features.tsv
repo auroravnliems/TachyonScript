@@ -1,0 +1,942 @@
+class	kind	name	review	tachyon	source
+CondAI	condition	Has AI	unreviewed		src/main/java/ch/njol/skript/conditions/CondAI.java
+CondAllayCanDuplicate	condition	Allay Can Duplicate	unreviewed		src/main/java/ch/njol/skript/conditions/CondAllayCanDuplicate.java
+CondAlphanumeric	condition	Alphanumeric	unreviewed		src/main/java/ch/njol/skript/conditions/CondAlphanumeric.java
+CondAnchorWorks	condition	Do Respawn Anchors Work	unreviewed		src/main/java/ch/njol/skript/conditions/CondAnchorWorks.java
+CondCancelled	condition	Event Cancelled	unreviewed		src/main/java/ch/njol/skript/conditions/CondCancelled.java
+CondCanFly	condition	Can Fly	unreviewed		src/main/java/ch/njol/skript/conditions/CondCanFly.java
+CondCanHold	condition	Can Hold	unreviewed		src/main/java/ch/njol/skript/conditions/CondCanHold.java
+CondCanPickUpItems	condition	Can Pick Up Items	unreviewed		src/main/java/ch/njol/skript/conditions/CondCanPickUpItems.java
+CondCanSee	condition	Can See	unreviewed		src/main/java/ch/njol/skript/conditions/CondCanSee.java
+CondChance	condition	Chance	unreviewed		src/main/java/ch/njol/skript/conditions/CondChance.java
+CondChatColors	condition	Can See Chat Colors	unreviewed		src/main/java/ch/njol/skript/conditions/CondChatColors.java
+CondChatFiltering	condition	Has Chat Filtering	unreviewed		src/main/java/ch/njol/skript/conditions/CondChatFiltering.java
+CondChatVisibility	condition	Can See Messages	unreviewed		src/main/java/ch/njol/skript/conditions/CondChatVisibility.java
+CondCompare	condition	Comparison	unreviewed		src/main/java/ch/njol/skript/conditions/CondCompare.java
+CondContains	condition	Contains	unreviewed		src/main/java/ch/njol/skript/conditions/CondContains.java
+CondDamageCause	condition	Damage Cause	unreviewed		src/main/java/ch/njol/skript/conditions/CondDamageCause.java
+CondDate	condition	Time	unreviewed		src/main/java/ch/njol/skript/conditions/CondDate.java
+CondElytraBoostConsume	condition	Will Consume Boosting Firework	unreviewed		src/main/java/ch/njol/skript/conditions/CondElytraBoostConsume.java
+CondEndermanStaredAt	condition	Enderman Has Been Stared At	unreviewed		src/main/java/ch/njol/skript/conditions/CondEndermanStaredAt.java
+CondEntityIsInLiquid	condition	Entity is in Liquid	unreviewed		src/main/java/ch/njol/skript/conditions/CondEntityIsInLiquid.java
+CondEntityIsWet	condition	Entity is Wet	unreviewed		src/main/java/ch/njol/skript/conditions/CondEntityIsWet.java
+CondEntityStorageIsFull	condition	Entity Storage Is Full	unreviewed		src/main/java/ch/njol/skript/conditions/CondEntityStorageIsFull.java
+CondEntityUnload	condition	Can Despawn	unreviewed		src/main/java/ch/njol/skript/conditions/CondEntityUnload.java
+CondFromMobSpawner	condition	Is From A Mob Spawner	unreviewed		src/main/java/ch/njol/skript/conditions/CondFromMobSpawner.java
+CondGlowingText	condition	Has Glowing Text	unreviewed		src/main/java/ch/njol/skript/conditions/CondGlowingText.java
+CondGoatHasHorns	condition	Goat Has Horns	unreviewed		src/main/java/ch/njol/skript/conditions/CondGoatHasHorns.java
+CondHasClientWeather	condition	Has Client Weather	unreviewed		src/main/java/ch/njol/skript/conditions/CondHasClientWeather.java
+CondHasCustomModelData	condition	Has Custom Model Data	unreviewed		src/main/java/ch/njol/skript/conditions/CondHasCustomModelData.java
+CondHasItemCooldown	condition	Has Item Cooldown	unreviewed		src/main/java/ch/njol/skript/conditions/CondHasItemCooldown.java
+CondHasLineOfSight	condition	Has Line of Sight	unreviewed		src/main/java/ch/njol/skript/conditions/CondHasLineOfSight.java
+CondHasMetadata	condition	Has Metadata	adapted	Entity/Block/World.hasMetadata	src/main/java/ch/njol/skript/conditions/CondHasMetadata.java
+CondHasResourcePack	condition	Has Resource Pack	unreviewed		src/main/java/ch/njol/skript/conditions/CondHasResourcePack.java
+CondHasScoreboardTag	condition	Has Scoreboard Tag	unreviewed		src/main/java/ch/njol/skript/conditions/CondHasScoreboardTag.java
+CondIgnitionProcess	condition	Ignition Process	unreviewed		src/main/java/ch/njol/skript/conditions/CondIgnitionProcess.java
+CondIncendiary	condition	Is Incendiary	unreviewed		src/main/java/ch/njol/skript/conditions/CondIncendiary.java
+CondIsAlive	condition	Is Alive	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsAlive.java
+CondIsBanned	condition	Is Banned	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsBanned.java
+CondIsBlock	condition	Is Block	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsBlock.java
+CondIsBlocking	condition	Is Blocking	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsBlocking.java
+CondIsBlockRedstonePowered	condition	Is Block Redstone Powered	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsBlockRedstonePowered.java
+CondIsBurning	condition	Is Burning	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsBurning.java
+CondIsCharged	condition	Is Charged	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsCharged.java
+CondIsChargingFireball	condition	Is Charging Fireball	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsChargingFireball.java
+CondIsClimbing	condition	Is Climbing	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsClimbing.java
+CondIsCommandBlockConditional	condition	Is Conditional	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsCommandBlockConditional.java
+CondIsCustomNameVisible	condition	Is Custom Name Visible	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsCustomNameVisible.java
+CondIsDancing	condition	Is Dancing	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsDancing.java
+CondIsDashing	condition	Camel Is Dashing	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsDashing.java
+CondIsDivisibleBy	condition	Is Evenly Divisible By	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsDivisibleBy.java
+CondIsEating	condition	Is Eating	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsEating.java
+CondIsEdible	condition	Is Edible	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsEdible.java
+CondIsEmpty	condition	Is Empty	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsEmpty.java
+CondIsFireResistant	condition	Is Fire Resistant	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsFireResistant.java
+CondIsFlammable	condition	Is Flammable	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsFlammable.java
+CondIsFlying	condition	Is Flying	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsFlying.java
+CondIsFrozen	condition	Is Frozen	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsFrozen.java
+CondIsFuel	condition	Is Fuel	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsFuel.java
+CondIsGliding	condition	Is Gliding	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsGliding.java
+CondIsHandRaised	condition	Is Hand Raised	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsHandRaised.java
+CondIsInfinite	condition	Is Infinite	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsInfinite.java
+CondIsInteractable	condition	Is Interactable	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsInteractable.java
+CondIsInvisible	condition	Is Invisible	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsInvisible.java
+CondIsInvulnerable	condition	Is Invulnerable	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsInvulnerable.java
+CondIsJumping	condition	Is Jumping	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsJumping.java
+CondIsLeftHanded	condition	Left Handed	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsLeftHanded.java
+CondIsLoaded	condition	Is Loaded	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsLoaded.java
+CondIsOccluding	condition	Is Occluding	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsOccluding.java
+CondIsOfType	condition	Is of Type	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsOfType.java
+CondIsOnGround	condition	Is on Ground	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsOnGround.java
+CondIsOnline	condition	Is Online	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsOnline.java
+CondIsOp	condition	Is Operator	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsOp.java
+CondIsPassable	condition	Is Passable	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsPassable.java
+CondIsPathfinding	condition	Is Pathfinding	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsPathfinding.java
+CondIsPersistent	condition	Is Persistent	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsPersistent.java
+CondIsPlayingDead	condition	Is Playing Dead	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsPlayingDead.java
+CondIsPluginEnabled	condition	Is Plugin Enabled	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsPluginEnabled.java
+CondIsPreferredTool	condition	Is Preferred Tool	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsPreferredTool.java
+CondIsResonating	condition	Bell Is Resonating	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsResonating.java
+CondIsRiding	condition	Is Riding	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsRiding.java
+CondIsRinging	condition	Bell Is Ringing	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsRinging.java
+CondIsRiptiding	condition	Is Riptiding	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsRiptiding.java
+CondIsSaddled	condition	Is Saddled	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsSaddled.java
+CondIsScreaming	condition	Is Screaming	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsScreaming.java
+CondIsSedated	condition	Beehive Is Sedated	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsSedated.java
+CondIsSet	condition	Exists/Is Set	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsSet.java
+CondIsSheared	condition	Entity Is Sheared	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsSheared.java
+CondIsSilent	condition	Is Silent	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsSilent.java
+CondIsSkriptCommand	condition	Is a Skript command	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsSkriptCommand.java
+CondIsSleeping	condition	Is Sleeping	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsSleeping.java
+CondIsSlimeChunk	condition	Is Slime Chunk	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsSlimeChunk.java
+CondIsSneaking	condition	Is Sneaking	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsSneaking.java
+CondIsSolid	condition	Is Solid	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsSolid.java
+CondIsSpawnable	condition	Is Spawnable	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsSpawnable.java
+CondIsSprinting	condition	Is Sprinting	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsSprinting.java
+CondIsStackable	condition	Is Stackable	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsStackable.java
+CondIsSwimming	condition	Is Swimming	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsSwimming.java
+CondIsTameable	condition	Is Tameable	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsTameable.java
+CondIsTamed	condition	Is Tamed	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsTamed.java
+CondIsTicking	condition	Is Ticking	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsTicking.java
+CondIsTransparent	condition	Is Transparent	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsTransparent.java
+CondIsUnbreakable	condition	Is Unbreakable	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsUnbreakable.java
+CondIsUsingFeature	condition	Is Using Experimental Feature	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsUsingFeature.java
+CondIsValid	condition	Is Valid	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsValid.java
+CondIsVectorNormalized	condition	Is Normalized	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsVectorNormalized.java
+CondIsWearing	condition	Is Wearing	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsWearing.java
+CondIsWhitelisted	condition	Is Whitelisted	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsWhitelisted.java
+CondIsWithin	condition	Is Within	unreviewed		src/main/java/ch/njol/skript/conditions/CondIsWithin.java
+CondItemDespawn	condition	Will Despawn	unreviewed		src/main/java/ch/njol/skript/conditions/CondItemDespawn.java
+CondItemInHand	condition	Is Holding	unreviewed		src/main/java/ch/njol/skript/conditions/CondItemInHand.java
+CondLeashed	condition	Is Leashed	unreviewed		src/main/java/ch/njol/skript/conditions/CondLeashed.java
+CondLeashWillDrop	condition	Leash Will Drop	unreviewed		src/main/java/ch/njol/skript/conditions/CondLeashWillDrop.java
+CondLidState	condition	Lid Is Open/Closed	unreviewed		src/main/java/ch/njol/skript/conditions/CondLidState.java
+CondMatches	condition	Matches	unreviewed		src/main/java/ch/njol/skript/conditions/CondMatches.java
+CondMinecraftVersion	condition	Running Minecraft	unreviewed		src/main/java/ch/njol/skript/conditions/CondMinecraftVersion.java
+CondPandaIsOnBack	condition	Panda Is On Its Back	unreviewed		src/main/java/ch/njol/skript/conditions/CondPandaIsOnBack.java
+CondPandaIsRolling	condition	Panda Is Rolling	unreviewed		src/main/java/ch/njol/skript/conditions/CondPandaIsRolling.java
+CondPandaIsScared	condition	Panda Is Scared	unreviewed		src/main/java/ch/njol/skript/conditions/CondPandaIsScared.java
+CondPandaIsSneezing	condition	Panda Is Sneezing	unreviewed		src/main/java/ch/njol/skript/conditions/CondPandaIsSneezing.java
+CondPastFuture	condition	In The Past/Future	unreviewed		src/main/java/ch/njol/skript/conditions/CondPastFuture.java
+CondPermission	condition	Has Permission	unreviewed		src/main/java/ch/njol/skript/conditions/CondPermission.java
+CondPlayedBefore	condition	Has Played Before	unreviewed		src/main/java/ch/njol/skript/conditions/CondPlayedBefore.java
+CondPvP	condition	PvP	unreviewed		src/main/java/ch/njol/skript/conditions/CondPvP.java
+CondResourcePack	condition	Resource Pack	unreviewed		src/main/java/ch/njol/skript/conditions/CondResourcePack.java
+CondRespawnLocation	condition	Is Bed/Anchor Spawn	unreviewed		src/main/java/ch/njol/skript/conditions/CondRespawnLocation.java
+CondScriptLoaded	condition	Is Script Loaded	unreviewed		src/main/java/ch/njol/skript/conditions/CondScriptLoaded.java
+CondStartsEndsWith	condition	Starts/Ends With	unreviewed		src/main/java/ch/njol/skript/conditions/CondStartsEndsWith.java
+CondStriderIsShivering	condition	Strider Is Shivering	unreviewed		src/main/java/ch/njol/skript/conditions/CondStriderIsShivering.java
+CondTooltip	condition	Has Item Tooltips	unreviewed		src/main/java/ch/njol/skript/conditions/CondTooltip.java
+CondWillHatch	condition	Egg Will Hatch	unreviewed		src/main/java/ch/njol/skript/conditions/CondWillHatch.java
+CondWithinRadius	condition	Is Within Radius	unreviewed		src/main/java/ch/njol/skript/conditions/CondWithinRadius.java
+Delay	other	Delay	unreviewed		src/main/java/ch/njol/skript/effects/Delay.java
+EffAllayCanDuplicate	effect	Allay Duplicate	unreviewed		src/main/java/ch/njol/skript/effects/EffAllayCanDuplicate.java
+EffAllayDuplicate	effect	Make Allay Duplicate	unreviewed		src/main/java/ch/njol/skript/effects/EffAllayDuplicate.java
+EffApplyBoneMeal	effect	Apply Bone Meal	unreviewed		src/main/java/ch/njol/skript/effects/EffApplyBoneMeal.java
+EffBlockUpdate	effect	Update Block	unreviewed		src/main/java/ch/njol/skript/effects/EffBlockUpdate.java
+EffBreakNaturally	effect	Break Block	unreviewed		src/main/java/ch/njol/skript/effects/EffBreakNaturally.java
+EffCancelCooldown	effect	Cancel Command Cooldown	unreviewed		src/main/java/ch/njol/skript/effects/EffCancelCooldown.java
+EffCancelDrops	effect	Cancel Drops	unreviewed		src/main/java/ch/njol/skript/effects/EffCancelDrops.java
+EffCancelEvent	effect	Cancel Event	unreviewed		src/main/java/ch/njol/skript/effects/EffCancelEvent.java
+EffCancelItemUse	effect	Cancel Active Item	unreviewed		src/main/java/ch/njol/skript/effects/EffCancelItemUse.java
+EffChange	effect	Change: Set/Add/Remove/Remove All/Delete/Reset	unreviewed		src/main/java/ch/njol/skript/effects/EffChange.java
+EffCharge	effect	Charge Entity	unreviewed		src/main/java/ch/njol/skript/effects/EffCharge.java
+EffClearEntityStorage	effect	Clear Entity Storage	unreviewed		src/main/java/ch/njol/skript/effects/EffClearEntityStorage.java
+EffColorItems	effect	Color Items	unreviewed		src/main/java/ch/njol/skript/effects/EffColorItems.java
+EffCommand	effect	Command	unreviewed		src/main/java/ch/njol/skript/effects/EffCommand.java
+EffCommandBlockConditional	effect	Conditional / Unconditional	unreviewed		src/main/java/ch/njol/skript/effects/EffCommandBlockConditional.java
+EffConnect	effect	Connect	unreviewed		src/main/java/ch/njol/skript/effects/EffConnect.java
+EffContinue	effect	Continue	unreviewed		src/main/java/ch/njol/skript/effects/EffContinue.java
+EffCopy	effect	Copy Into Variable	unreviewed		src/main/java/ch/njol/skript/effects/EffCopy.java
+EffCustomName	effect	Toggle Custom Name Visibility	unreviewed		src/main/java/ch/njol/skript/effects/EffCustomName.java
+EffDancing	effect	Dance	unreviewed		src/main/java/ch/njol/skript/effects/EffDancing.java
+EffDetonate	effect	Detonate Entities	unreviewed		src/main/java/ch/njol/skript/effects/EffDetonate.java
+EffDoIf	effect	Do If	unreviewed		src/main/java/ch/njol/skript/effects/EffDoIf.java
+EffDrop	effect	Drop	unreviewed		src/main/java/ch/njol/skript/effects/EffDrop.java
+EffDropLeash	effect	Allow / Prevent Leash Drop	unreviewed		src/main/java/ch/njol/skript/effects/EffDropLeash.java
+EffEating	effect	Force Eating	unreviewed		src/main/java/ch/njol/skript/effects/EffEating.java
+EffElytraBoostConsume	effect	Consume Boosting Firework	unreviewed		src/main/java/ch/njol/skript/effects/EffElytraBoostConsume.java
+EffEndermanTeleport	effect	Enderman Teleport	unreviewed		src/main/java/ch/njol/skript/effects/EffEndermanTeleport.java
+EffEnforceWhitelist	effect	Enforce Whitelist	unreviewed		src/main/java/ch/njol/skript/effects/EffEnforceWhitelist.java
+EffEntityUnload	effect	Entity Despawn	unreviewed		src/main/java/ch/njol/skript/effects/EffEntityUnload.java
+EffEntityVisibility	effect	Entity Visibility	unreviewed		src/main/java/ch/njol/skript/effects/EffEntityVisibility.java
+EffEquip	effect	Equip	unreviewed		src/main/java/ch/njol/skript/effects/EffEquip.java
+EffExceptionDebug	effect	EffExceptionDebug	unreviewed		src/main/java/ch/njol/skript/effects/EffExceptionDebug.java
+EffExit	effect	Exit	unreviewed		src/main/java/ch/njol/skript/effects/EffExit.java
+EffExplodeCreeper	effect	Explode Creeper	unreviewed		src/main/java/ch/njol/skript/effects/EffExplodeCreeper.java
+EffExplosion	effect	Explosion	unreviewed		src/main/java/ch/njol/skript/effects/EffExplosion.java
+EffFeed	effect	Feed	unreviewed		src/main/java/ch/njol/skript/effects/EffFeed.java
+EffFireResistant	effect	Make Fire Resistant	unreviewed		src/main/java/ch/njol/skript/effects/EffFireResistant.java
+EffFireworkLaunch	effect	Launch firework	unreviewed		src/main/java/ch/njol/skript/effects/EffFireworkLaunch.java
+EffForceAttack	effect	Force Attack	unreviewed		src/main/java/ch/njol/skript/effects/EffForceAttack.java
+EffGlowingText	effect	Make Sign Glow	unreviewed		src/main/java/ch/njol/skript/effects/EffGlowingText.java
+EffGoatHorns	effect	Goat Horns	unreviewed		src/main/java/ch/njol/skript/effects/EffGoatHorns.java
+EffGoatRam	effect	Make Goat Ram	unreviewed		src/main/java/ch/njol/skript/effects/EffGoatRam.java
+EffHandedness	effect	Handedness	unreviewed		src/main/java/ch/njol/skript/effects/EffHandedness.java
+EffHealth	effect	Damage/Heal/Repair	unreviewed		src/main/java/ch/njol/skript/effects/EffHealth.java
+EffHidePlayerFromServerList	effect	Hide Player from Server List	unreviewed		src/main/java/ch/njol/skript/effects/EffHidePlayerFromServerList.java
+EffIgnite	effect	Ignite/Extinguish	unreviewed		src/main/java/ch/njol/skript/effects/EffIgnite.java
+EffIncendiary	effect	Make Incendiary	unreviewed		src/main/java/ch/njol/skript/effects/EffIncendiary.java
+EffInsertEntityStorage	effect	Insert Entity Storage	unreviewed		src/main/java/ch/njol/skript/effects/EffInsertEntityStorage.java
+EffInvisible	effect	Make Invisible	unreviewed		src/main/java/ch/njol/skript/effects/EffInvisible.java
+EffInvulnerability	effect	Make Invulnerable	unreviewed		src/main/java/ch/njol/skript/effects/EffInvulnerability.java
+EffItemDespawn	effect	Item Despawn	unreviewed		src/main/java/ch/njol/skript/effects/EffItemDespawn.java
+EffKeepInventory	effect	Keep Inventory / Experience	unreviewed		src/main/java/ch/njol/skript/effects/EffKeepInventory.java
+EffKill	effect	Kill	unreviewed		src/main/java/ch/njol/skript/effects/EffKill.java
+EffKnockback	effect	Knockback	unreviewed		src/main/java/ch/njol/skript/effects/EffKnockback.java
+EffLeash	effect	Leash entities	unreviewed		src/main/java/ch/njol/skript/effects/EffLeash.java
+EffLidState	effect	Open/Close Lid	unreviewed		src/main/java/ch/njol/skript/effects/EffLidState.java
+EffLightning	effect	Lightning	unreviewed		src/main/java/ch/njol/skript/effects/EffLightning.java
+EffLoadServerIcon	effect	Load Server Icon	unreviewed		src/main/java/ch/njol/skript/effects/EffLoadServerIcon.java
+EffLog	effect	Log	unreviewed		src/main/java/ch/njol/skript/effects/EffLog.java
+EffLook	effect	Look At	unreviewed		src/main/java/ch/njol/skript/effects/EffLook.java
+EffMakeEggHatch	effect	Make Egg Hatch	unreviewed		src/main/java/ch/njol/skript/effects/EffMakeEggHatch.java
+EffMakeFly	effect	Make Fly	unreviewed		src/main/java/ch/njol/skript/effects/EffMakeFly.java
+EffMakeSay	effect	Make Say	unreviewed		src/main/java/ch/njol/skript/effects/EffMakeSay.java
+EffOp	effect	op/deop	unreviewed		src/main/java/ch/njol/skript/effects/EffOp.java
+EffOpenBook	effect	Open Book	unreviewed		src/main/java/ch/njol/skript/effects/EffOpenBook.java
+EffOpenInventory	effect	Open/Close Inventory	unreviewed		src/main/java/ch/njol/skript/effects/EffOpenInventory.java
+EffPandaOnBack	effect	Force Panda On Back	unreviewed		src/main/java/ch/njol/skript/effects/EffPandaOnBack.java
+EffPandaRolling	effect	Make Panda Roll	unreviewed		src/main/java/ch/njol/skript/effects/EffPandaRolling.java
+EffPandaSneezing	effect	Make Panda Sneeze	unreviewed		src/main/java/ch/njol/skript/effects/EffPandaSneezing.java
+EffPathfind	effect	Pathfind	unreviewed		src/main/java/ch/njol/skript/effects/EffPathfind.java
+EffPersistent	effect	Persistent	unreviewed		src/main/java/ch/njol/skript/effects/EffPersistent.java
+EffPlayerInfoVisibility	effect	Player Info Visibility	unreviewed		src/main/java/ch/njol/skript/effects/EffPlayerInfoVisibility.java
+EffPlayingDead	effect	Play Dead	unreviewed		src/main/java/ch/njol/skript/effects/EffPlayingDead.java
+EffPlaySound	effect	Play Sound	unreviewed		src/main/java/ch/njol/skript/effects/EffPlaySound.java
+EffPush	effect	Push	unreviewed		src/main/java/ch/njol/skript/effects/EffPush.java
+EffPvP	effect	PvP	unreviewed		src/main/java/ch/njol/skript/effects/EffPvP.java
+EffReleaseEntityStorage	effect	Release From Entity Storage	unreviewed		src/main/java/ch/njol/skript/effects/EffReleaseEntityStorage.java
+EffReplace	effect	Replace	unreviewed		src/main/java/ch/njol/skript/effects/EffReplace.java
+EffRespawn	effect	Force Respawn	unreviewed		src/main/java/ch/njol/skript/effects/EffRespawn.java
+EffReturn	effect	Return	unreviewed		src/main/java/ch/njol/skript/effects/EffReturn.java
+EffRing	effect	Ring Bell	unreviewed		src/main/java/ch/njol/skript/effects/EffRing.java
+EffRun	effect	Run	unreviewed		src/main/java/ch/njol/skript/effects/EffRun.java
+EffScreaming	effect	Make Entity Scream	unreviewed		src/main/java/ch/njol/skript/effects/EffScreaming.java
+EffScriptFile	effect	Enable/Disable/Unload/Reload Script	unreviewed		src/main/java/ch/njol/skript/effects/EffScriptFile.java
+EffSendBlockChange	effect	Send Block Change	unreviewed		src/main/java/ch/njol/skript/effects/EffSendBlockChange.java
+EffSendResourcePack	effect	Send Resource Pack	unreviewed		src/main/java/ch/njol/skript/effects/EffSendResourcePack.java
+EffShear	effect	Shear	unreviewed		src/main/java/ch/njol/skript/effects/EffShear.java
+EffSilence	effect	Silence Entity	unreviewed		src/main/java/ch/njol/skript/effects/EffSilence.java
+EffSort	effect	Sort	unreviewed		src/main/java/ch/njol/skript/effects/EffSort.java
+EffSprinting	effect	Sprinting	unreviewed		src/main/java/ch/njol/skript/effects/EffSprinting.java
+EffStopServer	effect	Stop Server	unreviewed		src/main/java/ch/njol/skript/effects/EffStopServer.java
+EffStopSound	effect	Stop Sound	unreviewed		src/main/java/ch/njol/skript/effects/EffStopSound.java
+EffStriderShivering	effect	Strider Shivering	unreviewed		src/main/java/ch/njol/skript/effects/EffStriderShivering.java
+EffSuppressTypeHints	effect	Suppress Type Hints (Experimental)	unreviewed		src/main/java/ch/njol/skript/effects/EffSuppressTypeHints.java
+EffSuppressWarnings	effect	Locally Suppress Warning	unreviewed		src/main/java/ch/njol/skript/effects/EffSuppressWarnings.java
+EffSwingHand	effect	Swing Hand	unreviewed		src/main/java/ch/njol/skript/effects/EffSwingHand.java
+EffTame	effect	Tame / Untame	unreviewed		src/main/java/ch/njol/skript/effects/EffTame.java
+EffToggle	effect	Toggle	unreviewed		src/main/java/ch/njol/skript/effects/EffToggle.java
+EffToggleCanPickUpItems	effect	Toggle Picking Up Items	unreviewed		src/main/java/ch/njol/skript/effects/EffToggleCanPickUpItems.java
+EffToggleFlight	effect	Toggle Flight	unreviewed		src/main/java/ch/njol/skript/effects/EffToggleFlight.java
+EffTooltip	effect	Item Tooltips	unreviewed		src/main/java/ch/njol/skript/effects/EffTooltip.java
+EffTransform	effect	Transform List	unreviewed		src/main/java/ch/njol/skript/effects/EffTransform.java
+EffTree	effect	Tree	unreviewed		src/main/java/ch/njol/skript/effects/EffTree.java
+EffVehicle	effect	Vehicle	unreviewed		src/main/java/ch/njol/skript/effects/EffVehicle.java
+EffWakeupSleep	effect	Wake And Sleep	unreviewed		src/main/java/ch/njol/skript/effects/EffWakeupSleep.java
+EffWardenDisturbance	effect	Make Disturbance	unreviewed		src/main/java/ch/njol/skript/effects/EffWardenDisturbance.java
+EffWorldLoad	effect	Load World	unreviewed		src/main/java/ch/njol/skript/effects/EffWorldLoad.java
+EffWorldSave	effect	Save World	unreviewed		src/main/java/ch/njol/skript/effects/EffWorldSave.java
+EffZombify	effect	Zombify Villager	unreviewed		src/main/java/ch/njol/skript/effects/EffZombify.java
+EvtAttemptAttack	event	EvtAttemptAttack	unreviewed		src/main/java/ch/njol/skript/events/EvtAttemptAttack.java
+EvtAtTime	event	EvtAtTime	unreviewed		src/main/java/ch/njol/skript/events/EvtAtTime.java
+EvtBeaconEffect	event	EvtBeaconEffect	unreviewed		src/main/java/ch/njol/skript/events/EvtBeaconEffect.java
+EvtBeaconToggle	event	EvtBeaconToggle	unreviewed		src/main/java/ch/njol/skript/events/EvtBeaconToggle.java
+EvtBlock	event	EvtBlock	unreviewed		src/main/java/ch/njol/skript/events/EvtBlock.java
+EvtBookEdit	event	EvtBookEdit	unreviewed		src/main/java/ch/njol/skript/events/EvtBookEdit.java
+EvtBookSign	event	EvtBookSign	unreviewed		src/main/java/ch/njol/skript/events/EvtBookSign.java
+EvtClick	event	EvtClick	unreviewed		src/main/java/ch/njol/skript/events/EvtClick.java
+EvtCommand	event	EvtCommand	unreviewed		src/main/java/ch/njol/skript/events/EvtCommand.java
+EvtDamage	event	EvtDamage	unreviewed		src/main/java/ch/njol/skript/events/EvtDamage.java
+EvtEntity	event	EvtEntity	unreviewed		src/main/java/ch/njol/skript/events/EvtEntity.java
+EvtEntityBlockChange	event	EvtEntityBlockChange	unreviewed		src/main/java/ch/njol/skript/events/EvtEntityBlockChange.java
+EvtEntityShootBow	event	EvtEntityShootBow	unreviewed		src/main/java/ch/njol/skript/events/EvtEntityShootBow.java
+EvtEntityTarget	event	EvtEntityTarget	unreviewed		src/main/java/ch/njol/skript/events/EvtEntityTarget.java
+EvtEntityTransform	event	EvtEntityTransform	unreviewed		src/main/java/ch/njol/skript/events/EvtEntityTransform.java
+EvtExperienceChange	event	EvtExperienceChange	unreviewed		src/main/java/ch/njol/skript/events/EvtExperienceChange.java
+EvtExperienceSpawn	event	EvtExperienceSpawn	unreviewed		src/main/java/ch/njol/skript/events/EvtExperienceSpawn.java
+EvtFirework	event	EvtFirework	unreviewed		src/main/java/ch/njol/skript/events/EvtFirework.java
+EvtFirstJoin	event	EvtFirstJoin	unreviewed		src/main/java/ch/njol/skript/events/EvtFirstJoin.java
+EvtGrow	event	EvtGrow	unreviewed		src/main/java/ch/njol/skript/events/EvtGrow.java
+EvtHarvestBlock	event	EvtHarvestBlock	unreviewed		src/main/java/ch/njol/skript/events/EvtHarvestBlock.java
+EvtHealing	event	EvtHealing	unreviewed		src/main/java/ch/njol/skript/events/EvtHealing.java
+EvtItem	event	EvtItem	unreviewed		src/main/java/ch/njol/skript/events/EvtItem.java
+EvtLeash	event	EvtLeash	unreviewed		src/main/java/ch/njol/skript/events/EvtLeash.java
+EvtLevel	event	EvtLevel	unreviewed		src/main/java/ch/njol/skript/events/EvtLevel.java
+EvtMove	event	EvtMove	unreviewed		src/main/java/ch/njol/skript/events/EvtMove.java
+EvtMoveOn	event	EvtMoveOn	unreviewed		src/main/java/ch/njol/skript/events/EvtMoveOn.java
+EvtPeriodical	event	EvtPeriodical	unreviewed		src/main/java/ch/njol/skript/events/EvtPeriodical.java
+EvtPlantGrowth	event	EvtPlantGrowth	unreviewed		src/main/java/ch/njol/skript/events/EvtPlantGrowth.java
+EvtPlayerArmorChange	event	EvtPlayerArmorChange	unreviewed		src/main/java/ch/njol/skript/events/EvtPlayerArmorChange.java
+EvtPlayerChunkEnter	event	EvtPlayerChunkEnter	unreviewed		src/main/java/ch/njol/skript/events/EvtPlayerChunkEnter.java
+EvtPlayerCommandSend	event	EvtPlayerCommandSend	unreviewed		src/main/java/ch/njol/skript/events/EvtPlayerCommandSend.java
+EvtPortal	event	EvtPortal	unreviewed		src/main/java/ch/njol/skript/events/EvtPortal.java
+EvtPressurePlate	event	EvtPressurePlate	unreviewed		src/main/java/ch/njol/skript/events/EvtPressurePlate.java
+EvtRealTime	event	EvtRealTime	unreviewed		src/main/java/ch/njol/skript/events/EvtRealTime.java
+EvtResourcePackResponse	event	EvtResourcePackResponse	unreviewed		src/main/java/ch/njol/skript/events/EvtResourcePackResponse.java
+EvtScript	event	EvtScript	unreviewed		src/main/java/ch/njol/skript/events/EvtScript.java
+EvtSkript	event	EvtSkript	unreviewed		src/main/java/ch/njol/skript/events/EvtSkript.java
+EvtSpectate	event	EvtSpectate	unreviewed		src/main/java/ch/njol/skript/events/EvtSpectate.java
+EvtTeleport	event	EvtTeleport	unreviewed		src/main/java/ch/njol/skript/events/EvtTeleport.java
+EvtVehicleCollision	event	EvtVehicleCollision	unreviewed		src/main/java/ch/njol/skript/events/EvtVehicleCollision.java
+EvtWeatherChange	event	EvtWeatherChange	unreviewed		src/main/java/ch/njol/skript/events/EvtWeatherChange.java
+EvtWorld	event	EvtWorld	unreviewed		src/main/java/ch/njol/skript/events/EvtWorld.java
+ExprArithmetic	expression	Arithmetic	unreviewed		src/main/java/ch/njol/skript/expressions/arithmetic/ExprArithmetic.java
+ExprAbsorbedBlocks	expression	Absorbed blocks	unreviewed		src/main/java/ch/njol/skript/expressions/ExprAbsorbedBlocks.java
+ExprActiveItem	expression	Active Item	unreviewed		src/main/java/ch/njol/skript/expressions/ExprActiveItem.java
+ExprAffectedEntities	expression	Affected Entities	unreviewed		src/main/java/ch/njol/skript/expressions/ExprAffectedEntities.java
+ExprAge	expression	Age of Block/Entity	unreviewed		src/main/java/ch/njol/skript/expressions/ExprAge.java
+ExprAI	expression	Entity AI	unreviewed		src/main/java/ch/njol/skript/expressions/ExprAI.java
+ExprAllayJukebox	expression	Allay Target Jukebox	unreviewed		src/main/java/ch/njol/skript/expressions/ExprAllayJukebox.java
+ExprAllBannedEntries	expression	All Banned Players/IPs	unreviewed		src/main/java/ch/njol/skript/expressions/ExprAllBannedEntries.java
+ExprAllCommands	expression	All commands	unreviewed		src/main/java/ch/njol/skript/expressions/ExprAllCommands.java
+ExprAlphabetList	expression	Alphabetical Sort	unreviewed		src/main/java/ch/njol/skript/expressions/ExprAlphabetList.java
+ExprAltitude	expression	Altitude	unreviewed		src/main/java/ch/njol/skript/expressions/ExprAltitude.java
+ExprAmount	expression	Amount	unreviewed		src/main/java/ch/njol/skript/expressions/ExprAmount.java
+ExprAmountOfItems	expression	Amount of Items	unreviewed		src/main/java/ch/njol/skript/expressions/ExprAmountOfItems.java
+ExprAngle	expression	Angle	unreviewed		src/main/java/ch/njol/skript/expressions/ExprAngle.java
+ExprAnvilRepairCost	expression	Anvil Repair Cost	missing	No AnvilView repair cost API yet	src/main/java/ch/njol/skript/expressions/ExprAnvilRepairCost.java
+ExprAnvilText	expression	Anvil Text Input	missing	No AnvilView API yet	src/main/java/ch/njol/skript/expressions/ExprAnvilText.java
+ExprAnyOf	expression	Any Of	unreviewed		src/main/java/ch/njol/skript/expressions/ExprAnyOf.java
+ExprAppliedEffect	expression	Applied Beacon Effect	unreviewed		src/main/java/ch/njol/skript/expressions/ExprAppliedEffect.java
+ExprARGB	expression	Alpha/Red/Green/Blue Color Value	unreviewed		src/main/java/ch/njol/skript/expressions/ExprARGB.java
+ExprArgument	expression	Argument	unreviewed		src/main/java/ch/njol/skript/expressions/ExprArgument.java
+ExprArmorChangeItem	expression	Armor Change Item	unreviewed		src/main/java/ch/njol/skript/expressions/ExprArmorChangeItem.java
+ExprArmorSlot	expression	Armor Slot	unreviewed		src/main/java/ch/njol/skript/expressions/ExprArmorSlot.java
+ExprArrowKnockbackStrength	expression	Arrow Knockback Strength	unreviewed		src/main/java/ch/njol/skript/expressions/ExprArrowKnockbackStrength.java
+ExprArrowPierceLevel	expression	Arrow Pierce Level	unreviewed		src/main/java/ch/njol/skript/expressions/ExprArrowPierceLevel.java
+ExprArrowsStuck	expression	Arrows Stuck	unreviewed		src/main/java/ch/njol/skript/expressions/ExprArrowsStuck.java
+ExprAttachedBlock	expression	Arrow Attached Block	unreviewed		src/main/java/ch/njol/skript/expressions/ExprAttachedBlock.java
+ExprAttackCooldown	expression	Attack Cooldown	unreviewed		src/main/java/ch/njol/skript/expressions/ExprAttackCooldown.java
+ExprAttacked	expression	Attacked	unreviewed		src/main/java/ch/njol/skript/expressions/ExprAttacked.java
+ExprAttacker	expression	Attacker	unreviewed		src/main/java/ch/njol/skript/expressions/ExprAttacker.java
+ExprBannerItem	expression	Banner Pattern Item	unreviewed		src/main/java/ch/njol/skript/expressions/ExprBannerItem.java
+ExprBannerPatterns	expression	Banner Patterns	unreviewed		src/main/java/ch/njol/skript/expressions/ExprBannerPatterns.java
+ExprBarterDrops	expression	Barter Drops	unreviewed		src/main/java/ch/njol/skript/expressions/ExprBarterDrops.java
+ExprBarterInput	expression	Barter Input	unreviewed		src/main/java/ch/njol/skript/expressions/ExprBarterInput.java
+ExprBeaconEffects	expression	Beacon Effects	unreviewed		src/main/java/ch/njol/skript/expressions/ExprBeaconEffects.java
+ExprBeaconRange	expression	Beacon Range	unreviewed		src/main/java/ch/njol/skript/expressions/ExprBeaconRange.java
+ExprBeaconTier	expression	Beacon Tier	unreviewed		src/main/java/ch/njol/skript/expressions/ExprBeaconTier.java
+ExprBed	expression	Bed	unreviewed		src/main/java/ch/njol/skript/expressions/ExprBed.java
+ExprBeehiveFlower	expression	Beehive Target Flower	unreviewed		src/main/java/ch/njol/skript/expressions/ExprBeehiveFlower.java
+ExprBeehiveHoneyLevel	expression	Beehive Honey Level	unreviewed		src/main/java/ch/njol/skript/expressions/ExprBeehiveHoneyLevel.java
+ExprBiome	expression	Biome	unreviewed		src/main/java/ch/njol/skript/expressions/ExprBiome.java
+ExprBlock	expression	Block	unreviewed		src/main/java/ch/njol/skript/expressions/ExprBlock.java
+ExprBlockData	expression	Block Data	adapted	BlockData; Block.data; Block.blockData string compatibility; BlockDisplay.blockData	src/main/java/ch/njol/skript/expressions/ExprBlockData.java
+ExprBlockHardness	expression	Block Hardness	unreviewed		src/main/java/ch/njol/skript/expressions/ExprBlockHardness.java
+ExprBlocks	expression	Blocks	unreviewed		src/main/java/ch/njol/skript/expressions/ExprBlocks.java
+ExprBlockSound	expression	Block Sound	unreviewed		src/main/java/ch/njol/skript/expressions/ExprBlockSound.java
+ExprBlockSphere	expression	Block Sphere	unreviewed		src/main/java/ch/njol/skript/expressions/ExprBlockSphere.java
+ExprBreakSpeed	expression	Block Break Speed	unreviewed		src/main/java/ch/njol/skript/expressions/ExprBreakSpeed.java
+ExprBrushableItem	expression	Buried Item	unreviewed		src/main/java/ch/njol/skript/expressions/ExprBrushableItem.java
+ExprCarryingBlockData	expression	Enderman Carrying BlockData	unreviewed		src/main/java/ch/njol/skript/expressions/ExprCarryingBlockData.java
+ExprCaughtErrors	expression	Last Caught Errors	unreviewed		src/main/java/ch/njol/skript/expressions/ExprCaughtErrors.java
+ExprCharacterFromCodepoint	expression	Character from Codepoint	unreviewed		src/main/java/ch/njol/skript/expressions/ExprCharacterFromCodepoint.java
+ExprCharacters	expression	Characters Between	unreviewed		src/main/java/ch/njol/skript/expressions/ExprCharacters.java
+ExprCharges	expression	Respawn Anchor Charges	unreviewed		src/main/java/ch/njol/skript/expressions/ExprCharges.java
+ExprChestInventory	expression	Custom Chest Inventory	unreviewed		src/main/java/ch/njol/skript/expressions/ExprChestInventory.java
+ExprChunk	expression	Chunk	unreviewed		src/main/java/ch/njol/skript/expressions/ExprChunk.java
+ExprClicked	expression	Clicked Block/Entity/Inventory/Slot	unreviewed		src/main/java/ch/njol/skript/expressions/ExprClicked.java
+ExprClientViewDistance	expression	View Distance of Client	unreviewed		src/main/java/ch/njol/skript/expressions/ExprClientViewDistance.java
+ExprCmdCooldownInfo	expression	Cooldown Time/Remaining Time/Elapsed Time/Last Usage/Bypass Permission	unreviewed		src/main/java/ch/njol/skript/expressions/ExprCmdCooldownInfo.java
+ExprCodepoint	expression	Character Codepoint	unreviewed		src/main/java/ch/njol/skript/expressions/ExprCodepoint.java
+ExprCommand	expression	Command	unreviewed		src/main/java/ch/njol/skript/expressions/ExprCommand.java
+ExprCommandBlockCommand	expression	Command Block Command	unreviewed		src/main/java/ch/njol/skript/expressions/ExprCommandBlockCommand.java
+ExprCommandInfo	expression	Command Info	unreviewed		src/main/java/ch/njol/skript/expressions/ExprCommandInfo.java
+ExprCommandSender	expression	Command Sender	unreviewed		src/main/java/ch/njol/skript/expressions/ExprCommandSender.java
+ExprCompassTarget	expression	Compass Target	unreviewed		src/main/java/ch/njol/skript/expressions/ExprCompassTarget.java
+ExprConfig	expression	Config	unreviewed		src/main/java/ch/njol/skript/expressions/ExprConfig.java
+ExprConsumedItem	expression	Consumed Item	unreviewed		src/main/java/ch/njol/skript/expressions/ExprConsumedItem.java
+ExprCoordinate	expression	Coordinate	unreviewed		src/main/java/ch/njol/skript/expressions/ExprCoordinate.java
+ExprCreeperMaxFuseTicks	expression	Creeper Max Fuse Ticks	unreviewed		src/main/java/ch/njol/skript/expressions/ExprCreeperMaxFuseTicks.java
+ExprCursorSlot	expression	Cursor Slot	unreviewed		src/main/java/ch/njol/skript/expressions/ExprCursorSlot.java
+ExprCustomModelData	expression	Custom Model Data	unreviewed		src/main/java/ch/njol/skript/expressions/ExprCustomModelData.java
+ExprDamage	expression	Damage	unreviewed		src/main/java/ch/njol/skript/expressions/ExprDamage.java
+ExprDamageCause	expression	Damage Cause	unreviewed		src/main/java/ch/njol/skript/expressions/ExprDamageCause.java
+ExprDamagedItem	expression	Damaged Item	unreviewed		src/main/java/ch/njol/skript/expressions/ExprDamagedItem.java
+ExprDateAgoLater	expression	Date Ago/Later	unreviewed		src/main/java/ch/njol/skript/expressions/ExprDateAgoLater.java
+ExprDebugInfo	expression	Debug Info	unreviewed		src/main/java/ch/njol/skript/expressions/ExprDebugInfo.java
+ExprDefaultValue	expression	Default Value	unreviewed		src/main/java/ch/njol/skript/expressions/ExprDefaultValue.java
+ExprDequeuedQueue	expression	De-queue Queue (Experimental)	unreviewed		src/main/java/ch/njol/skript/expressions/ExprDequeuedQueue.java
+ExprDifference	expression	Difference	unreviewed		src/main/java/ch/njol/skript/expressions/ExprDifference.java
+ExprDifficulty	expression	Difficulty	unreviewed		src/main/java/ch/njol/skript/expressions/ExprDifficulty.java
+ExprDirection	expression	Direction	unreviewed		src/main/java/ch/njol/skript/expressions/ExprDirection.java
+ExprDistance	expression	Distance	unreviewed		src/main/java/ch/njol/skript/expressions/ExprDistance.java
+ExprDomestication	expression	Horse Domestication	unreviewed		src/main/java/ch/njol/skript/expressions/ExprDomestication.java
+ExprDrops	expression	Drops	unreviewed		src/main/java/ch/njol/skript/expressions/ExprDrops.java
+ExprDropsOfBlock	expression	Drops Of Block	unreviewed		src/main/java/ch/njol/skript/expressions/ExprDropsOfBlock.java
+ExprDuplicateCooldown	expression	Allay Duplication Cooldown	unreviewed		src/main/java/ch/njol/skript/expressions/ExprDuplicateCooldown.java
+ExprDurability	expression	Damage Value/Durability	unreviewed		src/main/java/ch/njol/skript/expressions/ExprDurability.java
+ExprDustedStage	expression	Brushing Stage	unreviewed		src/main/java/ch/njol/skript/expressions/ExprDustedStage.java
+ExprEgg	expression	The Egg	unreviewed		src/main/java/ch/njol/skript/expressions/ExprEgg.java
+ExprElement	expression	Elements	unreviewed		src/main/java/ch/njol/skript/expressions/ExprElement.java
+ExprEnderChest	expression	Ender Chest	unreviewed		src/main/java/ch/njol/skript/expressions/ExprEnderChest.java
+ExprEntities	expression	Entities	unreviewed		src/main/java/ch/njol/skript/expressions/ExprEntities.java
+ExprEntity	expression	Creature/Entity/Player/Projectile/Villager/Powered Creeper/etc.	unreviewed		src/main/java/ch/njol/skript/expressions/ExprEntity.java
+ExprEntityAttribute	expression	Entity Attribute	unreviewed		src/main/java/ch/njol/skript/expressions/ExprEntityAttribute.java
+ExprEntityItemUseTime	expression	Active Item Use Time	unreviewed		src/main/java/ch/njol/skript/expressions/ExprEntityItemUseTime.java
+ExprEntityOwner	expression	Entity Owner	unreviewed		src/main/java/ch/njol/skript/expressions/ExprEntityOwner.java
+ExprEntitySize	expression	Entity Size	unreviewed		src/main/java/ch/njol/skript/expressions/ExprEntitySize.java
+ExprEntitySnapshot	expression	Entity Snapshot	unreviewed		src/main/java/ch/njol/skript/expressions/ExprEntitySnapshot.java
+ExprEntitySound	expression	Entity Sound	unreviewed		src/main/java/ch/njol/skript/expressions/ExprEntitySound.java
+ExprEntityStorageEntityCount	expression	Entity Storage Entity Count	unreviewed		src/main/java/ch/njol/skript/expressions/ExprEntityStorageEntityCount.java
+ExprEventExpression	expression	ExprEventExpression	unreviewed		src/main/java/ch/njol/skript/expressions/ExprEventExpression.java
+ExprEvtInitiator	expression	Initiator Inventory	unreviewed		src/main/java/ch/njol/skript/expressions/ExprEvtInitiator.java
+ExprExactItem	expression	Exact Item	unreviewed		src/main/java/ch/njol/skript/expressions/ExprExactItem.java
+ExprExcept	expression	Except	unreviewed		src/main/java/ch/njol/skript/expressions/ExprExcept.java
+ExprExhaustion	expression	Exhaustion	unreviewed		src/main/java/ch/njol/skript/expressions/ExprExhaustion.java
+ExprExperience	expression	Experience	unreviewed		src/main/java/ch/njol/skript/expressions/ExprExperience.java
+ExprExperienceCooldown	expression	Experience Pickup Cooldown	unreviewed		src/main/java/ch/njol/skript/expressions/ExprExperienceCooldown.java
+ExprExperienceCooldownChangeReason	expression	Experience Cooldown Change Reason	unreviewed		src/main/java/ch/njol/skript/expressions/ExprExperienceCooldownChangeReason.java
+ExprExplodedBlocks	expression	Exploded Blocks	unreviewed		src/main/java/ch/njol/skript/expressions/ExprExplodedBlocks.java
+ExprExplosionBlockYield	expression	Explosion Block Yield	unreviewed		src/main/java/ch/njol/skript/expressions/ExprExplosionBlockYield.java
+ExprExplosionYield	expression	Explosion Yield	unreviewed		src/main/java/ch/njol/skript/expressions/ExprExplosionYield.java
+ExprExplosiveYield	expression	Explosive Yield	unreviewed		src/main/java/ch/njol/skript/expressions/ExprExplosiveYield.java
+ExprEyeLocation	expression	Head location	unreviewed		src/main/java/ch/njol/skript/expressions/ExprEyeLocation.java
+ExprFacing	expression	Facing	unreviewed		src/main/java/ch/njol/skript/expressions/ExprFacing.java
+ExprFallDistance	expression	Fall Distance	unreviewed		src/main/java/ch/njol/skript/expressions/ExprFallDistance.java
+ExprFertilizedBlocks	expression	Fertilized Blocks	unreviewed		src/main/java/ch/njol/skript/expressions/ExprFertilizedBlocks.java
+ExprFilter	expression	Filter	unreviewed		src/main/java/ch/njol/skript/expressions/ExprFilter.java
+ExprFinalDamage	expression	Final Damage	unreviewed		src/main/java/ch/njol/skript/expressions/ExprFinalDamage.java
+ExprFireTicks	expression	Entity Fire Burn Duration	unreviewed		src/main/java/ch/njol/skript/expressions/ExprFireTicks.java
+ExprFireworkEffect	expression	Firework Effect	unreviewed		src/main/java/ch/njol/skript/expressions/ExprFireworkEffect.java
+ExprFirstEmptySlot	expression	First Empty Slot in Inventory	unreviewed		src/main/java/ch/njol/skript/expressions/ExprFirstEmptySlot.java
+ExprFlightMode	expression	Flight Mode	unreviewed		src/main/java/ch/njol/skript/expressions/ExprFlightMode.java
+ExprFoodLevel	expression	Food Level	unreviewed		src/main/java/ch/njol/skript/expressions/ExprFoodLevel.java
+ExprFormatDate	expression	Formatted Date	unreviewed		src/main/java/ch/njol/skript/expressions/ExprFormatDate.java
+ExprFreezeTicks	expression	Freeze Time	unreviewed		src/main/java/ch/njol/skript/expressions/ExprFreezeTicks.java
+ExprFromUUID	expression	Entity/Player/World from UUID	unreviewed		src/main/java/ch/njol/skript/expressions/ExprFromUUID.java
+ExprFunction	expression	Function	unreviewed		src/main/java/ch/njol/skript/expressions/ExprFunction.java
+ExprGameRule	expression	Gamerule Value	existing	World.gameRule/setGameRule (string interface)	src/main/java/ch/njol/skript/expressions/ExprGameRule.java
+ExprGlidingState	expression	Gliding State	unreviewed		src/main/java/ch/njol/skript/expressions/ExprGlidingState.java
+ExprGlowing	expression	Glowing	unreviewed		src/main/java/ch/njol/skript/expressions/ExprGlowing.java
+ExprGravity	expression	Gravity	unreviewed		src/main/java/ch/njol/skript/expressions/ExprGravity.java
+ExprHanging	expression	Hanging Entity/Remover	unreviewed		src/main/java/ch/njol/skript/expressions/ExprHanging.java
+ExprHash	expression	Hash	unreviewed		src/main/java/ch/njol/skript/expressions/ExprHash.java
+ExprHatchingNumber	expression	Hatching Number	unreviewed		src/main/java/ch/njol/skript/expressions/ExprHatchingNumber.java
+ExprHatchingType	expression	Hatching Entity Type	unreviewed		src/main/java/ch/njol/skript/expressions/ExprHatchingType.java
+ExprHealAmount	expression	Heal Amount	unreviewed		src/main/java/ch/njol/skript/expressions/ExprHealAmount.java
+ExprHealReason	expression	Heal Reason	unreviewed		src/main/java/ch/njol/skript/expressions/ExprHealReason.java
+ExprHealth	expression	Health	unreviewed		src/main/java/ch/njol/skript/expressions/ExprHealth.java
+ExprHiddenPlayers	expression	Hidden Players	unreviewed		src/main/java/ch/njol/skript/expressions/ExprHiddenPlayers.java
+ExprHostname	expression	Hostname	unreviewed		src/main/java/ch/njol/skript/expressions/ExprHostname.java
+ExprHotbarButton	expression	Hotbar Button	unreviewed		src/main/java/ch/njol/skript/expressions/ExprHotbarButton.java
+ExprHotbarSlot	expression	Hotbar Slot	unreviewed		src/main/java/ch/njol/skript/expressions/ExprHotbarSlot.java
+ExprHoverList	expression	Hover List	unreviewed		src/main/java/ch/njol/skript/expressions/ExprHoverList.java
+ExprHumidity	expression	Humidity	unreviewed		src/main/java/ch/njol/skript/expressions/ExprHumidity.java
+ExprIndices	expression	Indices of List	unreviewed		src/main/java/ch/njol/skript/expressions/ExprIndices.java
+ExprIndicesOfValue	expression	Indices of Value	unreviewed		src/main/java/ch/njol/skript/expressions/ExprIndicesOfValue.java
+ExprInput	expression	Input	unreviewed		src/main/java/ch/njol/skript/expressions/ExprInput.java
+ExprInventory	expression	Inventory	unreviewed		src/main/java/ch/njol/skript/expressions/ExprInventory.java
+ExprInventoryAction	expression	Inventory Action	unreviewed		src/main/java/ch/njol/skript/expressions/ExprInventoryAction.java
+ExprInventoryCloseReason	expression	Inventory Close Reason	unreviewed		src/main/java/ch/njol/skript/expressions/ExprInventoryCloseReason.java
+ExprInventoryInfo	expression	Inventory Holder/Viewers/Rows/Slots	unreviewed		src/main/java/ch/njol/skript/expressions/ExprInventoryInfo.java
+ExprInventorySlot	expression	Inventory Slot	unreviewed		src/main/java/ch/njol/skript/expressions/ExprInventorySlot.java
+ExprInverse	expression	Inverse Boolean	unreviewed		src/main/java/ch/njol/skript/expressions/ExprInverse.java
+ExprIP	expression	IP	unreviewed		src/main/java/ch/njol/skript/expressions/ExprIP.java
+ExprItem	expression	Item	unreviewed		src/main/java/ch/njol/skript/expressions/ExprItem.java
+ExprItemAmount	expression	Item Amount	unreviewed		src/main/java/ch/njol/skript/expressions/ExprItemAmount.java
+ExprItemCooldown	expression	Item Cooldown	unreviewed		src/main/java/ch/njol/skript/expressions/ExprItemCooldown.java
+ExprItemFlags	expression	Item Flags	unreviewed		src/main/java/ch/njol/skript/expressions/ExprItemFlags.java
+ExprItemOwner	expression	Dropped Item Owner	unreviewed		src/main/java/ch/njol/skript/expressions/ExprItemOwner.java
+ExprItems	expression	Items	unreviewed		src/main/java/ch/njol/skript/expressions/ExprItems.java
+ExprItemsIn	expression	Items In	unreviewed		src/main/java/ch/njol/skript/expressions/ExprItemsIn.java
+ExprItemThrower	expression	Dropped Item Thrower	unreviewed		src/main/java/ch/njol/skript/expressions/ExprItemThrower.java
+ExprItemWithCustomModelData	expression	Item with Custom Model Data	unreviewed		src/main/java/ch/njol/skript/expressions/ExprItemWithCustomModelData.java
+ExprItemWithTooltip	expression	Item with Tooltip	unreviewed		src/main/java/ch/njol/skript/expressions/ExprItemWithTooltip.java
+ExprJoinSplit	expression	Join & Split	unreviewed		src/main/java/ch/njol/skript/expressions/ExprJoinSplit.java
+ExprKeyed	expression	Keyed	unreviewed		src/main/java/ch/njol/skript/expressions/ExprKeyed.java
+ExprLanguage	expression	Language	unreviewed		src/main/java/ch/njol/skript/expressions/ExprLanguage.java
+ExprLastAttacker	expression	Last Attacker	unreviewed		src/main/java/ch/njol/skript/expressions/ExprLastAttacker.java
+ExprLastDamage	expression	Last Damage	unreviewed		src/main/java/ch/njol/skript/expressions/ExprLastDamage.java
+ExprLastDamageCause	expression	Last Damage Cause	unreviewed		src/main/java/ch/njol/skript/expressions/ExprLastDamageCause.java
+ExprLastDeathLocation	expression	Last Death Location	unreviewed		src/main/java/ch/njol/skript/expressions/ExprLastDeathLocation.java
+ExprLastLoadedServerIcon	expression	Last Loaded Server Icon	unreviewed		src/main/java/ch/njol/skript/expressions/ExprLastLoadedServerIcon.java
+ExprLastLoginTime	expression	Last/First Login Time	unreviewed		src/main/java/ch/njol/skript/expressions/ExprLastLoginTime.java
+ExprLastResourcePackResponse	expression	Last Resource Pack Response	unreviewed		src/main/java/ch/njol/skript/expressions/ExprLastResourcePackResponse.java
+ExprLastSpawnedEntity	expression	Last Spawned Entity	unreviewed		src/main/java/ch/njol/skript/expressions/ExprLastSpawnedEntity.java
+ExprLeashHolder	expression	Leash Holder	unreviewed		src/main/java/ch/njol/skript/expressions/ExprLeashHolder.java
+ExprLength	expression	Length	unreviewed		src/main/java/ch/njol/skript/expressions/ExprLength.java
+ExprLevel	expression	Level	unreviewed		src/main/java/ch/njol/skript/expressions/ExprLevel.java
+ExprLevelProgress	expression	Level Progress	unreviewed		src/main/java/ch/njol/skript/expressions/ExprLevelProgress.java
+ExprLightLevel	expression	Light Level	unreviewed		src/main/java/ch/njol/skript/expressions/ExprLightLevel.java
+ExprLocation	expression	Location	unreviewed		src/main/java/ch/njol/skript/expressions/ExprLocation.java
+ExprLocationAt	expression	Location At	unreviewed		src/main/java/ch/njol/skript/expressions/ExprLocationAt.java
+ExprLocationFromVector	expression	Vectors - Create Location from Vector	unreviewed		src/main/java/ch/njol/skript/expressions/ExprLocationFromVector.java
+ExprLocationOf	expression	Location	unreviewed		src/main/java/ch/njol/skript/expressions/ExprLocationOf.java
+ExprLocationVectorOffset	expression	Vectors - Location Vector Offset	unreviewed		src/main/java/ch/njol/skript/expressions/ExprLocationVectorOffset.java
+ExprLoopIteration	expression	Loop Iteration	unreviewed		src/main/java/ch/njol/skript/expressions/ExprLoopIteration.java
+ExprLoopValue	expression	Loop value	unreviewed		src/main/java/ch/njol/skript/expressions/ExprLoopValue.java
+ExprLowestHighestSolidBlock	expression	Lowest/Highest Solid Block	unreviewed		src/main/java/ch/njol/skript/expressions/ExprLowestHighestSolidBlock.java
+ExprMaxDurability	expression	Max Durability	unreviewed		src/main/java/ch/njol/skript/expressions/ExprMaxDurability.java
+ExprMaxFreezeTicks	expression	Maximum Freeze Time	unreviewed		src/main/java/ch/njol/skript/expressions/ExprMaxFreezeTicks.java
+ExprMaxHealth	expression	Max Health	unreviewed		src/main/java/ch/njol/skript/expressions/ExprMaxHealth.java
+ExprMaxItemUseTime	expression	Max Item Use Time	unreviewed		src/main/java/ch/njol/skript/expressions/ExprMaxItemUseTime.java
+ExprMaxMinecartSpeed	expression	Max Minecart Speed	unreviewed		src/main/java/ch/njol/skript/expressions/ExprMaxMinecartSpeed.java
+ExprMaxPlayers	expression	Max Players	unreviewed		src/main/java/ch/njol/skript/expressions/ExprMaxPlayers.java
+ExprMaxStack	expression	Maximum Stack Size	unreviewed		src/main/java/ch/njol/skript/expressions/ExprMaxStack.java
+ExprMe	expression	Me	unreviewed		src/main/java/ch/njol/skript/expressions/ExprMe.java
+ExprMemory	expression	Free / Max / Total Memory	unreviewed		src/main/java/ch/njol/skript/expressions/ExprMemory.java
+ExprMendingRepairAmount	expression	Mending Repair Amount	unreviewed		src/main/java/ch/njol/skript/expressions/ExprMendingRepairAmount.java
+ExprMetadata	expression	Metadata	adapted	Entity/Block/World.metadata,setMetadata,hasMetadata,removeMetadata; own store with lifecycle cleanup	src/main/java/ch/njol/skript/expressions/ExprMetadata.java
+ExprMiddleOfLocation	expression	Middle of Location	unreviewed		src/main/java/ch/njol/skript/expressions/ExprMiddleOfLocation.java
+ExprMidpoint	expression	Midpoint	unreviewed		src/main/java/ch/njol/skript/expressions/ExprMidpoint.java
+ExprMinecartDerailedFlyingVelocity	expression	Minecart Derailed / Flying Velocity	unreviewed		src/main/java/ch/njol/skript/expressions/ExprMinecartDerailedFlyingVelocity.java
+ExprMoonPhase	expression	Moon Phase	unreviewed		src/main/java/ch/njol/skript/expressions/ExprMoonPhase.java
+ExprName	expression	Name / Display Name / Tab List Name	unreviewed		src/main/java/ch/njol/skript/expressions/ExprName.java
+ExprNamed	expression	Named Item/Inventory	unreviewed		src/main/java/ch/njol/skript/expressions/ExprNamed.java
+ExprNearestEntity	expression	Nearest Entity	unreviewed		src/main/java/ch/njol/skript/expressions/ExprNearestEntity.java
+ExprNewBannerPattern	expression	Banner Pattern	unreviewed		src/main/java/ch/njol/skript/expressions/ExprNewBannerPattern.java
+ExprNoDamageTicks	expression	No Damage Ticks	unreviewed		src/main/java/ch/njol/skript/expressions/ExprNoDamageTicks.java
+ExprNoDamageTime	expression	No Damage Time	unreviewed		src/main/java/ch/njol/skript/expressions/ExprNoDamageTime.java
+ExprNode	expression	Node	unreviewed		src/main/java/ch/njol/skript/expressions/ExprNode.java
+ExprNow	expression	Now	unreviewed		src/main/java/ch/njol/skript/expressions/ExprNow.java
+ExprNumberOfCharacters	expression	Number of Characters	unreviewed		src/main/java/ch/njol/skript/expressions/ExprNumberOfCharacters.java
+ExprNumbers	expression	Numbers	unreviewed		src/main/java/ch/njol/skript/expressions/ExprNumbers.java
+ExprOfflinePlayers	expression	Offline players	unreviewed		src/main/java/ch/njol/skript/expressions/ExprOfflinePlayers.java
+ExprOnlinePlayersCount	expression	Online Player Count	unreviewed		src/main/java/ch/njol/skript/expressions/ExprOnlinePlayersCount.java
+ExprOpenedInventory	expression	Opened Inventory	unreviewed		src/main/java/ch/njol/skript/expressions/ExprOpenedInventory.java
+ExprOps	expression	All Operators	unreviewed		src/main/java/ch/njol/skript/expressions/ExprOps.java
+ExprPandaGene	expression	Panda Gene	unreviewed		src/main/java/ch/njol/skript/expressions/ExprPandaGene.java
+ExprParse	expression	Parse	unreviewed		src/main/java/ch/njol/skript/expressions/ExprParse.java
+ExprParseError	expression	Parse Error	unreviewed		src/main/java/ch/njol/skript/expressions/ExprParseError.java
+ExprPassenger	expression	Passenger	unreviewed		src/main/java/ch/njol/skript/expressions/ExprPassenger.java
+ExprPercent	expression	Percent of	unreviewed		src/main/java/ch/njol/skript/expressions/ExprPercent.java
+ExprPermissions	expression	All Permissions	unreviewed		src/main/java/ch/njol/skript/expressions/ExprPermissions.java
+ExprPickupDelay	expression	Pickup Delay	unreviewed		src/main/java/ch/njol/skript/expressions/ExprPickupDelay.java
+ExprPing	expression	Ping	unreviewed		src/main/java/ch/njol/skript/expressions/ExprPing.java
+ExprPlain	expression	Plain Item	unreviewed		src/main/java/ch/njol/skript/expressions/ExprPlain.java
+ExprPlayerChatCompletions	expression	Player Chat Completions	unreviewed		src/main/java/ch/njol/skript/expressions/ExprPlayerChatCompletions.java
+ExprPlayerProtocolVersion	expression	Player Protocol Version	unreviewed		src/main/java/ch/njol/skript/expressions/ExprPlayerProtocolVersion.java
+ExprPlugins	expression	Loaded Plugins	unreviewed		src/main/java/ch/njol/skript/expressions/ExprPlugins.java
+ExprPortal	expression	Portal	unreviewed		src/main/java/ch/njol/skript/expressions/ExprPortal.java
+ExprPortalCooldown	expression	Portal Cooldown	unreviewed		src/main/java/ch/njol/skript/expressions/ExprPortalCooldown.java
+ExprProjectileCriticalState	expression	Projectile Critical State	unreviewed		src/main/java/ch/njol/skript/expressions/ExprProjectileCriticalState.java
+ExprProjectileForce	expression	Projectile Force	unreviewed		src/main/java/ch/njol/skript/expressions/ExprProjectileForce.java
+ExprProtocolVersion	expression	Protocol Version	unreviewed		src/main/java/ch/njol/skript/expressions/ExprProtocolVersion.java
+ExprPushedBlocks	expression	Moved blocks	unreviewed		src/main/java/ch/njol/skript/expressions/ExprPushedBlocks.java
+ExprQueue	expression	Queue (Experimental)	unreviewed		src/main/java/ch/njol/skript/expressions/ExprQueue.java
+ExprQueueStartEnd	expression	Queue Start/End (Experimental)	unreviewed		src/main/java/ch/njol/skript/expressions/ExprQueueStartEnd.java
+ExprQuitReason	expression	Quit Reason	unreviewed		src/main/java/ch/njol/skript/expressions/ExprQuitReason.java
+ExprRandom	expression	Random	unreviewed		src/main/java/ch/njol/skript/expressions/ExprRandom.java
+ExprRandomCharacter	expression	Random Character	unreviewed		src/main/java/ch/njol/skript/expressions/ExprRandomCharacter.java
+ExprRandomNumber	expression	Random Numbers	unreviewed		src/main/java/ch/njol/skript/expressions/ExprRandomNumber.java
+ExprRandomUUID	expression	Random UUID	unreviewed		src/main/java/ch/njol/skript/expressions/ExprRandomUUID.java
+ExprRawName	expression	Raw Name	unreviewed		src/main/java/ch/njol/skript/expressions/ExprRawName.java
+ExprReadiedArrow	expression	Readied Arrow/Bow	unreviewed		src/main/java/ch/njol/skript/expressions/ExprReadiedArrow.java
+ExprRecursive	expression	Recursive	unreviewed		src/main/java/ch/njol/skript/expressions/ExprRecursive.java
+ExprRedstoneBlockPower	expression	Redstone Block Power	unreviewed		src/main/java/ch/njol/skript/expressions/ExprRedstoneBlockPower.java
+ExprReduce	expression	Reduce	unreviewed		src/main/java/ch/njol/skript/expressions/ExprReduce.java
+ExprReducedValue	expression	Reduced Value	unreviewed		src/main/java/ch/njol/skript/expressions/ExprReducedValue.java
+ExprRemainingAir	expression	Remaining Air	unreviewed		src/main/java/ch/njol/skript/expressions/ExprRemainingAir.java
+ExprRepeat	expression	Repeat String	unreviewed		src/main/java/ch/njol/skript/expressions/ExprRepeat.java
+ExprResonatingTime	expression	Resonating Time	unreviewed		src/main/java/ch/njol/skript/expressions/ExprResonatingTime.java
+ExprRespawnReason	expression	Respawn Reason	unreviewed		src/main/java/ch/njol/skript/expressions/ExprRespawnReason.java
+ExprResult	expression	Result	unreviewed		src/main/java/ch/njol/skript/expressions/ExprResult.java
+ExprReversedList	expression	Reversed List	unreviewed		src/main/java/ch/njol/skript/expressions/ExprReversedList.java
+ExprRingingTime	expression	Ringing Time	unreviewed		src/main/java/ch/njol/skript/expressions/ExprRingingTime.java
+ExprRound	expression	Rounding	unreviewed		src/main/java/ch/njol/skript/expressions/ExprRound.java
+ExprSaturation	expression	Saturation	unreviewed		src/main/java/ch/njol/skript/expressions/ExprSaturation.java
+ExprScoreboardTags	expression	Scoreboard Tags	unreviewed		src/main/java/ch/njol/skript/expressions/ExprScoreboardTags.java
+ExprScript	expression	Script	unreviewed		src/main/java/ch/njol/skript/expressions/ExprScript.java
+ExprScripts	expression	All Scripts	unreviewed		src/main/java/ch/njol/skript/expressions/ExprScripts.java
+ExprScriptsOld	expression	All Scripts	unreviewed		src/main/java/ch/njol/skript/expressions/ExprScriptsOld.java
+ExprSeaLevel	expression	Sea Level	unreviewed		src/main/java/ch/njol/skript/expressions/ExprSeaLevel.java
+ExprSeaPickles	expression	Sea Pickles	unreviewed		src/main/java/ch/njol/skript/expressions/ExprSeaPickles.java
+ExprSeed	expression	World Seed	unreviewed		src/main/java/ch/njol/skript/expressions/ExprSeed.java
+ExprSentCommands	expression	Sent Command List	unreviewed		src/main/java/ch/njol/skript/expressions/ExprSentCommands.java
+ExprServerIcon	expression	Server Icon	unreviewed		src/main/java/ch/njol/skript/expressions/ExprServerIcon.java
+ExprSets	expression	Sets	unreviewed		src/main/java/ch/njol/skript/expressions/ExprSets.java
+ExprShooter	expression	Shooter	unreviewed		src/main/java/ch/njol/skript/expressions/ExprShooter.java
+ExprShuffledList	expression	Shuffled List	unreviewed		src/main/java/ch/njol/skript/expressions/ExprShuffledList.java
+ExprSimulationDistance	expression	Simulation Distance	unreviewed		src/main/java/ch/njol/skript/expressions/ExprSimulationDistance.java
+ExprSkull	expression	Player Skull	unreviewed		src/main/java/ch/njol/skript/expressions/ExprSkull.java
+ExprSkullOwner	expression	Skull Owner	unreviewed		src/main/java/ch/njol/skript/expressions/ExprSkullOwner.java
+ExprSlotIndex	expression	Slot Index	unreviewed		src/main/java/ch/njol/skript/expressions/ExprSlotIndex.java
+ExprSortedList	expression	Sorted List	unreviewed		src/main/java/ch/njol/skript/expressions/ExprSortedList.java
+ExprSourceBlock	expression	Source Block	unreviewed		src/main/java/ch/njol/skript/expressions/ExprSourceBlock.java
+ExprSpawn	expression	Spawn	unreviewed		src/main/java/ch/njol/skript/expressions/ExprSpawn.java
+ExprSpawnEggEntity	expression	Spawn Egg Entity	unreviewed		src/main/java/ch/njol/skript/expressions/ExprSpawnEggEntity.java
+ExprSpawnerType	expression	Spawner Type	unreviewed		src/main/java/ch/njol/skript/expressions/ExprSpawnerType.java
+ExprSpawnReason	expression	Spawn Reason	unreviewed		src/main/java/ch/njol/skript/expressions/ExprSpawnReason.java
+ExprSpectatorTarget	expression	Spectator Target	unreviewed		src/main/java/ch/njol/skript/expressions/ExprSpectatorTarget.java
+ExprSpeed	expression	Speed	unreviewed		src/main/java/ch/njol/skript/expressions/ExprSpeed.java
+ExprStringCase	expression	Case Text	unreviewed		src/main/java/ch/njol/skript/expressions/ExprStringCase.java
+ExprSubnodeValue	expression	Value of Subnode	unreviewed		src/main/java/ch/njol/skript/expressions/ExprSubnodeValue.java
+ExprSubstring	expression	Substring	unreviewed		src/main/java/ch/njol/skript/expressions/ExprSubstring.java
+ExprTablistedPlayers	expression	Tablisted Players	unreviewed		src/main/java/ch/njol/skript/expressions/ExprTablistedPlayers.java
+ExprTamer	expression	Tamer	unreviewed		src/main/java/ch/njol/skript/expressions/ExprTamer.java
+ExprTarget	expression	Target	unreviewed		src/main/java/ch/njol/skript/expressions/ExprTarget.java
+ExprTargetedBlock	expression	Targeted Block	unreviewed		src/main/java/ch/njol/skript/expressions/ExprTargetedBlock.java
+ExprTeleportCause	expression	Teleport Cause	unreviewed		src/main/java/ch/njol/skript/expressions/ExprTeleportCause.java
+ExprTemperature	expression	Temperature	unreviewed		src/main/java/ch/njol/skript/expressions/ExprTemperature.java
+ExprTernary	expression	Ternary	unreviewed		src/main/java/ch/njol/skript/expressions/ExprTernary.java
+ExprTime	expression	Time	unreviewed		src/main/java/ch/njol/skript/expressions/ExprTime.java
+ExprTimeLived	expression	Time Lived of Entity	unreviewed		src/main/java/ch/njol/skript/expressions/ExprTimeLived.java
+ExprTimePlayed	expression	Time Played	partial	Player.statistic(Statistic.PLAY_ONE_MINUTE) in ticks; general typed statistic overloads; offline statistic not added	src/main/java/ch/njol/skript/expressions/ExprTimePlayed.java
+ExprTimes	expression	X Times	unreviewed		src/main/java/ch/njol/skript/expressions/ExprTimes.java
+ExprTimeSince	expression	Time Since/Until	unreviewed		src/main/java/ch/njol/skript/expressions/ExprTimeSince.java
+ExprTimespanDetails	expression	Timespan Details	unreviewed		src/main/java/ch/njol/skript/expressions/ExprTimespanDetails.java
+ExprTimeState	expression	Former/Future State	unreviewed		src/main/java/ch/njol/skript/expressions/ExprTimeState.java
+ExprTool	expression	Tool	unreviewed		src/main/java/ch/njol/skript/expressions/ExprTool.java
+ExprTotalExperience	expression	Total Experience	unreviewed		src/main/java/ch/njol/skript/expressions/ExprTotalExperience.java
+ExprTPS	expression	TPS (ticks per second)	unreviewed		src/main/java/ch/njol/skript/expressions/ExprTPS.java
+ExprTransform	expression	Transformed List	unreviewed		src/main/java/ch/njol/skript/expressions/ExprTransform.java
+ExprTransformReason	expression	Transform Reason	unreviewed		src/main/java/ch/njol/skript/expressions/ExprTransformReason.java
+ExprTypeOf	expression	Type of	unreviewed		src/main/java/ch/njol/skript/expressions/ExprTypeOf.java
+ExprUnbreakable	expression	Unbreakable Items	unreviewed		src/main/java/ch/njol/skript/expressions/ExprUnbreakable.java
+ExprUnixDate	expression	Unix Date	unreviewed		src/main/java/ch/njol/skript/expressions/ExprUnixDate.java
+ExprUnixTicks	expression	Unix Timestamp	unreviewed		src/main/java/ch/njol/skript/expressions/ExprUnixTicks.java
+ExprUnleashReason	expression	Unleash Reason	unreviewed		src/main/java/ch/njol/skript/expressions/ExprUnleashReason.java
+ExprUUID	expression	UUID	unreviewed		src/main/java/ch/njol/skript/expressions/ExprUUID.java
+ExprValue	expression	Value	unreviewed		src/main/java/ch/njol/skript/expressions/ExprValue.java
+ExprValueWithin	expression	Value Within	unreviewed		src/main/java/ch/njol/skript/expressions/ExprValueWithin.java
+ExprVectorAngleBetween	expression	Vectors - Angle Between	unreviewed		src/main/java/ch/njol/skript/expressions/ExprVectorAngleBetween.java
+ExprVectorBetweenLocations	expression	Vectors - Vector Between Locations	unreviewed		src/main/java/ch/njol/skript/expressions/ExprVectorBetweenLocations.java
+ExprVectorCrossProduct	expression	Vectors - Cross Product	unreviewed		src/main/java/ch/njol/skript/expressions/ExprVectorCrossProduct.java
+ExprVectorCylindrical	expression	Vectors - Cylindrical Shape	unreviewed		src/main/java/ch/njol/skript/expressions/ExprVectorCylindrical.java
+ExprVectorDotProduct	expression	Vectors - Dot Product	unreviewed		src/main/java/ch/njol/skript/expressions/ExprVectorDotProduct.java
+ExprVectorFromDirection	expression	Vectors - Create from Direction	unreviewed		src/main/java/ch/njol/skript/expressions/ExprVectorFromDirection.java
+ExprVectorFromXYZ	expression	Vectors - Create from XYZ	unreviewed		src/main/java/ch/njol/skript/expressions/ExprVectorFromXYZ.java
+ExprVectorFromYawAndPitch	expression	Vectors - Vector from Yaw and Pitch	unreviewed		src/main/java/ch/njol/skript/expressions/ExprVectorFromYawAndPitch.java
+ExprVectorLength	expression	Vectors - Length	unreviewed		src/main/java/ch/njol/skript/expressions/ExprVectorLength.java
+ExprVectorNormalize	expression	Vectors - Normalized	unreviewed		src/main/java/ch/njol/skript/expressions/ExprVectorNormalize.java
+ExprVectorOfLocation	expression	Vectors - Vector from Location	unreviewed		src/main/java/ch/njol/skript/expressions/ExprVectorOfLocation.java
+ExprVectorProjection	expression	Vectors - Vector Projection	unreviewed		src/main/java/ch/njol/skript/expressions/ExprVectorProjection.java
+ExprVectorRandom	expression	Vectors - Random Vector	unreviewed		src/main/java/ch/njol/skript/expressions/ExprVectorRandom.java
+ExprVectorSpherical	expression	Vectors - Spherical Shape	unreviewed		src/main/java/ch/njol/skript/expressions/ExprVectorSpherical.java
+ExprVectorSquaredLength	expression	Vectors - Squared Length	unreviewed		src/main/java/ch/njol/skript/expressions/ExprVectorSquaredLength.java
+ExprVehicle	expression	Vehicle	unreviewed		src/main/java/ch/njol/skript/expressions/ExprVehicle.java
+ExprVelocity	expression	Velocity	unreviewed		src/main/java/ch/njol/skript/expressions/ExprVelocity.java
+ExprVersion	expression	Version	unreviewed		src/main/java/ch/njol/skript/expressions/ExprVersion.java
+ExprVersionString	expression	Version String	unreviewed		src/main/java/ch/njol/skript/expressions/ExprVersionString.java
+ExprViewDistance	expression	View Distance	unreviewed		src/main/java/ch/njol/skript/expressions/ExprViewDistance.java
+ExprVillagerLevel	expression	Villager Level/Experience	unreviewed		src/main/java/ch/njol/skript/expressions/ExprVillagerLevel.java
+ExprVillagerProfession	expression	Villager Profession	unreviewed		src/main/java/ch/njol/skript/expressions/ExprVillagerProfession.java
+ExprVillagerType	expression	Villager Type	unreviewed		src/main/java/ch/njol/skript/expressions/ExprVillagerType.java
+ExprWardenAngryAt	expression	Warden Most Angered At	unreviewed		src/main/java/ch/njol/skript/expressions/ExprWardenAngryAt.java
+ExprWardenEntityAnger	expression	Warden Anger Level	unreviewed		src/main/java/ch/njol/skript/expressions/ExprWardenEntityAnger.java
+ExprWeather	expression	Weather	unreviewed		src/main/java/ch/njol/skript/expressions/ExprWeather.java
+ExprWhether	expression	Whether	unreviewed		src/main/java/ch/njol/skript/expressions/ExprWhether.java
+ExprWhitelist	expression	Whitelist	unreviewed		src/main/java/ch/njol/skript/expressions/ExprWhitelist.java
+ExprWithFireResistance	expression	With Fire Resistance	unreviewed		src/main/java/ch/njol/skript/expressions/ExprWithFireResistance.java
+ExprWithItemFlags	expression	Item with Item Flags	unreviewed		src/main/java/ch/njol/skript/expressions/ExprWithItemFlags.java
+ExprWorld	expression	World	unreviewed		src/main/java/ch/njol/skript/expressions/ExprWorld.java
+ExprWorldEnvironment	expression	World Environment	unreviewed		src/main/java/ch/njol/skript/expressions/ExprWorldEnvironment.java
+ExprWorldFromName	expression	World from Name	unreviewed		src/main/java/ch/njol/skript/expressions/ExprWorldFromName.java
+ExprWorlds	expression	Worlds	unreviewed		src/main/java/ch/njol/skript/expressions/ExprWorlds.java
+ExprXOf	expression	X of Item/Entity Type	unreviewed		src/main/java/ch/njol/skript/expressions/ExprXOf.java
+ExprXYZComponent	expression	Vector/Quaternion - WXYZ Component	unreviewed		src/main/java/ch/njol/skript/expressions/ExprXYZComponent.java
+ExprYawPitch	expression	Yaw / Pitch	unreviewed		src/main/java/ch/njol/skript/expressions/ExprYawPitch.java
+ExprPrefixSuffix	expression	Prefix/Suffix	unreviewed		src/main/java/ch/njol/skript/hooks/chat/expressions/ExprPrefixSuffix.java
+ExprBalance	expression	Money	unreviewed		src/main/java/ch/njol/skript/hooks/economy/expressions/ExprBalance.java
+ExprAllGroups	expression	All Groups	unreviewed		src/main/java/ch/njol/skript/hooks/permission/expressions/ExprAllGroups.java
+ExprGroup	expression	Group	unreviewed		src/main/java/ch/njol/skript/hooks/permission/expressions/ExprGroup.java
+CondCanBuild	condition	Can Build	unreviewed		src/main/java/ch/njol/skript/hooks/regions/conditions/CondCanBuild.java
+CondIsMember	condition	Is Member/Owner of Region	unreviewed		src/main/java/ch/njol/skript/hooks/regions/conditions/CondIsMember.java
+CondRegionContains	condition	Region Contains	unreviewed		src/main/java/ch/njol/skript/hooks/regions/conditions/CondRegionContains.java
+EvtRegionBorder	event	EvtRegionBorder	unreviewed		src/main/java/ch/njol/skript/hooks/regions/events/EvtRegionBorder.java
+ExprBlocksInRegion	expression	Blocks in Region	unreviewed		src/main/java/ch/njol/skript/hooks/regions/expressions/ExprBlocksInRegion.java
+ExprMembersOfRegion	expression	Region Members & Owners	unreviewed		src/main/java/ch/njol/skript/hooks/regions/expressions/ExprMembersOfRegion.java
+ExprRegion	expression	Region	unreviewed		src/main/java/ch/njol/skript/hooks/regions/expressions/ExprRegion.java
+ExprRegionsAt	expression	Regions At	unreviewed		src/main/java/ch/njol/skript/hooks/regions/expressions/ExprRegionsAt.java
+EffFunctionCall	effect	EffFunctionCall	unreviewed		src/main/java/ch/njol/skript/lang/function/EffFunctionCall.java
+ExprFunctionCall	expression	ExprFunctionCall	unreviewed		src/main/java/ch/njol/skript/lang/function/ExprFunctionCall.java
+LitConsole	other	Console	unreviewed		src/main/java/ch/njol/skript/literals/LitConsole.java
+LitDoubleMaxValue	other	Maximum Double Value	unreviewed		src/main/java/ch/njol/skript/literals/LitDoubleMaxValue.java
+LitDoubleMinValue	other	Minimum Double Value	unreviewed		src/main/java/ch/njol/skript/literals/LitDoubleMinValue.java
+LitEternity	other	An Eternity	unreviewed		src/main/java/ch/njol/skript/literals/LitEternity.java
+LitFloatMaxValue	other	Maximum Float Value	unreviewed		src/main/java/ch/njol/skript/literals/LitFloatMaxValue.java
+LitFloatMinValue	other	Minimum Float Value	unreviewed		src/main/java/ch/njol/skript/literals/LitFloatMinValue.java
+LitInfinity	other	Infinity	unreviewed		src/main/java/ch/njol/skript/literals/LitInfinity.java
+LitIntMaxValue	other	Maximum Integer Value	unreviewed		src/main/java/ch/njol/skript/literals/LitIntMaxValue.java
+LitIntMinValue	other	Minimum Integer Value	unreviewed		src/main/java/ch/njol/skript/literals/LitIntMinValue.java
+LitLongMaxValue	other	Maximum Long Value	unreviewed		src/main/java/ch/njol/skript/literals/LitLongMaxValue.java
+LitLongMinValue	other	Minimum Long Value	unreviewed		src/main/java/ch/njol/skript/literals/LitLongMinValue.java
+LitNaN	other	NaN	unreviewed		src/main/java/ch/njol/skript/literals/LitNaN.java
+LitNegativeInfinity	other	Negative Infinity	unreviewed		src/main/java/ch/njol/skript/literals/LitNegativeInfinity.java
+LitNewLine	other	New Line	unreviewed		src/main/java/ch/njol/skript/literals/LitNewLine.java
+LitPi	other	Pi	unreviewed		src/main/java/ch/njol/skript/literals/LitPi.java
+EffSecShoot	effect	Shoot	unreviewed		src/main/java/ch/njol/skript/sections/EffSecShoot.java
+EffSecSpawn	effect	Spawn	unreviewed		src/main/java/ch/njol/skript/sections/EffSecSpawn.java
+SecCatchErrors	section	Catch Runtime Errors	unreviewed		src/main/java/ch/njol/skript/sections/SecCatchErrors.java
+SecConditional	section	Conditionals	unreviewed		src/main/java/ch/njol/skript/sections/SecConditional.java
+SecFilter	section	Filter	unreviewed		src/main/java/ch/njol/skript/sections/SecFilter.java
+SecFor	section	For Each Loop	unreviewed		src/main/java/ch/njol/skript/sections/SecFor.java
+SecLoop	section	Loop	unreviewed		src/main/java/ch/njol/skript/sections/SecLoop.java
+SecWhile	section	While Loop	unreviewed		src/main/java/ch/njol/skript/sections/SecWhile.java
+StructAliases	other	Aliases	unreviewed		src/main/java/ch/njol/skript/structures/StructAliases.java
+StructAutoReload	other	Auto Reload	unreviewed		src/main/java/ch/njol/skript/structures/StructAutoReload.java
+StructCommand	other	Command	unreviewed		src/main/java/ch/njol/skript/structures/StructCommand.java
+StructEvent	other	Event	unreviewed		src/main/java/ch/njol/skript/structures/StructEvent.java
+StructExample	other	Example	unreviewed		src/main/java/ch/njol/skript/structures/StructExample.java
+StructFunction	other	Function	unreviewed		src/main/java/ch/njol/skript/structures/StructFunction.java
+StructOptions	other	Options	unreviewed		src/main/java/ch/njol/skript/structures/StructOptions.java
+StructUsing	other	Using Experimental Feature	unreviewed		src/main/java/ch/njol/skript/structures/StructUsing.java
+StructVariables	other	Variables	unreviewed		src/main/java/ch/njol/skript/structures/StructVariables.java
+CondHasDelayBefore	condition	CondHasDelayBefore	unreviewed		src/main/java/ch/njol/skript/test/runner/CondHasDelayBefore.java
+CondMethodExists	condition	Method Exists	unreviewed		src/main/java/ch/njol/skript/test/runner/CondMethodExists.java
+CondRunningJUnit	condition	Check JUnit	unreviewed		src/main/java/ch/njol/skript/test/runner/CondRunningJUnit.java
+EffAssert	effect	Assert	unreviewed		src/main/java/ch/njol/skript/test/runner/EffAssert.java
+EffDebug	effect	Debug	unreviewed		src/main/java/ch/njol/skript/test/runner/EffDebug.java
+EffObjectives	effect	Objectives	unreviewed		src/main/java/ch/njol/skript/test/runner/EffObjectives.java
+EffRunRunnable	effect	EffRunRunnable	unreviewed		src/main/java/ch/njol/skript/test/runner/EffRunRunnable.java
+EffSecErrorWhenSection	effect	EffSecErrorWhenSection	unreviewed		src/main/java/ch/njol/skript/test/runner/EffSecErrorWhenSection.java
+EffTestExprList	effect	EffTestExprList	unreviewed		src/main/java/ch/njol/skript/test/runner/EffTestExprList.java
+EffTestPluralClassInfos	effect	Test Plural Class Infos	unreviewed		src/main/java/ch/njol/skript/test/runner/EffTestPluralClassInfos.java
+EvtTestCase	event	EvtTestCase	unreviewed		src/main/java/ch/njol/skript/test/runner/EvtTestCase.java
+ExprDefaultNumberValue	expression	ExprDefaultNumberValue	unreviewed		src/main/java/ch/njol/skript/test/runner/ExprDefaultNumberValue.java
+ExprExperimentalOnly	expression	Experimental Only	unreviewed		src/main/java/ch/njol/skript/test/runner/ExprExperimentalOnly.java
+ExprKeyValueSet	expression	ExprKeyValueSet	unreviewed		src/main/java/ch/njol/skript/test/runner/ExprKeyValueSet.java
+ExprParseLogs	expression	Parse Logs	unreviewed		src/main/java/ch/njol/skript/test/runner/ExprParseLogs.java
+ExprSecErroringSectionExpression	expression	ExprSecErroringSectionExpression	unreviewed		src/main/java/ch/njol/skript/test/runner/ExprSecErroringSectionExpression.java
+ExprSecRunnable	expression	ExprSecRunnable	unreviewed		src/main/java/ch/njol/skript/test/runner/ExprSecRunnable.java
+ExprTestBlock	expression	Test Block	unreviewed		src/main/java/ch/njol/skript/test/runner/ExprTestBlock.java
+ExprTestLocation	expression	Test Location	unreviewed		src/main/java/ch/njol/skript/test/runner/ExprTestLocation.java
+ExprTestLoopPeeking	expression	ExprTestLoopPeeking	unreviewed		src/main/java/ch/njol/skript/test/runner/ExprTestLoopPeeking.java
+ExprTestOfflinePlayer	expression	ExprTestOfflinePlayer	unreviewed		src/main/java/ch/njol/skript/test/runner/ExprTestOfflinePlayer.java
+ExprTestStringLiteral	expression	Test String Literal	unreviewed		src/main/java/ch/njol/skript/test/runner/ExprTestStringLiteral.java
+ExprTestWorld	expression	Test World	unreviewed		src/main/java/ch/njol/skript/test/runner/ExprTestWorld.java
+SecCustomDefault	section	SecCustomDefault	unreviewed		src/main/java/ch/njol/skript/test/runner/SecCustomDefault.java
+SecParse	section	Parse Section	unreviewed		src/main/java/ch/njol/skript/test/runner/SecParse.java
+SecReturnable	section	SecReturnable	unreviewed		src/main/java/ch/njol/skript/test/runner/SecReturnable.java
+StructParse	other	Parse Structure	unreviewed		src/main/java/ch/njol/skript/test/runner/StructParse.java
+EvtFurnace	event	EvtFurnace	unreviewed		src/main/java/org/skriptlang/skript/bukkit/block/furnace/elements/events/EvtFurnace.java
+ExprFurnaceEventItems	expression	Furnace Event Items	unreviewed		src/main/java/org/skriptlang/skript/bukkit/block/furnace/elements/expressions/ExprFurnaceEventItems.java
+ExprFurnaceSlot	expression	Furnace Slot	unreviewed		src/main/java/org/skriptlang/skript/bukkit/block/furnace/elements/expressions/ExprFurnaceSlot.java
+ExprFurnaceTime	expression	Furnace Times	unreviewed		src/main/java/org/skriptlang/skript/bukkit/block/furnace/elements/expressions/ExprFurnaceTime.java
+ExprSignText	expression	Sign Text	adapted	Block.signLine/setSignLine(SignSide, index); typed sides	src/main/java/org/skriptlang/skript/bukkit/block/sign/elements/expressions/ExprSignText.java
+CondHasBossBarFlag	condition	Has Boss Bar Flag	unreviewed		src/main/java/org/skriptlang/skript/bukkit/bossbar/elements/conditions/CondHasBossBarFlag.java
+EffBossBarFlags	effect	Boss Bar Flags	unreviewed		src/main/java/org/skriptlang/skript/bukkit/bossbar/elements/effects/EffBossBarFlags.java
+ExprBossBarFromEntity	expression	Boss Bar From Boss	unreviewed		src/main/java/org/skriptlang/skript/bukkit/bossbar/elements/expressions/ExprBossBarFromEntity.java
+ExprBossBarFromKey	expression	Boss Bar From Key	unreviewed		src/main/java/org/skriptlang/skript/bukkit/bossbar/elements/expressions/ExprBossBarFromKey.java
+ExprKeyOfBossBar	expression	Key Of Boss Bar	unreviewed		src/main/java/org/skriptlang/skript/bukkit/bossbar/elements/expressions/ExprKeyOfBossBar.java
+ExprSecCreateBossBar	expression	Create Boss Bar	unreviewed		src/main/java/org/skriptlang/skript/bukkit/bossbar/elements/expressions/ExprSecCreateBossBar.java
+CondCanAge	condition	Can Age	unreviewed		src/main/java/org/skriptlang/skript/bukkit/breeding/elements/conditions/CondCanAge.java
+CondCanBreed	condition	Can Breed	unreviewed		src/main/java/org/skriptlang/skript/bukkit/breeding/elements/conditions/CondCanBreed.java
+CondIsAdult	condition	Is Adult	unreviewed		src/main/java/org/skriptlang/skript/bukkit/breeding/elements/conditions/CondIsAdult.java
+CondIsBaby	condition	Is Baby	unreviewed		src/main/java/org/skriptlang/skript/bukkit/breeding/elements/conditions/CondIsBaby.java
+CondIsInLove	condition	Is In Love	unreviewed		src/main/java/org/skriptlang/skript/bukkit/breeding/elements/conditions/CondIsInLove.java
+EffAllowAging	effect	Allow Aging	unreviewed		src/main/java/org/skriptlang/skript/bukkit/breeding/elements/effects/EffAllowAging.java
+EffBreedable	effect	Make Breedable	unreviewed		src/main/java/org/skriptlang/skript/bukkit/breeding/elements/effects/EffBreedable.java
+EffMakeAdultOrBaby	effect	Make Adult/Baby	unreviewed		src/main/java/org/skriptlang/skript/bukkit/breeding/elements/effects/EffMakeAdultOrBaby.java
+EvtBreed	event	EvtBreed	unreviewed		src/main/java/org/skriptlang/skript/bukkit/breeding/elements/events/EvtBreed.java
+ExprBreedingFamily	expression	Breeding Family	unreviewed		src/main/java/org/skriptlang/skript/bukkit/breeding/elements/expressions/ExprBreedingFamily.java
+ExprLoveTime	expression	Love Time	unreviewed		src/main/java/org/skriptlang/skript/bukkit/breeding/elements/expressions/ExprLoveTime.java
+CondBrewingConsume	condition	Brewing Will Consume Fuel	unreviewed		src/main/java/org/skriptlang/skript/bukkit/brewing/elements/conditions/CondBrewingConsume.java
+EffBrewingConsume	effect	Consume Brewing Fuel	unreviewed		src/main/java/org/skriptlang/skript/bukkit/brewing/elements/effects/EffBrewingConsume.java
+EvtBrewingComplete	event	EvtBrewingComplete	unreviewed		src/main/java/org/skriptlang/skript/bukkit/brewing/elements/events/EvtBrewingComplete.java
+EvtBrewingFuel	event	EvtBrewingFuel	unreviewed		src/main/java/org/skriptlang/skript/bukkit/brewing/elements/events/EvtBrewingFuel.java
+EvtBrewingStart	event	EvtBrewingStart	unreviewed		src/main/java/org/skriptlang/skript/bukkit/brewing/elements/events/EvtBrewingStart.java
+ExprBrewingFuelLevel	expression	Brewing Stand Fuel Level	unreviewed		src/main/java/org/skriptlang/skript/bukkit/brewing/elements/expressions/ExprBrewingFuelLevel.java
+ExprBrewingResults	expression	Brewing Results	unreviewed		src/main/java/org/skriptlang/skript/bukkit/brewing/elements/expressions/ExprBrewingResults.java
+ExprBrewingSlot	expression	Brewing Stand Slot	unreviewed		src/main/java/org/skriptlang/skript/bukkit/brewing/elements/expressions/ExprBrewingSlot.java
+ExprBrewingTime	expression	Brewing Time	unreviewed		src/main/java/org/skriptlang/skript/bukkit/brewing/elements/expressions/ExprBrewingTime.java
+CondScalesWithDifficulty	condition	Damage Source - Does Scale With Difficulty	unreviewed		src/main/java/org/skriptlang/skript/bukkit/damagesource/elements/conditions/CondScalesWithDifficulty.java
+CondWasIndirect	condition	Damage Source - Was Indirectly Caused	unreviewed		src/main/java/org/skriptlang/skript/bukkit/damagesource/elements/conditions/CondWasIndirect.java
+ExprCausingEntity	expression	Damage Source - Causing Entity	unreviewed		src/main/java/org/skriptlang/skript/bukkit/damagesource/elements/expressions/ExprCausingEntity.java
+ExprCreatedDamageSource	expression	Created Damage Source	unreviewed		src/main/java/org/skriptlang/skript/bukkit/damagesource/elements/expressions/ExprCreatedDamageSource.java
+ExprDamageLocation	expression	Damage Source - Damage Location	unreviewed		src/main/java/org/skriptlang/skript/bukkit/damagesource/elements/expressions/ExprDamageLocation.java
+ExprDamageType	expression	Damage Source - Damage Type	unreviewed		src/main/java/org/skriptlang/skript/bukkit/damagesource/elements/expressions/ExprDamageType.java
+ExprDirectEntity	expression	Damage Source - Direct Entity	unreviewed		src/main/java/org/skriptlang/skript/bukkit/damagesource/elements/expressions/ExprDirectEntity.java
+ExprFoodExhaustion	expression	Damage Source - Food Exhaustion	unreviewed		src/main/java/org/skriptlang/skript/bukkit/damagesource/elements/expressions/ExprFoodExhaustion.java
+ExprSecDamageSource	expression	Damage Source	unreviewed		src/main/java/org/skriptlang/skript/bukkit/damagesource/elements/expressions/ExprSecDamageSource.java
+ExprSourceLocation	expression	Damage Source - Source Location	unreviewed		src/main/java/org/skriptlang/skript/bukkit/damagesource/elements/expressions/ExprSourceLocation.java
+CondIsEnchanted	condition	Is Enchanted	unreviewed		src/main/java/org/skriptlang/skript/bukkit/enchantments/elements/conditions/CondIsEnchanted.java
+CondItemEnchantmentGlint	condition	Item Has Enchantment Glint Override	unreviewed		src/main/java/org/skriptlang/skript/bukkit/enchantments/elements/conditions/CondItemEnchantmentGlint.java
+EffEnchant	effect	Enchant/Disenchant	unreviewed		src/main/java/org/skriptlang/skript/bukkit/enchantments/elements/effects/EffEnchant.java
+EffForceEnchantmentGlint	effect	Force Enchantment Glint	unreviewed		src/main/java/org/skriptlang/skript/bukkit/enchantments/elements/effects/EffForceEnchantmentGlint.java
+ExprAppliedEnchantments	expression	Applied Enchantments	unreviewed		src/main/java/org/skriptlang/skript/bukkit/enchantments/elements/expressions/ExprAppliedEnchantments.java
+ExprEnchantingExpCost	expression	Enchanting Experience Cost	unreviewed		src/main/java/org/skriptlang/skript/bukkit/enchantments/elements/expressions/ExprEnchantingExpCost.java
+ExprEnchantItem	expression	Enchant Item	unreviewed		src/main/java/org/skriptlang/skript/bukkit/enchantments/elements/expressions/ExprEnchantItem.java
+ExprEnchantmentBonus	expression	Enchantment Bonus	unreviewed		src/main/java/org/skriptlang/skript/bukkit/enchantments/elements/expressions/ExprEnchantmentBonus.java
+ExprEnchantmentHint	expression	Enchantment Hint	unreviewed		src/main/java/org/skriptlang/skript/bukkit/enchantments/elements/expressions/ExprEnchantmentHint.java
+ExprEnchantmentLevel	expression	Enchantment Level	unreviewed		src/main/java/org/skriptlang/skript/bukkit/enchantments/elements/expressions/ExprEnchantmentLevel.java
+ExprEnchantmentOffer	expression	Enchantment Offer	unreviewed		src/main/java/org/skriptlang/skript/bukkit/enchantments/elements/expressions/ExprEnchantmentOffer.java
+ExprEnchantmentOfferCost	expression	Enchantment Offer Cost	unreviewed		src/main/java/org/skriptlang/skript/bukkit/enchantments/elements/expressions/ExprEnchantmentOfferCost.java
+ExprEnchantments	expression	Item Enchantments	unreviewed		src/main/java/org/skriptlang/skript/bukkit/enchantments/elements/expressions/ExprEnchantments.java
+ExprItemWithEnchantmentGlint	expression	Item with Enchantment Glint	unreviewed		src/main/java/org/skriptlang/skript/bukkit/enchantments/elements/expressions/ExprItemWithEnchantmentGlint.java
+ExprMinMaxEnchantmentLevel	expression	Minimum/Maximum Enchantment Level	unreviewed		src/main/java/org/skriptlang/skript/bukkit/enchantments/elements/expressions/ExprMinMaxEnchantmentLevel.java
+ExprStoredEnchantments	expression	Stored Enchantments	unreviewed		src/main/java/org/skriptlang/skript/bukkit/enchantments/elements/expressions/ExprStoredEnchantments.java
+ExprDisplayBillboard	expression	Display Billboard	implemented	Display.billboardMode: Billboard	src/main/java/org/skriptlang/skript/bukkit/entity/displays/elements/expressions/ExprDisplayBillboard.java
+ExprDisplayBrightness	expression	Display Brightness	implemented	Display.brightness: Brightness?	src/main/java/org/skriptlang/skript/bukkit/entity/displays/elements/expressions/ExprDisplayBrightness.java
+ExprDisplayGlowOverride	expression	Display Glow Color Override	implemented	Display.glowColor: Color?	src/main/java/org/skriptlang/skript/bukkit/entity/displays/elements/expressions/ExprDisplayGlowOverride.java
+ExprDisplayHeightWidth	expression	Display Height/Width	implemented	Display.displayWidth,displayHeight	src/main/java/org/skriptlang/skript/bukkit/entity/displays/elements/expressions/ExprDisplayHeightWidth.java
+ExprDisplayInterpolation	expression	Display Interpolation Delay/Duration	implemented	Display.interpolationDuration,interpolationDelay	src/main/java/org/skriptlang/skript/bukkit/entity/displays/elements/expressions/ExprDisplayInterpolation.java
+ExprDisplayShadow	expression	Display Shadow Radius/Strength	implemented	Display.shadowRadius,shadowStrength	src/main/java/org/skriptlang/skript/bukkit/entity/displays/elements/expressions/ExprDisplayShadow.java
+ExprDisplayTeleportDuration	expression	Display Teleport Duration	implemented	Display.teleportDuration	src/main/java/org/skriptlang/skript/bukkit/entity/displays/elements/expressions/ExprDisplayTeleportDuration.java
+ExprDisplayTransformationRotation	expression	Display Transformation Rotation	implemented	Display.leftRotation,rightRotation: Quaternion	src/main/java/org/skriptlang/skript/bukkit/entity/displays/elements/expressions/ExprDisplayTransformationRotation.java
+ExprDisplayTransformationScaleTranslation	expression	Display Transformation Scale/Translation	implemented	Display.displayScale,translation: Vector	src/main/java/org/skriptlang/skript/bukkit/entity/displays/elements/expressions/ExprDisplayTransformationScaleTranslation.java
+ExprDisplayViewRange	expression	Display View Range	implemented	Display.viewRange	src/main/java/org/skriptlang/skript/bukkit/entity/displays/elements/expressions/ExprDisplayViewRange.java
+ExprItemDisplayTransform	expression	Item Display Transform	implemented	ItemDisplay.transform: ItemDisplayTransform	src/main/java/org/skriptlang/skript/bukkit/entity/displays/item/elements/expressions/ExprItemDisplayTransform.java
+CondTextDisplayHasDropShadow	condition	Text Display Has Drop Shadow	existing	TextDisplay.shadowed	src/main/java/org/skriptlang/skript/bukkit/entity/displays/text/elements/conditions/CondTextDisplayHasDropShadow.java
+CondTextDisplaySeeThroughBlocks	condition	Text Display Visible Through Blocks	existing	TextDisplay.seeThrough	src/main/java/org/skriptlang/skript/bukkit/entity/displays/text/elements/conditions/CondTextDisplaySeeThroughBlocks.java
+EffTextDisplayDropShadow	effect	Text Display Drop Shadow	existing	TextDisplay.shadowed	src/main/java/org/skriptlang/skript/bukkit/entity/displays/text/elements/effects/EffTextDisplayDropShadow.java
+EffTextDisplaySeeThroughBlocks	effect	Text Display See Through Blocks	existing	TextDisplay.seeThrough	src/main/java/org/skriptlang/skript/bukkit/entity/displays/text/elements/effects/EffTextDisplaySeeThroughBlocks.java
+ExprTextDisplayAlignment	expression	Text Display Alignment	implemented	TextDisplay.alignment: TextAlignment	src/main/java/org/skriptlang/skript/bukkit/entity/displays/text/elements/expressions/ExprTextDisplayAlignment.java
+ExprTextDisplayLineWidth	expression	Text Display Line Width	existing	TextDisplay.lineWidth	src/main/java/org/skriptlang/skript/bukkit/entity/displays/text/elements/expressions/ExprTextDisplayLineWidth.java
+ExprTextDisplayOpacity	expression	Text Display Opacity	adapted	TextDisplay.opacity uses unsigned 0..255	src/main/java/org/skriptlang/skript/bukkit/entity/displays/text/elements/expressions/ExprTextDisplayOpacity.java
+EffTeleport	effect	Teleport	unreviewed		src/main/java/org/skriptlang/skript/bukkit/entity/elements/effects/EffTeleport.java
+ExprDeathMessage	expression	Death Message	unreviewed		src/main/java/org/skriptlang/skript/bukkit/entity/elements/expressions/ExprDeathMessage.java
+ExprPathfindingLocation	expression	Pathfinding Target Location	unreviewed		src/main/java/org/skriptlang/skript/bukkit/entity/elements/expressions/ExprPathfindingLocation.java
+ExprPathfindingTarget	expression	Pathfinding Target Entity	unreviewed		src/main/java/org/skriptlang/skript/bukkit/entity/elements/expressions/ExprPathfindingTarget.java
+CondIsResponsive	condition	Is Responsive	unreviewed		src/main/java/org/skriptlang/skript/bukkit/entity/interactions/elements/conditions/CondIsResponsive.java
+EffMakeResponsive	effect	Make Interaction Responsive	unreviewed		src/main/java/org/skriptlang/skript/bukkit/entity/interactions/elements/effects/EffMakeResponsive.java
+ExprInteractionDimensions	expression	Interaction Height/Width	unreviewed		src/main/java/org/skriptlang/skript/bukkit/entity/interactions/elements/expressions/ExprInteractionDimensions.java
+ExprLastInteractionDate	expression	Last Interaction Date	unreviewed		src/main/java/org/skriptlang/skript/bukkit/entity/interactions/elements/expressions/ExprLastInteractionDate.java
+ExprLastInteractionPlayer	expression	Last Interaction Player	unreviewed		src/main/java/org/skriptlang/skript/bukkit/entity/interactions/elements/expressions/ExprLastInteractionPlayer.java
+EffBan	effect	Ban	unreviewed		src/main/java/org/skriptlang/skript/bukkit/entity/player/elements/effects/EffBan.java
+EffKick	effect	Kick	unreviewed		src/main/java/org/skriptlang/skript/bukkit/entity/player/elements/effects/EffKick.java
+EvtPlayerGameModeChange	event	EvtPlayerGameModeChange	unreviewed		src/main/java/org/skriptlang/skript/bukkit/entity/player/elements/events/EvtPlayerGameModeChange.java
+EvtPlayerPickItem	event	EvtPlayerPickItem	unreviewed		src/main/java/org/skriptlang/skript/bukkit/entity/player/elements/events/EvtPlayerPickItem.java
+ExprChatFormat	expression	Chat Format	unreviewed		src/main/java/org/skriptlang/skript/bukkit/entity/player/elements/expressions/ExprChatFormat.java
+ExprChatMessage	expression	Chat Message	unreviewed		src/main/java/org/skriptlang/skript/bukkit/entity/player/elements/expressions/ExprChatMessage.java
+ExprChatRecipients	expression	Chat Recipients	unreviewed		src/main/java/org/skriptlang/skript/bukkit/entity/player/elements/expressions/ExprChatRecipients.java
+ExprGameMode	expression	Game Mode	unreviewed		src/main/java/org/skriptlang/skript/bukkit/entity/player/elements/expressions/ExprGameMode.java
+ExprJoinMessage	expression	Join Message	unreviewed		src/main/java/org/skriptlang/skript/bukkit/entity/player/elements/expressions/ExprJoinMessage.java
+ExprKickMessage	expression	Kick Message	unreviewed		src/main/java/org/skriptlang/skript/bukkit/entity/player/elements/expressions/ExprKickMessage.java
+ExprOnScreenKickMessage	expression	On-Screen Kick Message	unreviewed		src/main/java/org/skriptlang/skript/bukkit/entity/player/elements/expressions/ExprOnScreenKickMessage.java
+ExprPickedItem	expression	Picked Item/Block/Entity	unreviewed		src/main/java/org/skriptlang/skript/bukkit/entity/player/elements/expressions/ExprPickedItem.java
+ExprPlayerListHeaderFooter	expression	Player List Header and Footer	unreviewed		src/main/java/org/skriptlang/skript/bukkit/entity/player/elements/expressions/ExprPlayerListHeaderFooter.java
+ExprPlayerListName	expression	Player List Name	unreviewed		src/main/java/org/skriptlang/skript/bukkit/entity/player/elements/expressions/ExprPlayerListName.java
+ExprPlayerListPriority	expression	Player List Priority	unreviewed		src/main/java/org/skriptlang/skript/bukkit/entity/player/elements/expressions/ExprPlayerListPriority.java
+ExprQuitMessage	expression	Quit Message	unreviewed		src/main/java/org/skriptlang/skript/bukkit/entity/player/elements/expressions/ExprQuitMessage.java
+ExprRespawnLocation	expression	Respawn Location	unreviewed		src/main/java/org/skriptlang/skript/bukkit/entity/player/elements/expressions/ExprRespawnLocation.java
+CondFishingLure	condition	Fishing Lure Applied	unreviewed		src/main/java/org/skriptlang/skript/bukkit/fishing/elements/conditions/CondFishingLure.java
+CondIsInOpenWater	condition	Is Fish Hook in Open Water	unreviewed		src/main/java/org/skriptlang/skript/bukkit/fishing/elements/conditions/CondIsInOpenWater.java
+EffFishingLure	effect	Apply Fishing Lure	unreviewed		src/main/java/org/skriptlang/skript/bukkit/fishing/elements/effects/EffFishingLure.java
+EffPullHookedEntity	effect	Pull In Hooked Entity	unreviewed		src/main/java/org/skriptlang/skript/bukkit/fishing/elements/effects/EffPullHookedEntity.java
+EvtBucketEntity	event	Bucket Catch Entity	unreviewed		src/main/java/org/skriptlang/skript/bukkit/fishing/elements/events/EvtBucketEntity.java
+EvtFish	event	EvtFish	unreviewed		src/main/java/org/skriptlang/skript/bukkit/fishing/elements/events/EvtFish.java
+ExprFishingApproachAngle	expression	Fishing Approach Angle	unreviewed		src/main/java/org/skriptlang/skript/bukkit/fishing/elements/expressions/ExprFishingApproachAngle.java
+ExprFishingBiteTime	expression	Fishing Bite Time	unreviewed		src/main/java/org/skriptlang/skript/bukkit/fishing/elements/expressions/ExprFishingBiteTime.java
+ExprFishingHook	expression	Fishing Hook	unreviewed		src/main/java/org/skriptlang/skript/bukkit/fishing/elements/expressions/ExprFishingHook.java
+ExprFishingHookEntity	expression	Fishing Hooked Entity	unreviewed		src/main/java/org/skriptlang/skript/bukkit/fishing/elements/expressions/ExprFishingHookEntity.java
+ExprFishingWaitTime	expression	Fishing Wait Time	unreviewed		src/main/java/org/skriptlang/skript/bukkit/fishing/elements/expressions/ExprFishingWaitTime.java
+CondIsPressingKey	condition	Is Pressing Key	unreviewed		src/main/java/org/skriptlang/skript/bukkit/input/elements/conditions/CondIsPressingKey.java
+EvtPlayerInput	event	EvtPlayerInput	unreviewed		src/main/java/org/skriptlang/skript/bukkit/input/elements/events/EvtPlayerInput.java
+ExprCurrentInputKeys	expression	Player Input Keys	unreviewed		src/main/java/org/skriptlang/skript/bukkit/input/elements/expressions/ExprCurrentInputKeys.java
+ExprBookAuthor	expression	Book Author	unreviewed		src/main/java/org/skriptlang/skript/bukkit/item/book/elements/expressions/ExprBookAuthor.java
+ExprBookPages	expression	Book Pages	unreviewed		src/main/java/org/skriptlang/skript/bukkit/item/book/elements/expressions/ExprBookPages.java
+ExprBookTitle	expression	Book Title	unreviewed		src/main/java/org/skriptlang/skript/bukkit/item/book/elements/expressions/ExprBookTitle.java
+ExprItemWithLore	expression	Item with Lore	unreviewed		src/main/java/org/skriptlang/skript/bukkit/item/elements/ExprItemWithLore.java
+ExprLore	expression	Lore	unreviewed		src/main/java/org/skriptlang/skript/bukkit/item/elements/ExprLore.java
+ExprItemCompCopy	expression	Item Component - Copy	unreviewed		src/main/java/org/skriptlang/skript/bukkit/itemcomponents/elements/expressions/ExprItemCompCopy.java
+CondEquipCompDamage	condition	Equippable Component - Will Lose Durability	unreviewed		src/main/java/org/skriptlang/skript/bukkit/itemcomponents/equippable/elements/conditions/CondEquipCompDamage.java
+CondEquipCompDispensable	condition	Equippable Component - Can Be Dispensed	unreviewed		src/main/java/org/skriptlang/skript/bukkit/itemcomponents/equippable/elements/conditions/CondEquipCompDispensable.java
+CondEquipCompInteract	condition	Equippable Component - Can Equip On Entities	unreviewed		src/main/java/org/skriptlang/skript/bukkit/itemcomponents/equippable/elements/conditions/CondEquipCompInteract.java
+CondEquipCompShearable	condition	Equippable Component - Can Be Sheared Off	unreviewed		src/main/java/org/skriptlang/skript/bukkit/itemcomponents/equippable/elements/conditions/CondEquipCompShearable.java
+CondEquipCompSwapEquipment	condition	Equippable Component - Can Swap Equipment	unreviewed		src/main/java/org/skriptlang/skript/bukkit/itemcomponents/equippable/elements/conditions/CondEquipCompSwapEquipment.java
+EffEquipCompDamageable	effect	Equippable Component - Lose Durability	unreviewed		src/main/java/org/skriptlang/skript/bukkit/itemcomponents/equippable/elements/effects/EffEquipCompDamageable.java
+EffEquipCompDispensable	effect	Equippable Component - Dispense	unreviewed		src/main/java/org/skriptlang/skript/bukkit/itemcomponents/equippable/elements/effects/EffEquipCompDispensable.java
+EffEquipCompInteract	effect	Equippable Component - Equip On Entities	unreviewed		src/main/java/org/skriptlang/skript/bukkit/itemcomponents/equippable/elements/effects/EffEquipCompInteract.java
+EffEquipCompShearable	effect	Equippable Component - Shear Off	unreviewed		src/main/java/org/skriptlang/skript/bukkit/itemcomponents/equippable/elements/effects/EffEquipCompShearable.java
+EffEquipCompSwapEquipment	effect	Equippable Component - Swap Equipment	unreviewed		src/main/java/org/skriptlang/skript/bukkit/itemcomponents/equippable/elements/effects/EffEquipCompSwapEquipment.java
+ExprEquipCompCameraOverlay	expression	Equippable Component - Camera Overlay	unreviewed		src/main/java/org/skriptlang/skript/bukkit/itemcomponents/equippable/elements/expressions/ExprEquipCompCameraOverlay.java
+ExprEquipCompEntities	expression	Equippable Component - Allowed Entities	unreviewed		src/main/java/org/skriptlang/skript/bukkit/itemcomponents/equippable/elements/expressions/ExprEquipCompEntities.java
+ExprEquipCompEquipSound	expression	Equippable Component - Equip Sound	unreviewed		src/main/java/org/skriptlang/skript/bukkit/itemcomponents/equippable/elements/expressions/ExprEquipCompEquipSound.java
+ExprEquipCompModel	expression	Equippable Component - Model	unreviewed		src/main/java/org/skriptlang/skript/bukkit/itemcomponents/equippable/elements/expressions/ExprEquipCompModel.java
+ExprEquipCompShearSound	expression	Equippable Component - Shear Sound	unreviewed		src/main/java/org/skriptlang/skript/bukkit/itemcomponents/equippable/elements/expressions/ExprEquipCompShearSound.java
+ExprEquipCompSlot	expression	Equippable Component - Equipment Slot	unreviewed		src/main/java/org/skriptlang/skript/bukkit/itemcomponents/equippable/elements/expressions/ExprEquipCompSlot.java
+ExprEquippableComponent	expression	Equippable Component	unreviewed		src/main/java/org/skriptlang/skript/bukkit/itemcomponents/equippable/elements/expressions/ExprEquippableComponent.java
+ExprSecBlankEquipComp	expression	Blank Equippable Component	unreviewed		src/main/java/org/skriptlang/skript/bukkit/itemcomponents/equippable/elements/expressions/ExprSecBlankEquipComp.java
+CondHasLootTable	condition	Has Loot Table	unreviewed		src/main/java/org/skriptlang/skript/bukkit/loottables/elements/conditions/CondHasLootTable.java
+CondIsLootable	condition	Is Lootable	unreviewed		src/main/java/org/skriptlang/skript/bukkit/loottables/elements/conditions/CondIsLootable.java
+EffGenerateLoot	effect	Generate Loot	missing	No LootTable API yet	src/main/java/org/skriptlang/skript/bukkit/loottables/elements/effects/EffGenerateLoot.java
+ExprLoot	expression	Loot	missing	No LootContext API yet	src/main/java/org/skriptlang/skript/bukkit/loottables/elements/expressions/ExprLoot.java
+ExprLootContext	expression	Loot Context	unreviewed		src/main/java/org/skriptlang/skript/bukkit/loottables/elements/expressions/ExprLootContext.java
+ExprLootContextEntity	expression	Looted Entity of Loot Context	unreviewed		src/main/java/org/skriptlang/skript/bukkit/loottables/elements/expressions/ExprLootContextEntity.java
+ExprLootContextLocation	expression	Loot Location of Loot Context	unreviewed		src/main/java/org/skriptlang/skript/bukkit/loottables/elements/expressions/ExprLootContextLocation.java
+ExprLootContextLooter	expression	Looter of Loot Context	unreviewed		src/main/java/org/skriptlang/skript/bukkit/loottables/elements/expressions/ExprLootContextLooter.java
+ExprLootContextLuck	expression	Luck of Loot Context	unreviewed		src/main/java/org/skriptlang/skript/bukkit/loottables/elements/expressions/ExprLootContextLuck.java
+ExprLootItems	expression	Loot of Loot Table	unreviewed		src/main/java/org/skriptlang/skript/bukkit/loottables/elements/expressions/ExprLootItems.java
+ExprLootTable	expression	Loot Table	unreviewed		src/main/java/org/skriptlang/skript/bukkit/loottables/elements/expressions/ExprLootTable.java
+ExprLootTableFromString	expression	Loot Table from Key	unreviewed		src/main/java/org/skriptlang/skript/bukkit/loottables/elements/expressions/ExprLootTableFromString.java
+ExprLootTableSeed	expression	Seed of Loot Table	unreviewed		src/main/java/org/skriptlang/skript/bukkit/loottables/elements/expressions/ExprLootTableSeed.java
+ExprSecCreateLootContext	expression	Create Loot Context	unreviewed		src/main/java/org/skriptlang/skript/bukkit/loottables/elements/expressions/ExprSecCreateLootContext.java
+EffRotate	effect	Rotate	unreviewed		src/main/java/org/skriptlang/skript/bukkit/misc/elements/effects/EffRotate.java
+ExprBroadcastMessage	expression	Broadcast Message	unreviewed		src/main/java/org/skriptlang/skript/bukkit/misc/elements/expressions/ExprBroadcastMessage.java
+ExprColorOf	expression	Color of	unreviewed		src/main/java/org/skriptlang/skript/bukkit/misc/elements/expressions/ExprColorOf.java
+ExprItemOfEntity	expression	Item of an Entity	unreviewed		src/main/java/org/skriptlang/skript/bukkit/misc/elements/expressions/ExprItemOfEntity.java
+ExprMOTD	expression	Message of the Day	unreviewed		src/main/java/org/skriptlang/skript/bukkit/misc/elements/expressions/ExprMOTD.java
+ExprQuaternionAxisAngle	expression	Rotation Axis/Angle	adapted	Quaternion.axisAngle uses radians; invalid/zero axis fails clearly	src/main/java/org/skriptlang/skript/bukkit/misc/elements/expressions/ExprQuaternionAxisAngle.java
+ExprRotate	expression	Rotated Quaternion/Vector	unreviewed		src/main/java/org/skriptlang/skript/bukkit/misc/elements/expressions/ExprRotate.java
+ExprSkullTexture	expression	Skull Texture	unreviewed		src/main/java/org/skriptlang/skript/bukkit/misc/elements/expressions/ExprSkullTexture.java
+ExprTextOf	expression	Text Of	unreviewed		src/main/java/org/skriptlang/skript/bukkit/misc/elements/expressions/ExprTextOf.java
+ExprWithYawPitch	expression	Location with Yaw/Pitch	unreviewed		src/main/java/org/skriptlang/skript/bukkit/misc/elements/expressions/ExprWithYawPitch.java
+EffPlayEffect	effect	Play or Draw an Effect	unreviewed		src/main/java/org/skriptlang/skript/bukkit/particles/elements/effects/EffPlayEffect.java
+ExprGameEffectWithData	expression	Game Effects with Data	unreviewed		src/main/java/org/skriptlang/skript/bukkit/particles/elements/expressions/ExprGameEffectWithData.java
+ExprParticleCount	expression	Particle Count	unreviewed		src/main/java/org/skriptlang/skript/bukkit/particles/elements/expressions/ExprParticleCount.java
+ExprParticleDistribution	expression	Particle Distribution	unreviewed		src/main/java/org/skriptlang/skript/bukkit/particles/elements/expressions/ExprParticleDistribution.java
+ExprParticleOffset	expression	Particle Offset	unreviewed		src/main/java/org/skriptlang/skript/bukkit/particles/elements/expressions/ExprParticleOffset.java
+ExprParticleSpeed	expression	Particle Speed/Extra Value	unreviewed		src/main/java/org/skriptlang/skript/bukkit/particles/elements/expressions/ExprParticleSpeed.java
+ExprParticleWithData	expression	Particles with Data	unreviewed		src/main/java/org/skriptlang/skript/bukkit/particles/elements/expressions/ExprParticleWithData.java
+ExprParticleWithOffset	expression	Particle with Offset/Distribution/Velocity	unreviewed		src/main/java/org/skriptlang/skript/bukkit/particles/elements/expressions/ExprParticleWithOffset.java
+ExprParticleWithSpeed	expression	Particle with Speed/Extra Value	unreviewed		src/main/java/org/skriptlang/skript/bukkit/particles/elements/expressions/ExprParticleWithSpeed.java
+CondHasPersistentDataTag	condition	Has Persistent Data Tag	unreviewed		src/main/java/org/skriptlang/skript/bukkit/pdc/elements/conditions/CondHasPersistentDataTag.java
+ExprAllPersistentDataKeys	expression	All Persistent Data Keys	unreviewed		src/main/java/org/skriptlang/skript/bukkit/pdc/elements/expressions/ExprAllPersistentDataKeys.java
+ExprPersistentData	expression	Persistent Data Value	unreviewed		src/main/java/org/skriptlang/skript/bukkit/pdc/elements/expressions/ExprPersistentData.java
+CondHasPotion	condition	Has Potion Effect	unreviewed		src/main/java/org/skriptlang/skript/bukkit/potion/elements/conditions/CondHasPotion.java
+CondIsPoisoned	condition	Is Poisoned	unreviewed		src/main/java/org/skriptlang/skript/bukkit/potion/elements/conditions/CondIsPoisoned.java
+CondIsPotionAmbient	condition	Potion Effect - Is Ambient	unreviewed		src/main/java/org/skriptlang/skript/bukkit/potion/elements/conditions/CondIsPotionAmbient.java
+CondIsPotionInstant	condition	Potion Effect Type - Is Instant	unreviewed		src/main/java/org/skriptlang/skript/bukkit/potion/elements/conditions/CondIsPotionInstant.java
+CondPotionHasIcon	condition	Potion Effect - Has Icon	unreviewed		src/main/java/org/skriptlang/skript/bukkit/potion/elements/conditions/CondPotionHasIcon.java
+CondPotionHasParticles	condition	Potion Effect - Has Particles	unreviewed		src/main/java/org/skriptlang/skript/bukkit/potion/elements/conditions/CondPotionHasParticles.java
+EffApplyPotionEffect	effect	Apply Potion Effect	unreviewed		src/main/java/org/skriptlang/skript/bukkit/potion/elements/effects/EffApplyPotionEffect.java
+EffPoison	effect	Poison/Cure	unreviewed		src/main/java/org/skriptlang/skript/bukkit/potion/elements/effects/EffPoison.java
+EffPotionAmbient	effect	Potion Effect - Ambient	unreviewed		src/main/java/org/skriptlang/skript/bukkit/potion/elements/effects/EffPotionAmbient.java
+EffPotionIcon	effect	Potion Effect - Icon	unreviewed		src/main/java/org/skriptlang/skript/bukkit/potion/elements/effects/EffPotionIcon.java
+EffPotionInfinite	effect	Potion Effect - Infinite	unreviewed		src/main/java/org/skriptlang/skript/bukkit/potion/elements/effects/EffPotionInfinite.java
+EffPotionParticles	effect	Potion Effect - Particles	unreviewed		src/main/java/org/skriptlang/skript/bukkit/potion/elements/effects/EffPotionParticles.java
+EvtEntityPotion	event	EvtEntityPotion	unreviewed		src/main/java/org/skriptlang/skript/bukkit/potion/elements/events/EvtEntityPotion.java
+ExprPotionAmplifier	expression	Potion Effect - Amplifier	unreviewed		src/main/java/org/skriptlang/skript/bukkit/potion/elements/expressions/ExprPotionAmplifier.java
+ExprPotionDuration	expression	Potion Effect - Duration	unreviewed		src/main/java/org/skriptlang/skript/bukkit/potion/elements/expressions/ExprPotionDuration.java
+ExprPotionEffect	expression	Potion Effect of Entity/Item	unreviewed		src/main/java/org/skriptlang/skript/bukkit/potion/elements/expressions/ExprPotionEffect.java
+ExprPotionEffects	expression	Potion Effects of Entity/Item	unreviewed		src/main/java/org/skriptlang/skript/bukkit/potion/elements/expressions/ExprPotionEffects.java
+ExprPotionEffectTypeCategory	expression	Potion Effect Type Category	unreviewed		src/main/java/org/skriptlang/skript/bukkit/potion/elements/expressions/ExprPotionEffectTypeCategory.java
+ExprSecPotionEffect	expression	New Potion Effect	unreviewed		src/main/java/org/skriptlang/skript/bukkit/potion/elements/expressions/ExprSecPotionEffect.java
+ExprSkriptPotionEffect	expression	Created Potion Effect	unreviewed		src/main/java/org/skriptlang/skript/bukkit/potion/elements/expressions/ExprSkriptPotionEffect.java
+CondIsTagged	condition	Is Tagged	unreviewed		src/main/java/org/skriptlang/skript/bukkit/tags/elements/conditions/CondIsTagged.java
+EffRegisterTag	effect	Register Tag	unreviewed		src/main/java/org/skriptlang/skript/bukkit/tags/elements/effects/EffRegisterTag.java
+ExprTag	expression	Tag	unreviewed		src/main/java/org/skriptlang/skript/bukkit/tags/elements/expressions/ExprTag.java
+ExprTagContents	expression	Tags Contents	unreviewed		src/main/java/org/skriptlang/skript/bukkit/tags/elements/expressions/ExprTagContents.java
+ExprTagKey	expression	Tag Namespaced Key	unreviewed		src/main/java/org/skriptlang/skript/bukkit/tags/elements/expressions/ExprTagKey.java
+ExprTagsOf	expression	Tags of X	unreviewed		src/main/java/org/skriptlang/skript/bukkit/tags/elements/expressions/ExprTagsOf.java
+ExprTagsOfType	expression	All Tags of a Type	unreviewed		src/main/java/org/skriptlang/skript/bukkit/tags/elements/expressions/ExprTagsOfType.java
+EffActionBar	effect	Action Bar	unreviewed		src/main/java/org/skriptlang/skript/bukkit/text/elements/effects/EffActionBar.java
+EffBroadcast	effect	Broadcast	unreviewed		src/main/java/org/skriptlang/skript/bukkit/text/elements/effects/EffBroadcast.java
+EffMessage	effect	Message	unreviewed		src/main/java/org/skriptlang/skript/bukkit/text/elements/effects/EffMessage.java
+EffResetTitle	effect	Title - Clear/Reset	unreviewed		src/main/java/org/skriptlang/skript/bukkit/text/elements/effects/EffResetTitle.java
+EffSendTitle	effect	Title - Send	unreviewed		src/main/java/org/skriptlang/skript/bukkit/text/elements/effects/EffSendTitle.java
+ExprColored	expression	Colored/Formatted/Uncolored	unreviewed		src/main/java/org/skriptlang/skript/bukkit/text/elements/expressions/ExprColored.java
+ExprRawString	expression	Raw String	unreviewed		src/main/java/org/skriptlang/skript/bukkit/text/elements/expressions/ExprRawString.java
+ExprResolvedComponent	expression	Resolve Text Component	unreviewed		src/main/java/org/skriptlang/skript/bukkit/text/elements/expressions/ExprResolvedComponent.java
+ExprStringColor	expression	String Colors	unreviewed		src/main/java/org/skriptlang/skript/bukkit/text/elements/expressions/ExprStringColor.java
+EffWorldBorderExpand	effect	Expand/Shrink World Border	unreviewed		src/main/java/org/skriptlang/skript/bukkit/worldborder/elements/effects/EffWorldBorderExpand.java
+ExprSecCreateWorldBorder	expression	Create WorldBorder	unreviewed		src/main/java/org/skriptlang/skript/bukkit/worldborder/elements/expressions/ExprSecCreateWorldBorder.java
+ExprWorldBorder	expression	World Border	unreviewed		src/main/java/org/skriptlang/skript/bukkit/worldborder/elements/expressions/ExprWorldBorder.java
+ExprWorldBorderCenter	expression	Center of World Border	unreviewed		src/main/java/org/skriptlang/skript/bukkit/worldborder/elements/expressions/ExprWorldBorderCenter.java
+ExprWorldBorderDamageAmount	expression	Damage Amount of World Border	unreviewed		src/main/java/org/skriptlang/skript/bukkit/worldborder/elements/expressions/ExprWorldBorderDamageAmount.java
+ExprWorldBorderDamageBuffer	expression	Damage Buffer of World Border	unreviewed		src/main/java/org/skriptlang/skript/bukkit/worldborder/elements/expressions/ExprWorldBorderDamageBuffer.java
+ExprWorldBorderSize	expression	Size of World Border	unreviewed		src/main/java/org/skriptlang/skript/bukkit/worldborder/elements/expressions/ExprWorldBorderSize.java
+ExprWorldBorderWarningDistance	expression	Warning Distance of World Border	unreviewed		src/main/java/org/skriptlang/skript/bukkit/worldborder/elements/expressions/ExprWorldBorderWarningDistance.java
+ExprWorldBorderWarningTime	expression	Warning Time of World Border	unreviewed		src/main/java/org/skriptlang/skript/bukkit/worldborder/elements/expressions/ExprWorldBorderWarningTime.java
+ExprColorFromHexCode	expression	Color from Hex Code	unreviewed		src/main/java/org/skriptlang/skript/common/elements/expressions/ExprColorFromHexCode.java
+ExprHexCode	expression	Hex Code	unreviewed		src/main/java/org/skriptlang/skript/common/elements/expressions/ExprHexCode.java
+ExprRecursiveSize	expression	Recursive Size	unreviewed		src/main/java/org/skriptlang/skript/common/elements/expressions/ExprRecursiveSize.java
+ExprReplace	expression	Text Replacement	unreviewed		src/main/java/org/skriptlang/skript/common/elements/expressions/ExprReplace.java
+PropCondContains	other	Contains (Property)	unreviewed		src/main/java/org/skriptlang/skript/common/properties/elements/conditions/PropCondContains.java
+PropCondIsEmpty	other	Is Empty	unreviewed		src/main/java/org/skriptlang/skript/common/properties/elements/conditions/PropCondIsEmpty.java
+PropExprAmount	other	Amount	unreviewed		src/main/java/org/skriptlang/skript/common/properties/elements/expressions/PropExprAmount.java
+PropExprCustomName	other	Display Name	unreviewed		src/main/java/org/skriptlang/skript/common/properties/elements/expressions/PropExprCustomName.java
+PropExprName	other	Name	unreviewed		src/main/java/org/skriptlang/skript/common/properties/elements/expressions/PropExprName.java
+PropExprNumber	other	Number Of	unreviewed		src/main/java/org/skriptlang/skript/common/properties/elements/expressions/PropExprNumber.java
+PropExprProgress	other	Progress	unreviewed		src/main/java/org/skriptlang/skript/common/properties/elements/expressions/PropExprProgress.java
+PropExprScale	other	Scale	unreviewed		src/main/java/org/skriptlang/skript/common/properties/elements/expressions/PropExprScale.java
+PropExprSize	other	Size	unreviewed		src/main/java/org/skriptlang/skript/common/properties/elements/expressions/PropExprSize.java
+PropExprStyle	other	Style	unreviewed		src/main/java/org/skriptlang/skript/common/properties/elements/expressions/PropExprStyle.java
+PropExprTitle	other	Title	unreviewed		src/main/java/org/skriptlang/skript/common/properties/elements/expressions/PropExprTitle.java
+PropExprValueOf	other	Value	unreviewed		src/main/java/org/skriptlang/skript/common/properties/elements/expressions/PropExprValueOf.java
+PropExprViewers	other	Viewers	unreviewed		src/main/java/org/skriptlang/skript/common/properties/elements/expressions/PropExprViewers.java
+PropExprWXYZ	other	WXYZ Component/Coordinate	unreviewed		src/main/java/org/skriptlang/skript/common/properties/elements/expressions/PropExprWXYZ.java

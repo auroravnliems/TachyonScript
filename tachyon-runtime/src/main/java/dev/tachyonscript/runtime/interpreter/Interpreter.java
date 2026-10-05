@@ -198,6 +198,7 @@ public final class Interpreter {
 
     static void execute(CompiledFunction fn, ExecutionStack stack, int pb, int rb) {
         final int[] code = fn.code;
+        final ExecutionGuard guard = fn.owner() instanceof ExecutionGuard owner ? owner : null;
         final int depth = stack.depth;
         stack.primitiveTop = pb + fn.primitiveSlots;
         stack.referenceTop = rb + fn.referenceSlots;
@@ -207,6 +208,9 @@ public final class Interpreter {
         while (true) {
             try {
                 while (true) {
+                    if (guard != null && guard.securityRevoked())
+                        throw new ScriptRuntimeException(ScriptRuntimeException.Kind.SECURITY_REVOKED,
+                                "Script execution revoked by the security controller.", null);
                     switch (code[pc]) {
                         case NOP -> pc += 1;
                         case CONST_I -> {

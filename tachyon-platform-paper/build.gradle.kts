@@ -7,6 +7,7 @@ description = "Paper and Folia platform: Bukkit bindings of the standard library
 dependencies {
     api(project(":tachyon-engine"))
     api(project(":tachyon-stdlib"))
+    implementation(libs.okhttp)
     compileOnly(libs.paper.api)
     testImplementation(libs.paper.api)
 }

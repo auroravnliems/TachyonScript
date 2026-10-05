@@ -532,7 +532,7 @@ A player writes on a sign.
 
 ### `player.inventoryClick`
 
-A player clicks a slot of an open inventory (menus made with Menu handle their own clicks).
+A player clicks an inventory; never dispatched while a Menu is open, including bottom and outside slots. Menu owns its clicks.
 
 | Variable | Type | Description |
 |---|---|---|
@@ -549,7 +549,7 @@ A player clicks a slot of an open inventory (menus made with Menu handle their o
 
 ### `player.inventoryDrag`
 
-A player drags items over several slots.
+A player drags items over several slots; never dispatched while a Menu is open. Menu owns its drag policy.
 
 | Variable | Type | Description |
 |---|---|---|
@@ -1379,8 +1379,11 @@ The console (or a command block) runs a command.
 
 | Name | Type | Description |
 |---|---|---|
+| `BlockData(text: string)` | `BlockData` | Parses a namespaced block state, such as minecraft:oak_stairs[facing=east]. |
 | `BossBar(title: Component)` | `BossBar` | A full white boss bar. It belongs to the script: reloading the script hides it. |
 | `BossBar(title: Component, progress: double, color: BarColor, style: BarStyle)` | `BossBar` | A boss bar; progress goes from 0 (empty) to 1 (full). |
+| `BoundingBox(x1: double, y1: double, z1: double, x2: double, y2: double, z2: double)` | `BoundingBox` | A box between two opposite corners; coordinates are normalized. |
+| `Brightness(blockLight: int, skyLight: int)` | `Brightness` | A light override; values must be from 0 to 15. |
 | `Color(red: int, green: int, blue: int)` | `Color` | A color from red, green and blue (0 to 255). |
 | `Database(name: string)` | `Database` | A database configured in config.yml (databases: ...). |
 | `Inventory(rows: int, title: Component)` | `Inventory` | A new chest inventory with 1 to 6 rows (it belongs to no block). |
@@ -1395,6 +1398,7 @@ The console (or a command block) runs a command.
 | `Menu(type: InventoryType, title: Component)` | `Menu` | A menu of another shape (hopper, dispenser, ...). |
 | `PotionEffect(type: PotionEffectType, duration: Duration, level: int)` | `PotionEffect` | A potion effect; level 1 is the normal strength, a negative duration lasts forever. |
 | `PotionEffect(type: PotionEffectType, duration: Duration, level: int, ambient: bool, particles: bool)` | `PotionEffect` | A potion effect with beacon-like (ambient) look and optional particles. |
+| `Quaternion(x: double, y: double, z: double, w: double)` | `Quaternion` | Creates and normalizes a finite, nonzero rotation quaternion. |
 | `Sidebar(title: Component)` | `Sidebar` | A scoreboard sidebar (up to 15 lines). It belongs to the script: reloading the script removes it. |
 | `Vector(x: double, y: double, z: double)` | `Vector` | A vector. |
 | `broadcast(message: Component)` | `void` | Sends a message to every online player and the console. |
@@ -1402,6 +1406,12 @@ The console (or a command block) runs a command.
 | `location(world: World, x: double, y: double, z: double)` | `Location` | Creates a location. |
 | `log(message: string)` | `void` | Writes a message to the server log. |
 | `log(message: any?)` | `void` | Writes a value to the server log. |
+
+**`BlockData(text: string)`**
+
+```tys-body
+let stairs = BlockData("minecraft:oak_stairs[facing=east]")
+```
 
 **`BossBar(title: Component, progress: double, color: BarColor, style: BarStyle)`**
 
@@ -1515,6 +1525,18 @@ let homes = Database.sqlite("homes.db")
 | Name | Type | Description |
 |---|---|---|
 | `Menu.slot(row: int, column: int)` | `int` | The slot index of a row and a column, both counted from 0. |
+
+### `Quaternion`
+
+| Name | Type | Description |
+|---|---|---|
+| `Quaternion.axisAngle(axis: Vector, radians: double)` | `Quaternion` | A rotation about a nonzero axis by an angle in radians. |
+
+### `Statistic`
+
+| Name | Type | Description |
+|---|---|---|
+| `Statistic.values()` | `List<Statistic>` | All statistic types. |
 
 ### `UUID`
 
@@ -2045,22 +2067,26 @@ A loaded world.
 | `fill(from: Location, to: Location, material: Material)` | `int` | Sets every block of a box to a material (at most 32768 blocks); returns how many changed. |
 | `fullTime` (read/write) | `long` | The world's age in ticks (the day count is fullTime / 24000). |
 | `gameRule(name: string)` | `string?` | The value of a game rule such as 'keepInventory', as text; null if there is no such rule. |
+| `hasMetadata(key: string)` | `bool` | Whether the world has a temporary value at this key. |
 | `highestBlockAt(x: int, z: int)` | `Block` | The highest non-air block of a column. |
 | `isChunkLoaded(x: int, z: int)` | `bool` | Whether the chunk at chunk coordinates is loaded. |
 | `isDay` | `bool` | Whether it is day (the sun is up). |
 | `isNight` | `bool` | Whether it is night. |
 | `livingEntities` | `List<LivingEntity>` | Every loaded living entity of the world. |
 | `maxHeight` | `int` | The height above the highest block. |
+| `metadata(key: string)` | `any?` | Temporary metadata shared across scripts on this world. |
 | `minHeight` | `int` | The lowest block height. |
 | `name` | `string` | The world's name. |
 | `players` | `List<Player>` | A snapshot of the players currently in the world. |
 | `pvp` (read/write) | `bool` | Whether players can hurt each other in this world. |
+| `removeMetadata(key: string)` | `void` | Removes a world's temporary value. |
 | `removeTag(key: string)` | `void` | Removes a tag from the world. |
 | `save()` | `void` | Saves the world to disk. |
 | `seaLevel` | `int` | The sea level. |
 | `seed` | `long` | The world's seed. |
 | `setClearWeather(duration: Duration)` | `void` | Stops rain and thunder for a while. |
 | `setGameRule(name: string, value: string)` | `bool` | Changes a game rule; false if the rule or the value is invalid. |
+| `setMetadata(key: string, value: any?)` | `void` | Sets a world's temporary metadata; cleared on writer retirement or world unload. |
 | `setTag(key: string, value: string)` | `void` | Stores a text tag in the world. |
 | `spawn(type: EntityType, location: Location)` | `Entity` | Spawns an entity. |
 | `spawnLocation` (read/write) | `Location` | The world's spawn point. |
@@ -2161,6 +2187,7 @@ Any entity in a world.
 |---|---|---|
 | `addPassenger(passenger: Entity)` | `void` | Makes another entity ride this one. |
 | `addScoreboardTag(tag: string)` | `bool` | Adds a scoreboard tag; false if it was already there. |
+| `boundingBox` | `BoundingBox` | A copy of the entity's current collision box. |
 | `chunk` | `Chunk` | The chunk the entity is in. |
 | `customName` (read/write) | `Component?` | The name shown above the entity; null for none. |
 | `customNameVisible` (read/write) | `bool` | Whether the custom name is always shown (not only when looked at). |
@@ -2177,6 +2204,7 @@ Any entity in a world.
 | `frozen` | `bool` | Whether the entity is fully frozen. |
 | `glowing` (read/write) | `bool` | Whether the entity has a glowing outline. |
 | `gravity` (read/write) | `bool` | Whether gravity pulls the entity down. |
+| `hasMetadata(key: string)` | `bool` | Whether temporary metadata exists at a key. |
 | `hasScoreboardTag(tag: string)` | `bool` | Whether the entity has a scoreboard tag. |
 | `hasTag(key: string)` | `bool` | Whether the entity has a tag. |
 | `height` | `double` | The entity's height in blocks. |
@@ -2187,6 +2215,7 @@ Any entity in a world.
 | `invulnerable` (read/write) | `bool` | Whether the entity ignores damage (except from creative players and the void). |
 | `leaveVehicle()` | `void` | Gets off the entity's vehicle. |
 | `location` | `Location` | A copy of the entity's current location. |
+| `metadata(key: string)` | `any?` | A shared temporary value, or null; cleared on writer reload/disable or entity removal. |
 | `name` | `string` | The entity's name. |
 | `nearbyEntities(radius: double)` | `List<Entity>` | Entities within a distance (a sphere), excluding this one. |
 | `nearbyPlayers(radius: double)` | `List<Player>` | Players within a distance, excluding this entity. |
@@ -2195,10 +2224,12 @@ Any entity in a world.
 | `persistent` (read/write) | `bool` | Whether the entity is saved with its chunk (false: removed when the chunk unloads). |
 | `portalCooldown` (read/write) | `int` | Ticks before the entity can use a portal again. |
 | `remove()` | `void` | Removes the entity from the world (players cannot be removed; kick them instead). |
+| `removeMetadata(key: string)` | `void` | Removes a temporary TachyonScript value. |
 | `removePassenger(passenger: Entity)` | `void` | Makes a passenger get off. |
 | `removeScoreboardTag(tag: string)` | `bool` | Removes a scoreboard tag; false if it was not there. |
 | `removeTag(key: string)` | `void` | Removes a tag from the entity. |
 | `scoreboardTags` | `List<string>` | The entity's scoreboard tags (the /tag command). |
+| `setMetadata(key: string, value: any?)` | `void` | Sets temporary metadata. Prefix shared keys with your module; null removes the value. |
 | `setRotation(yaw: double, pitch: double)` | `void` | Turns the entity (degrees). |
 | `setTag(key: string, value: string)` | `void` | Stores a text tag in the entity (saved with it). |
 | `setTag(key: string, value: int)` | `void` | Stores a whole-number tag in the entity. |
@@ -2371,6 +2402,9 @@ Has all members of [`LivingEntity`](#livingentity) and [`CommandSender`](#comman
 | `compassTarget` (read/write) | `Location` | Where the player's compass points. |
 | `cooldown(material: Material)` | `Duration` | The cooldown left for a material. |
 | `cursor` (read/write) | `ItemStack?` | The item held by the mouse cursor in an open inventory. |
+| `decrementStatistic(statistic: Statistic, amount: int)` | `void` | Decreases a statistic by a positive amount. |
+| `decrementStatistic(statistic: Statistic, material: Material, amount: int)` | `void` | Decreases a material statistic. |
+| `decrementStatistic(statistic: Statistic, entity: EntityType, amount: int)` | `void` | Decreases an entity statistic. |
 | `displayName` (read/write) | `Component` | The name shown in chat. |
 | `enderChest` | `Inventory` | The player's ender chest. |
 | `exhaustion` (read/write) | `double` | Exhaustion: when it reaches 4, saturation or food goes down. |
@@ -2386,6 +2420,9 @@ Has all members of [`LivingEntity`](#livingentity) and [`CommandSender`](#comman
 | `giveLevels(amount: int)` | `void` | Gives (or takes, if negative) experience levels. |
 | `hasCooldown(material: Material)` | `bool` | Whether a material is on cooldown. |
 | `hidePlayer(other: Player)` | `void` | Hides another player from this player. |
+| `incrementStatistic(statistic: Statistic, amount: int)` | `void` | Increases a statistic by a positive amount. |
+| `incrementStatistic(statistic: Statistic, material: Material, amount: int)` | `void` | Increases a material statistic. |
+| `incrementStatistic(statistic: Statistic, entity: EntityType, amount: int)` | `void` | Increases an entity statistic. |
 | `inventory` | `PlayerInventory` | The player's inventory. |
 | `kick(reason: Component)` | `void` | Disconnects the player with a reason. |
 | `level` (read/write) | `int` | Experience level. |
@@ -2409,6 +2446,9 @@ Has all members of [`LivingEntity`](#livingentity) and [`CommandSender`](#comman
 | `setCooldown(material: Material, duration: Duration)` | `void` | Puts every item of a material on cooldown (like ender pearls). |
 | `setPlayerTime(time: long, relative: bool)` | `void` | Changes the time of day this player sees (relative: keeps moving with the world). |
 | `setPlayerWeather(raining: bool)` | `void` | Changes the weather this player sees. |
+| `setStatistic(statistic: Statistic, value: int)` | `void` | Sets an unparameterized statistic to a nonnegative value. |
+| `setStatistic(statistic: Statistic, material: Material, value: int)` | `void` | Sets a material statistic. |
+| `setStatistic(statistic: Statistic, entity: EntityType, value: int)` | `void` | Sets an entity statistic. |
 | `showPlayer(other: Player)` | `void` | Shows a hidden player again. |
 | `sleepingIgnored` (read/write) | `bool` | Whether the player is ignored when counting sleeping players. |
 | `sneaking` | `bool` | Whether the player is sneaking. |
@@ -2416,6 +2456,9 @@ Has all members of [`LivingEntity`](#livingentity) and [`CommandSender`](#comman
 | `spawnParticle(particle: Particle, location: Location, count: int, offsetX: double, offsetY: double, offsetZ: double, speed: double)` | `void` | Shows spread-out particles only this player sees. |
 | `spectatorTarget` (read/write) | `Entity?` | The entity a spectator is looking through, or null. |
 | `sprinting` (read/write) | `bool` | Whether the player is sprinting. |
+| `statistic(statistic: Statistic)` | `int` | A statistic that does not require an extra parameter. |
+| `statistic(statistic: Statistic, material: Material)` | `int` | A statistic for a block or item material. |
+| `statistic(statistic: Statistic, entity: EntityType)` | `int` | A statistic for an entity type. |
 | `stopAllSounds()` | `void` | Stops every sound for this player. |
 | `stopSound(sound: Sound)` | `void` | Stops a sound for this player. |
 | `tabFooter` (read/write) | `Component?` | The text below the tab list. |
@@ -2449,6 +2492,12 @@ player.give(ItemStack(Material.BREAD, 16))
 player.playSound(Sound.ENTITY_EXPERIENCE_ORB_PICKUP)
 ```
 
+**`statistic(statistic: Statistic)`**
+
+```tys-body
+log(player.statistic(Statistic.JUMP))
+```
+
 **`title(title: Component, subtitle: Component)`**
 
 ```tys-body
@@ -2463,15 +2512,18 @@ A block at a position in a world.
 |---|---|---|
 | `biome` (read/write) | `Biome` | The biome at the block. |
 | `blockData` (read/write) | `string` | The full block state, e.g. 'minecraft:oak_stairs[facing=north,half=bottom]'. |
+| `boundingBox` | `BoundingBox` | A copy of the block's bounding box in world coordinates. |
 | `breakNaturally()` | `bool` | Breaks the block and drops its items; false if it was air. |
 | `breakNaturally(tool: ItemStack)` | `bool` | Breaks the block as if with a tool. |
 | `center` | `Location` | The center of the block. |
 | `chunk` | `Chunk` | The block's chunk. |
 | `clearTags()` | `void` | Removes every tag of the block (for example when it is broken). |
+| `data` (read/write) | `BlockData` | The typed block state (a copy); assignment applies it to the block. blockData remains the string API. |
 | `doubleTag(key: string)` | `double?` | A number tag of the block, or null. |
 | `drops` | `List<ItemStack>` | The items the block drops when broken by hand. |
 | `dropsWith(tool: ItemStack)` | `List<ItemStack>` | The items the block drops when broken with a tool. |
 | `hardness` | `double` | How long the block takes to break. |
+| `hasMetadata(key: string)` | `bool` | Whether temporary metadata exists. |
 | `hasTag(key: string)` | `bool` | Whether the block has a tag. |
 | `intTag(key: string)` | `int?` | A whole-number tag of the block, or null. |
 | `inventory` | `Inventory?` | The inventory of a container (chest, barrel, furnace, ...), or null. |
@@ -2482,15 +2534,26 @@ A block at a position in a world.
 | `isSolid` | `bool` | Whether the block is solid. |
 | `lightLevel` | `int` | The light level at the block, 0 to 15. |
 | `location` | `Location` | The block's location. |
+| `metadata(key: string)` | `any?` | Temporary metadata of a block, or null; cleared on writer retirement or chunk unload. |
 | `redstonePower` | `int` | The redstone power the block receives, 0 to 15. |
 | `relative(face: BlockFace)` | `Block` | The neighbouring block in a direction. |
 | `relative(x: int, y: int, z: int)` | `Block` | The block at an offset. |
+| `removeMetadata(key: string)` | `void` | Removes a block's temporary metadata. |
 | `removeTag(key: string)` | `void` | Removes a tag of the block. |
+| `setBlockData(data: BlockData, physics: bool)` | `void` | Applies a typed state with optional physics updates. |
+| `setMetadata(key: string, value: any?)` | `void` | Sets a block's temporary metadata; null removes it. |
+| `setSignColor(side: SignSide, color: DyeColor)` | `void` | Changes the text dye color of a sign side. |
+| `setSignGlowing(side: SignSide, value: bool)` | `void` | Changes glowing text on one side. |
 | `setSignLine(index: int, text: Component)` | `void` | Changes a line (0 to 3) of the front of a sign. |
+| `setSignLine(side: SignSide, index: int, text: Component)` | `void` | Writes one line on the selected side and updates the sign. |
 | `setTag(key: string, value: string)` | `void` | Stores a text tag for the block. |
 | `setTag(key: string, value: int)` | `void` | Stores a whole-number tag for the block. |
 | `setTag(key: string, value: double)` | `void` | Stores a number tag for the block. |
+| `signColor(side: SignSide)` | `DyeColor` | The text dye color of a sign side. |
+| `signGlowing(side: SignSide)` | `bool` | Whether a side uses glowing text. |
 | `signLine(index: int)` | `Component?` | A line (0 to 3) of the front of a sign, or null if the block is not a sign. |
+| `signLine(side: SignSide, index: int)` | `Component` | A sign line on either side; index is 0 to 3. Errors if not a sign. |
+| `signWaxed` (read/write) | `bool` | Whether the sign is waxed; an error for a non-sign block. |
 | `skyLight` | `int` | The light from the sky at the block, 0 to 15. |
 | `tag(key: string)` | `string?` | A text tag of the block, or null (any block can have tags; they are kept in its chunk). |
 | `toString()` | `string` | Text such as 'stone at world 10, 64, -3'. |
@@ -2636,6 +2699,7 @@ A block or item type: Material.DIAMOND, Material.OAK_LOG, ...
 | Member | Type | Description |
 |---|---|---|
 | `blastResistance` | `double` | How well the block resists explosions. |
+| `createBlockData()` | `BlockData` | Default state of a block material; an error for a non-block material. |
 | `hardness` | `double` | How long the block takes to break. |
 | `hasGravity` | `bool` | Whether the block falls (sand, gravel, ...). |
 | `isAir` | `bool` | Whether the material is a kind of air. |
@@ -3123,17 +3187,44 @@ Has all members of [`Entity`](#entity).
 | `fuseTicks` (read/write) | `int` | Ticks before the TNT explodes. |
 | `yield` (read/write) | `double` | The explosion strength (4 for normal TNT). |
 
-### TextDisplay
+### Display
 
-A floating text (a hologram line).
+Base type of text, item and block displays.
 
 Has all members of [`Entity`](#entity).
 
 | Member | Type | Description |
 |---|---|---|
+| `billboardMode` (read/write) | `Billboard` | How the display faces its viewer. |
+| `brightness` (read/write) | `Brightness?` | Light override, or null for natural lighting. |
+| `displayHeight` (read/write) | `double` | Height used for visibility culling. |
+| `displayScale` (read/write) | `Vector` | Separate x/y/z scale factors; getter returns a copy. |
+| `displayWidth` (read/write) | `double` | Width used for visibility culling. |
+| `glowColor` (read/write) | `Color?` | Glowing outline color, or null to use the team color. |
+| `interpolationDelay` (read/write) | `int` | Delay before interpolation starts, in ticks. |
+| `interpolationDuration` (read/write) | `int` | Transformation interpolation time in ticks. |
+| `leftRotation` (read/write) | `Quaternion` | Rotation before scaling; getter returns a copy. |
+| `rightRotation` (read/write) | `Quaternion` | Rotation after scaling; getter returns a copy. |
+| `shadowRadius` (read/write) | `double` | Radius of the display's shadow. |
+| `shadowStrength` (read/write) | `double` | Opacity of the display's shadow. |
+| `teleportDuration` (read/write) | `int` | Position interpolation time in ticks, from 0 to 59. |
+| `translation` (read/write) | `Vector` | Translation relative to the entity location; getter returns a copy. |
+| `viewRange` (read/write) | `double` | Visibility multiplier (1 is the default). |
+
+### TextDisplay
+
+A floating text (a hologram line).
+
+Has all members of [`Display`](#display).
+
+| Member | Type | Description |
+|---|---|---|
+| `alignment` (read/write) | `TextAlignment` | Alignment within the text box. |
 | `background` (read/write) | `Color?` | The background color (null: the default gray). |
 | `billboard` (read/write) | `bool` | Whether the text always turns towards the viewer. |
+| `defaultBackground` (read/write) | `bool` | Whether to use the default background color. |
 | `lineWidth` (read/write) | `int` | The width at which lines wrap, in pixels. |
+| `opacity` (read/write) | `int` | Unsigned text opacity from 0 to 255; 255 is fully opaque. |
 | `scale` (read/write) | `double` | The size of the text (1 = normal). |
 | `seeThrough` (read/write) | `bool` | Whether the text is visible through blocks. |
 | `shadowed` (read/write) | `bool` | Whether the text has a shadow. |
@@ -3954,6 +4045,117 @@ Has all members of [`Cancellable`](#cancellable).
 | Member | Type | Description |
 |---|---|---|
 | `command` (read/write) | `string` | The command line without /. |
+
+### Statistic
+
+A Minecraft statistic, with material or entity parameters where required.
+
+| Member | Type | Description |
+|---|---|---|
+| `name` | `string` | The enum name of the statistic. |
+| `parameterType` | `string` | UNTYPED, ITEM, BLOCK or ENTITY. |
+
+### DyeColor
+
+One of Minecraft's sixteen dye colors.
+
+### SignSide
+
+The front or back of a sign.
+
+### Billboard
+
+The axes on which a display faces its viewer.
+
+### ItemDisplayTransform
+
+The model transform of an item display.
+
+### TextAlignment
+
+Text alignment inside a text display.
+
+### BlockData
+
+Typed block state data. Copying and merging create independent values.
+
+| Member | Type | Description |
+|---|---|---|
+| `asString` | `string` | The full namespaced block state string. |
+| `copy()` | `BlockData` | An independent copy of the block data. |
+| `isPreferredTool(tool: ItemStack)` | `bool` | Whether the tool is appropriate for this block. |
+| `lightEmission` | `int` | Emitted light level from 0 to 15. |
+| `mapColor` | `Color` | Color shown on a map. |
+| `matches(other: BlockData)` | `bool` | Matches properties explicitly set in the other parsed data. |
+| `material` | `Material` | The material of this block state. |
+| `merge(other: BlockData)` | `BlockData` | New data with explicitly set properties from compatible parsed data. |
+| `occluding` | `bool` | Whether this state occludes light. |
+| `replaceable` | `bool` | Whether placement can replace this block. |
+| `requiresCorrectTool` | `bool` | Whether the right tool is required for drops. |
+| `toString()` | `string` | The full block state string. |
+
+### ItemDisplay
+
+An entity displaying an item model.
+
+Has all members of [`Display`](#display).
+
+| Member | Type | Description |
+|---|---|---|
+| `item` (read/write) | `ItemStack` | The displayed item (a copy). |
+| `transform` (read/write) | `ItemDisplayTransform` | The item model's pose. |
+
+### BlockDisplay
+
+An entity displaying a block model.
+
+Has all members of [`Display`](#display).
+
+| Member | Type | Description |
+|---|---|---|
+| `blockData` (read/write) | `BlockData` | The displayed block state (a copy). |
+
+### Quaternion
+
+A normalized quaternion describing a rotation.
+
+| Member | Type | Description |
+|---|---|---|
+| `copy()` | `Quaternion` | An independent copy. |
+| `w` | `double` | The w component. |
+| `x` | `double` | The x component. |
+| `y` | `double` | The y component. |
+| `z` | `double` | The z component. |
+
+### Brightness
+
+A display's block and sky light override, each from 0 to 15.
+
+| Member | Type | Description |
+|---|---|---|
+| `blockLight` | `int` | Overridden block light. |
+| `skyLight` | `int` | Overridden sky light. |
+
+### BoundingBox
+
+An axis-aligned box. Operations return new boxes.
+
+| Member | Type | Description |
+|---|---|---|
+| `center` | `Vector` | Center as a new vector. |
+| `contains(point: Vector)` | `bool` | Whether a point is inside; maximum faces are excluded. |
+| `contains(other: BoundingBox)` | `bool` | Whether this box completely contains another box. |
+| `copy()` | `BoundingBox` | An independent copy. |
+| `depth` | `double` | Width along z. |
+| `expand(amount: double)` | `BoundingBox` | An expanded copy (negative amounts shrink it). |
+| `height` | `double` | Height along y. |
+| `max` | `Vector` | Maximum corner as a new vector. |
+| `min` | `Vector` | Minimum corner as a new vector. |
+| `overlaps(other: BoundingBox)` | `bool` | Whether boxes overlap with positive extent. |
+| `shift(offset: Vector)` | `BoundingBox` | A translated copy. |
+| `union(other: BoundingBox)` | `BoundingBox` | A new box containing both boxes. |
+| `volume` | `double` | Volume in cubic blocks. |
+| `width` | `double` | Width along x. |
 
 ### Sql
 

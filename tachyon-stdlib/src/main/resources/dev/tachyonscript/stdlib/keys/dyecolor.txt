@@ -1,0 +1,16 @@
+WHITE minecraft:white
+ORANGE minecraft:orange
+MAGENTA minecraft:magenta
+LIGHT_BLUE minecraft:light_blue
+YELLOW minecraft:yellow
+LIME minecraft:lime
+PINK minecraft:pink
+GRAY minecraft:gray
+LIGHT_GRAY minecraft:light_gray
+CYAN minecraft:cyan
+PURPLE minecraft:purple
+BLUE minecraft:blue
+BROWN minecraft:brown
+GREEN minecraft:green
+RED minecraft:red
+BLACK minecraft:black

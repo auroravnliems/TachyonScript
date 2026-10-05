@@ -80,6 +80,10 @@ tachyon-runtime          Assembler (IR → packed code), linker, interpreter,
 tachyon-engine           Loading and transactional reload (generations),
                          event dispatch, error reporting, profiler, addon
                          assembly and the platform SPI.
+
+tachyon-security         Compiler-backed capabilities, static/taint/dependency
+                         analysis, exact-source policy, Qwen advisor, quarantine,
+                         audit and notification transport. Bukkit-free.
 tachyon-stdlib           Declarations of the standard library and the Minecraft
                          surface (types, members, events) plus the pure
                          implementations that need no server (math, strings).
@@ -101,6 +105,7 @@ plugin ─► platform-paper ─► engine ─► compiler ─► language ─�
                 │             └─► runtime ─► ir
                 └─► stdlib ─► api
 cli ─► compiler, runtime, stdlib
+engine ─► security ─► compiler
 tests (testkit) ─► engine, stdlib
 benchmarks ─► tests, platform-paper
 ```

@@ -29,7 +29,7 @@ public record EngineOptions(LoadMode mode, CompilerOptions compiler, RuntimeLimi
                             Map<String, DatabaseConfig> databases, Path databaseFolder) {
 
     public static final EngineOptions DEFAULT = new EngineOptions(LoadMode.LENIENT, CompilerOptions.DEFAULT,
-            RuntimeLimits.DEFAULT, 5_000_000L, false, null, 30_000L, CommandMessages.DEFAULT, Map.of(),
+            RuntimeLimits.DEFAULT, 0, false, null, 30_000L, CommandMessages.DEFAULT, Map.of(),
             Path.of("databases"));
 
     public EngineOptions {

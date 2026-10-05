@@ -1,0 +1,3 @@
+CENTER minecraft:center
+LEFT minecraft:left
+RIGHT minecraft:right

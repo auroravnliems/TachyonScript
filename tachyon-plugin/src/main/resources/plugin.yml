@@ -17,17 +17,29 @@ permissions:
     children:
       tachyonscript.admin: true
       tachyonscript.reload: true
+      tachyonscript.manage: true
       tachyonscript.profile: true
       tachyonscript.debug: true
+      tachyonscript.security.admin: true
+      tachyonscript.security.alerts: true
   tachyonscript.admin:
     description: Use /tys help, scripts, info, errors and version.
     default: op
   tachyonscript.reload:
     description: Reload scripts.
     default: op
+  tachyonscript.manage:
+    description: Enable or disable scripts, including the emergency stop.
+    default: op
   tachyonscript.profile:
     description: Profile script execution.
     default: op
   tachyonscript.debug:
     description: Use debugging commands such as /tys dump.
+    default: op
+  tachyonscript.security.admin:
+    description: Inspect, scan, approve and quarantine scripts with /tys security.
+    default: op
+  tachyonscript.security.alerts:
+    description: Receive detailed security incident notifications.
     default: op

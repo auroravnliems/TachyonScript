@@ -27,6 +27,7 @@ include(
     "tachyon-language",
     "tachyon-ir",
     "tachyon-compiler",
+    "tachyon-security",
     "tachyon-runtime",
     "tachyon-engine",
     "tachyon-stdlib",

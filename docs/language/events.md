@@ -56,6 +56,17 @@ event player.chat {
 
 Priorities: `LOWEST`, `LOW`, `NORMAL` (the default), `HIGH`, `HIGHEST`, `MONITOR`.
 
+`event.cancel()`, `event.uncancel()` and the writable `event.cancelled` property
+change the underlying Bukkit event. Assigning `false` can therefore undo another
+plugin's cancellation. Only do that when your script deliberately owns that decision;
+for an external GUI it can allow its icons to move as real items.
+
+Menus created with `Menu(...)` handle clicks and drags through their own listener.
+While such a menu is open, `player.inventoryClick` and `player.inventoryDrag` do not
+run for any part of its view. This does not depend on priority, `@ignoreCancelled`
+or `allowTaking`. Ordinary inventories and other plugins' inventories keep the normal
+event and cancellation API. See [menus](gui.md).
+
 ## Available events
 
 More than a hundred events are available; the [reference](reference.md#events) lists

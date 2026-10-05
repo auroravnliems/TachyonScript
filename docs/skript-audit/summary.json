@@ -1,0 +1,24 @@
+{
+  "source": "D:\\Downloads\\Skript-master\\Skript-master",
+  "java_source_sha256": "67783f8582a4f78a343a97c7be3da05372e5d52cc823c76dbd2d972a500bad48",
+  "classes": 941,
+  "by_kind": {
+    "condition": 168,
+    "other": 40,
+    "effect": 155,
+    "event": 56,
+    "expression": 513,
+    "section": 9
+  },
+  "by_review": {
+    "unreviewed": 912,
+    "adapted": 6,
+    "missing": 4,
+    "existing": 6,
+    "partial": 1,
+    "implemented": 12
+  },
+  "event_references": 162,
+  "referenced_events_with_binding": 79,
+  "note": "Counts are source classes/references, not distinct features or proof of semantic parity."
+}

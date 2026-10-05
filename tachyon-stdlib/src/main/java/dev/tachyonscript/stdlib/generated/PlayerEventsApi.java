@@ -275,7 +275,7 @@ public final class PlayerEventsApi {
             .variable("topInventory", GeneratedTypes.INVENTORY, "The inventory at the top of the view.")
             .cancellable()
             .threading(ThreadingRequirement.ENTITY)
-            .documentation(new Documentation("A player clicks a slot of an open inventory (menus made with Menu handle their own clicks).", "", List.of(), "0.2.0")).build();
+            .documentation(new Documentation("A player clicks an inventory; never dispatched while a Menu is open, including bottom and outside slots. Menu owns its clicks.", "", List.of(), "0.2.0")).build();
     // 10-events-player.api:256
     public static final EventDeclaration PLAYER_INVENTORY_DRAG_EVENT = EventDeclaration.builder("player.inventoryDrag", GeneratedTypes.INVENTORY_DRAG_EVENT)
             .variable("player", MinecraftTypes.PLAYER, "The player.")
@@ -283,7 +283,7 @@ public final class PlayerEventsApi {
             .variable("inventory", GeneratedTypes.INVENTORY, "The top inventory.")
             .cancellable()
             .threading(ThreadingRequirement.ENTITY)
-            .documentation(new Documentation("A player drags items over several slots.", "", List.of(), "0.2.0")).build();
+            .documentation(new Documentation("A player drags items over several slots; never dispatched while a Menu is open. Menu owns its drag policy.", "", List.of(), "0.2.0")).build();
     // 10-events-player.api:261
     public static final EventDeclaration PLAYER_INVENTORY_OPEN_EVENT = EventDeclaration.builder("player.inventoryOpen", GeneratedTypes.INVENTORY_OPEN_EVENT)
             .variable("player", MinecraftTypes.PLAYER, "The player.")

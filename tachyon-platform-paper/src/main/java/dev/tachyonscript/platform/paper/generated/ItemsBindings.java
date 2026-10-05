@@ -12,6 +12,7 @@ import dev.tachyonscript.platform.paper.lib.Bars;
 import dev.tachyonscript.platform.paper.lib.Blocks;
 import dev.tachyonscript.platform.paper.lib.Effects;
 import dev.tachyonscript.platform.paper.lib.Entities;
+import dev.tachyonscript.platform.paper.lib.Extensions;
 import dev.tachyonscript.platform.paper.lib.Items;
 import dev.tachyonscript.platform.paper.lib.MenuClick;
 import dev.tachyonscript.platform.paper.lib.Papi;

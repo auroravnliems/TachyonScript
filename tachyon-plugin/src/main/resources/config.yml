@@ -15,8 +15,11 @@ safety:
   max-execution-time-ms: 1000
 
 performance:
-  # Log executions slower than this (milliseconds). 0 disables the check.
-  slow-execution-warning-ms: 5
+  # Optional tick-thread warnings. Async work is measured by /tys profile only.
+  # Use /tys performance <milliseconds|off> to change this without restarting.
+  slow-execution-warnings: false
+  # At most one warning per function per 30 seconds. 0 also disables warnings.
+  slow-execution-warning-ms: 50
 
 runtime:
   # Execution backend. Only 'interpreter' exists yet; the bytecode backend is planned.
@@ -75,3 +78,34 @@ commands:
 debug:
   # Include Java causes in runtime error reports and enable log.debug(...) output.
   enabled: false
+# Security approval happens before linking and activation. Quarantine preserves immutable source snapshots.
+security:
+  enabled: true
+  provider: qwen
+  max-source-nodes: 25000
+  max-findings: 500
+  max-pending-tasks: 1024
+  allowed-network-hosts: [] # Exact, administrator-trusted exceptions, including private service hosts.
+  native-capabilities: {} # Resolved native declaration ID -> capability for addons.
+  ai:
+    enabled: false # Enable after configuring an endpoint, model and secret.
+    required: true # When enabled, failures keep new/modified revisions pending.
+    endpoint: "" # Full Qwen-compatible chat/completions URL; no endpoint/model is hard-coded.
+    model: ""
+    api-key: "${QWEN_API_KEY}"
+    connect-timeout-ms: 5000
+    read-timeout-ms: 15000
+    max-retries: 2
+    max-request-bytes: 1048576
+    max-response-bytes: 262144
+    max-review-parts: 32
+    max-output-tokens: 4096 # Bounded per-request completion budget; truncated reviews cannot approve scripts.
+    confidence:
+      warn: 0.80
+      auto-disable: 0.95
+  discord:
+    enabled: false
+    webhook: "${TACHYON_SECURITY_DISCORD_WEBHOOK}"
+    include-source-snippets: true
+    timeout-ms: 10000
+    max-retries: 2

@@ -62,10 +62,17 @@ command shop {
 
 ## The click
 
+`MenuListener` owns clicks and drags for the whole view of a `Menu`, including the
+player's lower inventory and clicks outside the window. These events never reach
+`player.inventoryClick` or `player.inventoryDrag`, at any priority, even when
+`allowTaking` is true. Use the menu's slot callback to handle its clicks.
+
 `click.player`, `click.slot`, `click.click` (`ClickType.LEFT`, `ClickType.SHIFT_RIGHT`,
 ...), `click.left`, `click.right`, `click.shift`, `click.item`, `click.cursor`,
 `click.hotbarButton`, `click.menu`; `click.close()` closes the menu for the player after
 the click, and `click.cancelled = false` lets this one click move the item.
+`click.cancelled` starts as `!menu.allowTaking`: true by default, false for a storage
+menu. The callback may override it for that click.
 
 Clicks in the player's own inventory are allowed, except shift-clicks and
 double-clicks that would move items into the menu.

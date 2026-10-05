@@ -53,7 +53,8 @@ type Projectile extends Entity = org.bukkit.entity.Projectile : A projectile (ar
 type ExperienceOrb extends Entity = org.bukkit.entity.ExperienceOrb : An experience orb.
 type FallingBlock extends Entity = org.bukkit.entity.FallingBlock : A falling block (sand, gravel, anvil, ...).
 type TNTPrimed extends Entity = org.bukkit.entity.TNTPrimed : Lit TNT.
-type TextDisplay extends Entity = org.bukkit.entity.TextDisplay : A floating text (a hologram line).
+type Display extends Entity = org.bukkit.entity.Display : Base type of text, item and block displays.
+type TextDisplay extends Display = org.bukkit.entity.TextDisplay : A floating text (a hologram line).
 
 # ------------------------------------------------------------------ interface
 

@@ -63,6 +63,23 @@ public final class DiagnosticRenderer {
         return out.toString();
     }
 
+    /** Compact server/chat layout. Each line remains readable after the logger adds its prefix. */
+    public String renderCompact(Diagnostic diagnostic) {
+        SourceFile file = diagnostic.file();
+        int start = Math.min(diagnostic.span().start(), file.length());
+        StringBuilder out = new StringBuilder().append(diagnostic.severity()).append(' ')
+                .append(pathPrefix).append(file.path()).append(':').append(file.lineOf(start)).append(':')
+                .append(file.columnOf(start)).append(" [").append(diagnostic.code().id()).append("] ")
+                .append(diagnostic.message()).append('\n');
+        int gutter = String.valueOf(maxLine(diagnostic)).length();
+        appendSnippet(out, file, diagnostic.span(), "", gutter, severityColor(diagnostic.severity()));
+        for (Label label : diagnostic.labels())
+            appendSnippet(out, file, label.span(), label.message(), gutter, "\u001B[36m");
+        for (String note : diagnostic.notes())
+            note.lines().filter(line -> !line.isBlank()).forEach(line -> out.append("  ").append(line.strip()).append('\n'));
+        return out.toString().stripTrailing();
+    }
+
     private int maxLine(Diagnostic diagnostic) {
         SourceFile file = diagnostic.file();
         int max = file.lineOf(Math.min(diagnostic.span().start(), file.length()));

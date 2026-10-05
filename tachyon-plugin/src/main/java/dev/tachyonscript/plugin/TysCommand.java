@@ -18,6 +18,7 @@ import dev.tachyonscript.runtime.code.Disassembler;
 import dev.tachyonscript.runtime.event.CompiledHandler;
 import dev.tachyonscript.runtime.interpreter.CompiledFunction;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.command.Command;
@@ -28,6 +29,7 @@ import org.bukkit.command.TabCompleter;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.io.IOException;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -53,14 +55,18 @@ final class TysCommand implements CommandExecutor, TabCompleter {
 
     private enum Sub {
         HELP("tachyonscript.admin", "", "Show this help"),
-        RELOAD("tachyonscript.reload", "[script]", "Recompile changed scripts and activate them"),
+        RELOAD("tachyonscript.reload", "[script|all]", "Reload one script and its importers, or all changed scripts"),
+        DISABLE("tachyonscript.manage", "[script|all]", "Stop scripts immediately and keep them disabled after restart"),
+        ENABLE("tachyonscript.manage", "<script|all>", "Enable scripts and compile them before activation"),
+        PERFORMANCE("tachyonscript.profile", "<milliseconds|off>", "Configure optional slow tick-thread warnings"),
         SCRIPTS("tachyonscript.admin", "", "List the scripts"),
         INFO("tachyonscript.admin", "<script>", "Show details about a script"),
         ERRORS("tachyonscript.admin", "", "Show compile errors and runtime errors"),
         PROFILE("tachyonscript.profile", "start|stop|report", "Measure script execution time"),
         DUMP("tachyonscript.debug", "<script> [ir|code]", "Print the compiled form of a script to the console"),
         STATUS("tachyonscript.admin", "", "Show storage, databases, commands and placeholders"),
-        VERSION("tachyonscript.admin", "", "Show version information");
+        VERSION("tachyonscript.admin", "", "Show version information"),
+        SECURITY("tachyonscript.security.admin", "<action> [script|incident]", "Inspect, scan and quarantine scripts");
 
         final String permission;
         final String usage;
@@ -112,6 +118,9 @@ final class TysCommand implements CommandExecutor, TabCompleter {
         switch (sub) {
             case HELP -> help(sender);
             case RELOAD -> reload(sender, rest);
+            case DISABLE -> disable(sender, rest);
+            case ENABLE -> enable(sender, rest);
+            case PERFORMANCE -> performance(sender, rest);
             case SCRIPTS -> scripts(sender);
             case INFO -> info(sender, rest);
             case ERRORS -> errors(sender);
@@ -119,11 +128,13 @@ final class TysCommand implements CommandExecutor, TabCompleter {
             case DUMP -> dump(sender, rest);
             case STATUS -> status(sender);
             case VERSION -> version(sender);
+            case SECURITY -> new SecurityCommands(plugin).execute(sender, rest);
         }
         return true;
     }
 
     private static Sub find(String name) {
+        if (name.equalsIgnoreCase("diable")) return Sub.DISABLE;
         for (Sub sub : Sub.values()) {
             if (sub.label().equalsIgnoreCase(name)) {
                 return sub;
@@ -152,10 +163,16 @@ final class TysCommand implements CommandExecutor, TabCompleter {
 
     private void reload(CommandSender sender, String[] args) {
         Set<String> force = Set.of();
-        if (args.length > 0) {
-            String path = scriptPath(args[0]);
+        if (args.length > 0 && !(args.length == 1 && args[0].equalsIgnoreCase("all"))) {
+            String requested = String.join(" ", args);
+            String path = knownScript(requested);
+            if (path == null) path = scriptPath(requested);
             if (path == null) {
-                error(sender, "No script named '" + args[0] + "' in the scripts directory.");
+                error(sender, "No script named '" + requested + "' in the scripts directory.");
+                return;
+            }
+            if (!plugin.engine().controls().allowed(path)) {
+                error(sender, "Script is disabled. Use /tys enable " + path + " (or /tys enable all after an emergency stop).");
                 return;
             }
             force = Set.of(path);
@@ -179,7 +196,7 @@ final class TysCommand implements CommandExecutor, TabCompleter {
             return;
         }
         if (!report.activated()) {
-            error(sender, "Reload cancelled (strict mode): " + report.errorCount()
+            error(sender, "Reload cancelled: " + report.errorCount()
                     + " errors. The previous scripts stay active.");
         } else if (report.failed().isEmpty()) {
             send(sender, Component.text("Reloaded " + report.summary(), NamedTextColor.GREEN));
@@ -193,6 +210,54 @@ final class TysCommand implements CommandExecutor, TabCompleter {
         sendDiagnostics(sender, report);
     }
 
+    private void disable(CommandSender sender, String[] args) {
+        boolean all = args.length == 0 || (args.length == 1 && args[0].equalsIgnoreCase("all"));
+        String input = String.join(" ", args);
+        String path = all ? null : knownScript(input);
+        if (!all && path == null) path = scriptPath(input);
+        if (!all && path == null) { error(sender, "Unknown script: " + input); return; }
+        try {
+            Set<String> affected = plugin.engine().disable(all ? Set.of() : Set.of(path), all);
+            send(sender, Component.text(all ? "All scripts disabled, including future loads. Use /tys enable all to resume."
+                    : "Disabled: " + String.join(", ", new TreeSet<>(affected)) + ". Saved across reloads and restarts.", NamedTextColor.YELLOW));
+        } catch (IOException | RuntimeException error) {
+            error(sender, "Disable failed to finish: " + error.getMessage()
+                    + ". The execution gate remains closed; check the console and persistence before restarting.");
+            plugin.getLogger().log(java.util.logging.Level.SEVERE, "Cannot finish disabling scripts", error);
+        }
+    }
+
+    private void enable(CommandSender sender, String[] args) {
+        if (args.length == 0) { error(sender, "Use /tys enable <script|all>."); return; }
+        boolean all = args.length == 1 && args[0].equalsIgnoreCase("all");
+        String input = String.join(" ", args);
+        String path = all ? null : knownScript(input);
+        if (!all && path == null) path = scriptPath(input);
+        if (!all && path == null) { error(sender, "Unknown script: " + input); return; }
+        try {
+            plugin.engine().controls().enable(all ? Set.of() : Set.of(path), all);
+            if (!plugin.reloadAsync(all ? Set.of() : Set.of(path), report -> sendReport(sender, report)))
+                info(sender, "Enable state saved; another reload is running. Run /tys reload again when it finishes.");
+        } catch (IOException | RuntimeException error) {
+            error(sender, "Cannot enable: " + error.getMessage());
+        }
+    }
+
+    private void performance(CommandSender sender, String[] args) {
+        if (args.length != 1) { error(sender, "Use /tys performance <milliseconds|off>."); return; }
+        long millis;
+        try {
+            millis = args[0].equalsIgnoreCase("off") ? 0 : Long.parseLong(args[0]);
+            if (millis < 0 || millis > Long.MAX_VALUE / 1_000_000L) throw new NumberFormatException();
+        } catch (NumberFormatException error) { error(sender, "Expected a nonnegative number of milliseconds, or off."); return; }
+        plugin.engine().slowWarnings(millis * 1_000_000L);
+        plugin.getConfig().set("performance.slow-execution-warnings", millis > 0);
+        plugin.getConfig().set("performance.slow-execution-warning-ms", millis);
+        plugin.saveConfig();
+        info(sender, millis == 0 ? "Slow execution warnings disabled. /tys profile remains available."
+                : "Slow tick-thread warnings enabled above " + millis + " ms (at most once per function every 30 seconds).");
+    }
+
     private void scripts(CommandSender sender) {
         ScriptEngine engine = plugin.engine();
         Generation generation = engine.generation();
@@ -200,7 +265,10 @@ final class TysCommand implements CommandExecutor, TabCompleter {
         Set<String> failed = report == null ? Set.of() : new TreeSet<>(report.failed());
         send(sender, Component.text("Scripts (generation " + generation.id() + ", activated "
                 + TIME.format(generation.created()) + "):", ACCENT));
-        if (generation.scripts().isEmpty() && failed.isEmpty()) {
+        if (engine.controls().allDisabled()) info(sender, "Emergency stop active: all scripts disabled, including new files.");
+        for (String path : new TreeSet<>(engine.controls().disabled()))
+            send(sender, Component.text("  " + path + " - disabled by operator", NamedTextColor.YELLOW));
+        if (generation.scripts().isEmpty() && failed.isEmpty() && engine.controls().disabled().isEmpty()) {
             info(sender, "  No scripts. Put .tys files into plugins/TachyonScript/scripts/ and run /tys reload.");
             return;
         }
@@ -225,7 +293,13 @@ final class TysCommand implements CommandExecutor, TabCompleter {
             error(sender, "Usage: /tys info <script>");
             return;
         }
-        String path = knownScript(args[0]);
+        String input = String.join(" ", args);
+        String path = knownScript(input);
+        if (path != null && !plugin.engine().controls().allowed(path)) {
+            send(sender, Component.text(path, ACCENT));
+            field(sender, "Status", "disabled by operator" + (plugin.engine().controls().allDisabled() ? " (all scripts stopped)" : ""));
+            return;
+        }
         LoadedScript script = path == null ? null : plugin.engine().generation().scripts().get(path);
         LoadReport report = plugin.lastReport();
         boolean failed = report != null && path != null && report.failed().contains(path);
@@ -233,7 +307,7 @@ final class TysCommand implements CommandExecutor, TabCompleter {
             if (failed) {
                 error(sender, path + " failed to compile and is not active. Use /tys errors.");
             } else {
-                error(sender, "No active script named '" + args[0] + "'.");
+                error(sender, "No active script named '" + input + "'.");
             }
             return;
         }
@@ -416,9 +490,16 @@ final class TysCommand implements CommandExecutor, TabCompleter {
         if (sub == null || !sender.hasPermission(sub.permission) || plugin.engine() == null) {
             return List.of();
         }
+        if (sub == Sub.SECURITY) return new SecurityCommands(plugin).complete(Arrays.copyOfRange(args, 1, args.length));
         if (args.length == 2) {
             return switch (sub) {
-                case RELOAD, INFO, DUMP -> matching(knownScripts(), args[1]);
+                case RELOAD, DISABLE, ENABLE -> {
+                    List<String> names = new ArrayList<>(knownScripts());
+                    names.add("all");
+                    yield matching(names, args[1]);
+                }
+                case INFO, DUMP -> matching(knownScripts(), args[1]);
+                case PERFORMANCE -> matching(List.of("off", "50", "100"), args[1]);
                 case PROFILE -> matching(List.of("start", "stop", "report"), args[1]);
                 default -> List.of();
             };
@@ -439,6 +520,14 @@ final class TysCommand implements CommandExecutor, TabCompleter {
     /** Scripts of the active generation plus scripts that failed in the last load. */
     private List<String> knownScripts() {
         Set<String> paths = new TreeSet<>(plugin.engine().generation().scripts().keySet());
+        paths.addAll(plugin.engine().controls().disabled());
+        Path root = plugin.scripts().root();
+        try (var walk = Files.walk(root)) {
+            walk.filter(p -> Files.isRegularFile(p, java.nio.file.LinkOption.NOFOLLOW_LINKS))
+                    .filter(p -> p.getFileName().toString().endsWith(".tys"))
+                    .filter(p -> { for (Path part : root.relativize(p)) if (part.toString().startsWith("-")) return false; return true; })
+                    .forEach(p -> paths.add(root.relativize(p).toString().replace('\\', '/')));
+        } catch (IOException ignored) { /* Active and disabled names remain available. */ }
         LoadReport report = plugin.lastReport();
         if (report != null) {
             paths.addAll(report.failed());
@@ -464,8 +553,10 @@ final class TysCommand implements CommandExecutor, TabCompleter {
     private String scriptPath(String input) {
         String normalized = normalize(input);
         Path root = plugin.scripts().root().toAbsolutePath().normalize();
-        Path file = root.resolve(normalized).normalize();
-        if (!file.startsWith(root) || !Files.isRegularFile(file)) {
+        Path file;
+        try { file = root.resolve(normalized).normalize(); }
+        catch (java.nio.file.InvalidPathException invalid) { return null; }
+        if (!file.startsWith(root) || !Files.isRegularFile(file, java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
             return null;
         }
         return root.relativize(file).toString().replace('\\', '/');
@@ -487,10 +578,13 @@ final class TysCommand implements CommandExecutor, TabCompleter {
             if (diagnostic.severity() != Severity.ERROR && diagnostic.severity() != Severity.WARNING) {
                 continue;
             }
-            String text = console ? renderer.render(diagnostic)
+            String text = console ? renderer.renderCompact(diagnostic)
                     : diagnostic.severity() + " " + TachyonPlugin.SCRIPTS_PREFIX + diagnostic.position()
                     + " [" + diagnostic.code().id() + "] " + diagnostic.message();
-            lines.add(Component.text(text, diagnostic.isError() ? NamedTextColor.RED : NamedTextColor.YELLOW));
+            var redactor = plugin.engine().security().options().redactor().withSource(diagnostic.file());
+            lines.add(Component.text(redactor.redact(text), diagnostic.isError() ? NamedTextColor.RED : NamedTextColor.YELLOW)
+                    .hoverEvent(Component.text(redactor.redact(renderer.renderCompact(diagnostic))))
+                    .clickEvent(ClickEvent.copyToClipboard(TachyonPlugin.SCRIPTS_PREFIX + diagnostic.position())));
         }
         report.linkProblems().forEach((path, problems) -> problems.forEach(problem -> lines.add(
                 Component.text("ERROR " + TachyonPlugin.SCRIPTS_PREFIX + path + ": " + problem, NamedTextColor.RED))));

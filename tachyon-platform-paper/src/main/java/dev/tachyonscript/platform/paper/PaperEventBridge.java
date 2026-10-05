@@ -5,6 +5,7 @@ import dev.tachyonscript.api.registry.SymbolRegistry;
 import dev.tachyonscript.engine.ScriptEngine;
 import dev.tachyonscript.engine.spi.EventBridge;
 import dev.tachyonscript.platform.paper.lib.Screens;
+import dev.tachyonscript.platform.paper.lib.ScriptMenu;
 import org.bukkit.Bukkit;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
@@ -12,6 +13,8 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.Plugin;
@@ -103,6 +106,13 @@ final class PaperEventBridge implements EventBridge {
                 };
                 try {
                     Bukkit.getPluginManager().registerEvent(type, listener, PRIORITIES.get(priority), (ignored, fired) -> {
+                        // MenuListener owns every click/drag in a ScriptMenu view, including
+                        // bottom slots and outside clicks. Generic handlers must not undo its
+                        // cancellation or manipulate its cursor/items, at any priority.
+                        if ((fired instanceof InventoryClickEvent || fired instanceof InventoryDragEvent)
+                                && ((InventoryEvent) fired).getView().getTopInventory().getHolder(false) instanceof ScriptMenu) {
+                            return;
+                        }
                         // Subclass events share the handler list of their parent; accept exact matches and subclasses only.
                         if (type.isInstance(fired)) {
                             ScriptEngine current = engine;

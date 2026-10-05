@@ -2,7 +2,7 @@
 
 What exists today, what is partial, and what is planned. This page is updated with
 every milestone; anything not listed as implemented should be assumed missing.
-Version: 0.2.0-SNAPSHOT (language level 2).
+Version: 0.5.1-SNAPSHOT (language level 2).
 
 ## Summary
 
@@ -17,7 +17,7 @@ Version: 0.2.0-SNAPSHOT (language level 2).
 | Commands, scheduling, lifecycle hooks, daily tasks | Implemented |
 | Saved variables (`persistent`, `playerdata`) with SQLite / MySQL storage | Implemented |
 | Databases in scripts (`Database`, `Sql`, async queries) | Implemented |
-| Standard library (~150 types, ~900 members, 111 events), generated from specifications | Implemented |
+| Standard library (111 events, typed extensions), generated from specifications | Implemented; see the exact [API reference](language/reference.md) |
 | Menus, boss bars, sidebars, titles, tab list, text displays | Implemented |
 | Vault and PlaceholderAPI integration | Implemented |
 | Paper/Folia platform | Implemented; verified on a live Paper 1.21.11 server (self-test script); Folia not yet run live |
@@ -54,6 +54,12 @@ Version: 0.2.0-SNAPSHOT (language level 2).
 
 * Incremental reload by content hash with a module graph: changed modules and the
   modules importing them are recompiled.
+* Selected-file reload uses active sources for importers and leaves unrelated disk
+  edits alone. Persistent emergency stop revokes scripts and their dependents.
+* ScriptMenu click/drag views are isolated from generic handlers at every priority.
+* Typed statistics, metadata, BlockData, signs and display/math extensions are
+  implemented. The [Skript audit](skript-audit/README.md) is partial, with 912 source
+  classes still unreviewed; no full parity claim is made.
 * Optimizer: only removal of unreachable blocks. Constant expressions are folded by
   the type checker. Planned: constant/copy propagation, dead code elimination, branch
   folding, slot reuse, superinstructions.

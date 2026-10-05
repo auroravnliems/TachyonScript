@@ -1,5 +1,6 @@
 plugins {
     id("tachyon.java-conventions")
+    id("com.gradleup.shadow") version "9.6.1"
 }
 
 description = "The TachyonScript Paper plugin."
@@ -26,15 +27,18 @@ tasks.processResources {
     }
 }
 
-// The plugin jar bundles the TachyonScript modules. Paper provides Bukkit and Adventure at
-// runtime, and there are no other runtime dependencies, so no shading/relocation is needed.
-tasks.jar {
+// Keep the established artifact name; HTTP libraries are isolated from other server plugins.
+tasks.jar { enabled = false; dependsOn(tasks.shadowJar) }
+tasks.shadowJar {
     archiveBaseName = "TachyonScript"
-    dependsOn(configurations.runtimeClasspath)
-    from({
-        configurations.runtimeClasspath.get().filter { it.name.endsWith(".jar") }.map { zipTree(it) }
-    }) {
-        exclude("META-INF/MANIFEST.MF", "META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA")
-    }
+    archiveClassifier = ""
+    relocate("okhttp3", "dev.tachyonscript.internal.okhttp3")
+    relocate("okio", "dev.tachyonscript.internal.okio")
+    relocate("kotlin", "dev.tachyonscript.internal.kotlin")
+    relocate("org.jetbrains.annotations", "dev.tachyonscript.internal.annotations")
+    mergeServiceFiles()
+    exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA")
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    filesMatching(listOf("META-INF/*.kotlin_module", "META-INF/services/**")) { duplicatesStrategy = DuplicatesStrategy.INCLUDE }
 }
+tasks.assemble { dependsOn(tasks.shadowJar) }

@@ -244,7 +244,7 @@ final class CommandManager {
         try {
             Interpreter.call(entry.function(), call);
         } catch (ScriptRuntimeException error) {
-            engine.errors().report(entry.script().path(), error);
+            if (error.kind() != ScriptRuntimeException.Kind.SECURITY_REVOKED) engine.errors().report(entry.script().path(), error);
             send(sender, messages.error(), Map.of());
         } finally {
             if (start != 0) {

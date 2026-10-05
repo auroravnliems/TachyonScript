@@ -37,6 +37,9 @@ import dev.tachyonscript.runtime.link.LinkException;
 import dev.tachyonscript.runtime.link.LinkedModule;
 import dev.tachyonscript.runtime.link.Linker;
 import dev.tachyonscript.runtime.value.GlobalCell;
+import dev.tachyonscript.security.SecurityDecision;
+import dev.tachyonscript.security.SecurityOptions;
+import dev.tachyonscript.security.SecurityService;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -91,13 +94,16 @@ public final class ScriptEngine {
     private final DataStore data;
     private final Databases databases;
     private final CommandManager commands;
+    private final SecurityService security;
+    private ScriptControls controls = new ScriptControls();
     private final ReentrantLock loadLock = new ReentrantLock();
     private final Map<CompiledFunction, Long> slowReported = new ConcurrentHashMap<>();
     private volatile Generation current;
     private volatile boolean timed;
+    private volatile long slowThresholdNanos;
     private volatile Map<String, Placeholder> placeholders = Map.of();
     private long nextGeneration = 1;
-    private boolean closed;
+    private volatile boolean closed;
 
     /** A placeholder declared by a script. */
     private record Placeholder(LoadedScript script, CompiledFunction function) {
@@ -105,9 +111,23 @@ public final class ScriptEngine {
 
     public ScriptEngine(SymbolRegistry registry, Platform platform, EngineOptions options,
                         InternalErrorHandler internalErrors) {
+        this(registry, platform, options, internalErrors, defaultSecurity(platform));
+    }
+
+    private static SecurityService defaultSecurity(Platform platform) {
+        try {
+            return new SecurityService(SecurityOptions.defaults(), new dev.tachyonscript.security.SecurityAuditStore(null),
+                    incident -> platform.logger().warn(dev.tachyonscript.security.SecurityMessages.detail(incident, true)),
+                    message -> platform.logger().error(message));
+        } catch (IOException e) { throw new IllegalStateException("Cannot initialize script security", e); }
+    }
+
+    public ScriptEngine(SymbolRegistry registry, Platform platform, EngineOptions options,
+                        InternalErrorHandler internalErrors, SecurityService security) {
         this.registry = registry;
         this.platform = platform;
         this.options = options;
+        this.security = security;
         this.compiler = new Compiler(registry, options.compiler(), internalErrors);
         this.errors = new ErrorReporter(platform.logger(), options.debug());
         this.databases = new Databases(options.databases(), options.databaseFolder());
@@ -119,6 +139,7 @@ public final class ScriptEngine {
         this.commands = new CommandManager(this, platform, options.messages());
         this.current = new Generation(0, Map.of(), HandlerTable.empty(registry), List.of());
         this.timed = options.slowThresholdNanos() > 0;
+        this.slowThresholdNanos = options.slowThresholdNanos();
         ExecutionStack.configure(options.limits());
     }
 
@@ -158,6 +179,31 @@ public final class ScriptEngine {
         return platform;
     }
 
+    public SecurityService security() { return security; }
+
+    public ScriptControls controls() { return controls; }
+
+    /** Installs persistent operator switches before the first load. */
+    public void controls(ScriptControls controls) {
+        if (current.id() != 0) throw new IllegalStateException("Script controls must be installed before loading");
+        this.controls = java.util.Objects.requireNonNull(controls);
+    }
+
+    /** Emergency stop: includes importers, skips unload hooks and never waits for compilation. */
+    public Set<String> disable(Set<String> paths, boolean all) throws IOException {
+        Set<String> affected = all ? Set.copyOf(current.scripts().keySet())
+                : Set.copyOf(securityDependents(paths, current.scripts().values()));
+        try { controls.disable(affected, all); }
+        finally { revokeSecurity(affected); }
+        return affected;
+    }
+
+    public void slowWarnings(long thresholdNanos) {
+        if (thresholdNanos < 0) throw new IllegalArgumentException("Negative warning threshold");
+        slowThresholdNanos = thresholdNanos;
+        timed = profiler.isEnabled() || thresholdNanos > 0;
+    }
+
     public void startProfiling() {
         profiler.start();
         timed = true;
@@ -165,7 +211,7 @@ public final class ScriptEngine {
 
     public void stopProfiling() {
         profiler.stop();
-        timed = options.slowThresholdNanos() > 0;
+        timed = slowThresholdNanos > 0;
     }
 
     /** Replaces the messages sent by script commands (after a configuration reload). */
@@ -185,6 +231,20 @@ public final class ScriptEngine {
      * are recompiled even if unchanged.
      */
     public LoadReport load(ScriptSource source, Set<String> forceRecompile) {
+        return load(source, forceRecompile, false);
+    }
+
+    /**
+     * Applies only these files. Importers are recompiled from their active source versions;
+     * unrelated edits, additions and deletions on disk are not applied. The affected group
+     * rolls back together if any compilation/link fails.
+     */
+    public LoadReport reload(ScriptSource source, Set<String> paths) {
+        if (paths.isEmpty()) throw new IllegalArgumentException("A targeted reload needs at least one path");
+        return load(source, Set.copyOf(paths), true);
+    }
+
+    private LoadReport load(ScriptSource source, Set<String> forceRecompile, boolean selected) {
         long start = System.nanoTime();
         boolean onGlobal = platform.scheduler().isGlobalThread();
         try {
@@ -197,32 +257,44 @@ public final class ScriptEngine {
             return failure(current, start, "The load was interrupted.");
         }
         try {
-            return loadLocked(source, forceRecompile, start);
+            return loadLocked(source, forceRecompile, start, 0, selected);
         } finally {
             loadLock.unlock();
         }
     }
 
-    private LoadReport loadLocked(ScriptSource source, Set<String> forceRecompile, long start) {
+    private LoadReport loadLocked(ScriptSource source, Set<String> forceRecompile, long start, int attempt, boolean selected) {
         Generation previous = current;
+        long controlRevision = controls.revision();
+        Map<String, LoadedScript> snapshot = previous.scripts();
+        ScriptSource effective = () -> {
+            Map<String, SourceFile> sources = new LinkedHashMap<>();
+            if (selected) snapshot.forEach((path, script) -> sources.put(path, script.compiled().file()));
+            if (selected) forceRecompile.forEach(sources::remove);
+            for (SourceFile file : selected ? source.read(forceRecompile) : source.read()) sources.put(file.path(), file);
+            return sources.values().stream().filter(file -> controls.allowed(file.path())).toList();
+        };
         if (closed) {
             return failure(previous, start, "The engine has been shut down.");
         }
         List<SourceFile> files;
         try {
-            files = source.read();
+            files = effective.read();
         } catch (IOException | RuntimeException e) {
             return failure(previous, start, "Cannot read scripts: " + e.getMessage());
         }
         Map<String, SourceFile> byPath = new LinkedHashMap<>();
         files.stream().sorted(Comparator.comparing(SourceFile::path)).forEach(file -> byPath.put(file.path(), file));
+        security.register(files);
+        if (security.options().enabled() && security.options().ai().enabled() && platform.scheduler().isTickThread())
+            return failure(previous, start, "AI security review must run on a background thread; pending scripts were not activated.");
         Map<String, LoadedScript> previousScripts = previous.scripts();
 
         // 1. What changes: new or edited files, forced ones, and every script importing a module that changes.
         Set<String> changed = new TreeSet<>();
         for (SourceFile file : byPath.values()) {
             LoadedScript old = previousScripts.get(file.path());
-            if (old == null || !old.hash().equals(file.hash()) || forceRecompile.contains(file.path())) {
+            if (old == null || !old.isActive() || !old.hash().equals(file.hash()) || forceRecompile.contains(file.path())) {
                 changed.add(file.path());
             }
         }
@@ -274,13 +346,51 @@ public final class ScriptEngine {
             }
         }
 
+        // Security operates on bound modules before any module is linked or made executable.
+        Map<String, BoundModule> securityModules = new LinkedHashMap<>();
+        reused.values().forEach(script -> securityModules.put(script.path(), script.compiled().bound()));
+        result.modules().stream().filter(module -> module.bound() != null)
+                .forEach(module -> securityModules.put(module.file().path(), module.bound()));
+        List<BoundModule> securityInput = List.copyOf(securityModules.values());
+        SecurityService.Batch review = security.review(securityInput);
+        if (closed) return failure(current, start, "Engine closed during security review.");
+        if (!unchanged(effective, byPath)) {
+            if (attempt < 3) return loadLocked(source, forceRecompile, start, attempt + 1, selected);
+            return failure(current, start, "Sources changed repeatedly during security review; stale decisions were discarded.");
+        }
+        Set<String> denied = new HashSet<>(review.denied());
+        for (String path : byPath.keySet()) if (security.blocked(path)) denied.add(path);
+        denied.addAll(securityDependents(denied, previousScripts.values()));
+        // Stop in-flight instructions before audit fsync or platform-thread cleanup can wait.
+        denied.forEach(path -> { LoadedScript active = current.scripts().get(path); if (active != null) active.revokeSecurity(); });
+        try {
+            security.commit(new SecurityService.Batch(review.reviews(), denied, review.pending(), review.policyVersion()), securityInput);
+        } catch (IOException | RuntimeException error) {
+            // Revocation is independent of audit/transport availability and of strict reload rollback.
+            denied.addAll(byPath.keySet().stream().filter(security::blocked).toList());
+            revokeSecurity(denied);
+            return failure(current, start, "Security audit/notification commit failed; pending revisions were not activated.");
+        }
+        revokeSecurity(denied);
+        previous = current;
+        Set<String> ineligible = new HashSet<>(denied);
+        ineligible.addAll(review.pending());
+        reused.keySet().removeAll(denied);
+        succeeded.removeIf(module -> ineligible.contains(module.file().path()));
+        for (String path : ineligible) {
+            if (!failed.contains(path)) failed.add(path);
+            linkProblems.put(path, List.of(denied.contains(path) ? "Security denied activation; previous runtime revoked. Use /tys security incidents."
+                    : "Required security review is pending; this revision was not activated."));
+        }
+
         // 3. Link in import order.
         Map<String, LoadedScript> byModule = new HashMap<>();
         reused.values().forEach(script -> byModule.put(script.module(), script));
         List<LoadedScript> prepared = new ArrayList<>();
         for (CompiledModule module : importOrder(succeeded)) {
             String path = module.file().path();
-            LoadedScript script = new LoadedScript(path, module.file().hash(), module);
+            LoadedScript script = new LoadedScript(path, module.file().hash(), module, security.revocation(path),
+                    () -> security.options().maxPendingTasks(), () -> controls.allowed(path));
             ModuleEnvironment environment = new ModuleEnvironment(script, byModule::get, data, platform.players());
             try {
                 LinkedModule linked = Linker.link(Assembler.assemble(module.ir()), bindings, platform.text(), environment);
@@ -297,7 +407,7 @@ public final class ScriptEngine {
         }
 
         List<Diagnostic> diagnostics = result.diagnostics().sorted();
-        if (!failed.isEmpty() && options.mode() == LoadMode.STRICT) {
+        if (!failed.isEmpty() && (selected || options.mode() == LoadMode.STRICT)) {
             return new LoadReport(false, previous.id(), previous.scripts().size(), changed.size(), reused.size(), failed,
                     List.of(), previous.handlers().size(), diagnostics, linkProblems, result.timings(),
                     System.nanoTime() - start, null);
@@ -307,7 +417,7 @@ public final class ScriptEngine {
         List<String> keptPrevious = new ArrayList<>();
         for (String path : failed) {
             LoadedScript old = previousScripts.get(path);
-            if (old != null && byPath.containsKey(path)) {
+            if (old != null && old.isActive() && !denied.contains(path) && byPath.containsKey(path)) {
                 next.put(path, old);
                 keptPrevious.add(path);
             }
@@ -319,10 +429,99 @@ public final class ScriptEngine {
             }
         }
         Generation generation = build(next);
-        activate(generation, retiring, prepared);
+        if (closed) return failure(current, start, "Engine closed before security-approved activation.");
+        if (!unchanged(effective, byPath)) {
+            if (attempt < 3) return loadLocked(source, forceRecompile, start, attempt + 1, selected);
+            return failure(current, start, "Sources changed before activation; stale linked revisions were discarded.");
+        }
+        if (controls.revision() != controlRevision)
+            return failure(current, start, "Script enable/disable state changed during loading. Reload again when ready.");
+        try { activate(generation, retiring, prepared, controlRevision); }
+        catch (IllegalStateException error) { return failure(current, start, error.getMessage()); }
         return new LoadReport(true, generation.id(), generation.scripts().size(), changed.size(), reused.size(), failed,
                 keptPrevious, generation.handlers().size(), diagnostics, linkProblems, result.timings(),
                 System.nanoTime() - start, null);
+    }
+
+    private static boolean unchanged(ScriptSource source, Map<String, SourceFile> snapshot) {
+        try {
+            List<SourceFile> current = source.read();
+            return current.size() == snapshot.size() && current.stream().allMatch(file -> snapshot.containsKey(file.path())
+                    && snapshot.get(file.path()).hash().equals(file.hash()));
+        } catch (IOException | RuntimeException e) { return false; }
+    }
+
+    private static Set<String> securityDependents(Set<String> roots, java.util.Collection<LoadedScript> scripts) {
+        Set<String> denied = new HashSet<>(roots), modules = new HashSet<>();
+        boolean grew;
+        do {
+            grew = false;
+            for (LoadedScript script : scripts) {
+                if (denied.contains(script.path())) grew |= modules.add(script.module());
+                if (script.compiled().bound().imports().stream().anyMatch(modules::contains)) grew |= denied.add(script.path());
+            }
+        } while (grew);
+        return denied;
+    }
+
+    /** Revoke tokens first, then retire without invoking untrusted unload hooks, and rebuild registrations. */
+    public void revokeSecurity(Set<String> paths) {
+        if (paths.isEmpty()) return;
+        Set<String> denied = securityDependents(paths, current.scripts().values());
+        for (LoadedScript script : current.scripts().values()) if (denied.contains(script.path())) script.revokeSecurity();
+        onGlobalThread(() -> {
+            Map<String, LoadedScript> remaining = new LinkedHashMap<>(current.scripts());
+            for (String path : denied) {
+                LoadedScript script = remaining.remove(path);
+                if (script != null) retire(script);
+            }
+            current = build(remaining);
+            commands.update(remaining.values());
+            placeholders = collectPlaceholders(current);
+            platform.events().activeEventsChanged(current.activePriorities());
+            data.flushLater();
+        });
+    }
+
+    public void securityDisable(String path, SecurityDecision decision, String actor) throws IOException {
+        securityDisable(path, decision, actor, securityAffected(path));
+    }
+    public Set<String> securityAffected(String path) {
+        security.registeredFile(path);
+        return Set.copyOf(securityDependents(Set.of(path), current.scripts().values()));
+    }
+    public void securityDisable(String path, SecurityDecision decision, String actor, Set<String> affected) throws IOException {
+        if (!decision.deniesExecution()) throw new IllegalArgumentException("Expected a security disable/quarantine");
+        for (String registered : affected) security.registeredFile(registered);
+        security.blockNow(path);
+        revokeSecurity(affected);
+        security.manual(path, decision, affected.stream().filter(p -> !p.equals(path)).sorted().toList(), actor);
+        for (String dependent : affected) if (!dependent.equals(path))
+            security.manual(dependent, SecurityDecision.DISABLE, List.of(), actor);
+    }
+
+    /** Scan without activating allowed edits. Security denials still retire active code immediately. */
+    public SecurityService.Batch scanSecurity(ScriptSource source) throws IOException {
+        if (platform.scheduler().isTickThread()) throw new IOException("Security scans must run on a background thread");
+        loadLock.lock();
+        try {
+            for (int attempt = 0; attempt < 4; attempt++) {
+                if (closed) throw new IOException("Engine closed");
+                List<SourceFile> files = source.read(); security.register(files);
+                Map<String, SourceFile> snapshot = new LinkedHashMap<>(); files.forEach(file -> snapshot.put(file.path(), file));
+                CompilationResult compiled = compiler.compile(files, Map.of());
+                List<BoundModule> modules = compiled.modules().stream().map(CompiledModule::bound).filter(java.util.Objects::nonNull).toList();
+                SecurityService.Batch batch = security.review(modules);
+                if (!unchanged(source, snapshot)) continue;
+                securityDependents(batch.denied(), current.scripts().values()).forEach(path -> {
+                    LoadedScript active = current.scripts().get(path); if (active != null) active.revokeSecurity();
+                });
+                try { security.commit(batch, modules); }
+                finally { revokeSecurity(batch.denied()); }
+                return batch;
+            }
+            throw new IOException("Sources changed during scan; stale results discarded");
+        } finally { loadLock.unlock(); }
     }
 
     private LoadReport failure(Generation previous, long start, String message) {
@@ -365,10 +564,19 @@ public final class ScriptEngine {
 
     // =================================================================== activation
 
-    private void activate(Generation generation, List<LoadedScript> retiring, List<LoadedScript> starting) {
+    private void activate(Generation generation, List<LoadedScript> retiring, List<LoadedScript> starting, long controlRevision) {
         onGlobalThread(() -> {
-            errors.clear();
-            slowReported.clear();
+            synchronized (controls) {
+            if (controls.revision() != controlRevision)
+                throw new IllegalStateException("Script enable/disable state changed before activation; reload required");
+            if (closed) throw new IllegalStateException("Engine closed before activation");
+            if (generation.scripts().values().stream().anyMatch(LoadedScript::securityRevoked))
+                throw new IllegalStateException("Security state changed before activation; reload required");
+            Set<String> replaced = new HashSet<>();
+            retiring.forEach(script -> replaced.add(script.path()));
+            starting.forEach(script -> replaced.add(script.path()));
+            errors.clear(replaced);
+            slowReported.keySet().removeIf(function -> replaced.contains(function.source().path()));
             for (int i = retiring.size() - 1; i >= 0; i--) {
                 retire(retiring.get(i));
             }
@@ -393,6 +601,7 @@ public final class ScriptEngine {
             if (!retiring.isEmpty()) {
                 data.flushLater();
             }
+            }
         });
     }
 
@@ -401,7 +610,7 @@ public final class ScriptEngine {
         if (script.state() == LoadedScript.State.RETIRED) {
             return;
         }
-        if (script.isActive()) {
+        if (script.isActive() && !script.securityRevoked()) {
             for (BoundFunction hook : script.compiled().bound().unloadHooks()) {
                 script.linked().function(hook.key()).ifPresent(function -> runSafely(script, function));
             }
@@ -511,7 +720,7 @@ public final class ScriptEngine {
         try {
             return Interpreter.call(function, arguments);
         } catch (ScriptRuntimeException error) {
-            errors.report(script.path(), error);
+            if (error.kind() != ScriptRuntimeException.Kind.SECURITY_REVOKED) errors.report(script.path(), error);
         } catch (RuntimeException error) {
             platform.logger().error("Internal error while running " + function.displayName() + " of " + script.path()
                     + ": " + error);
@@ -537,9 +746,10 @@ public final class ScriptEngine {
         if (profiler.isEnabled()) {
             profiler.record(function, elapsed);
         }
-        long threshold = options.slowThresholdNanos();
+        long threshold = slowThresholdNanos;
         // Only outermost executions: nested ones are part of their caller's time.
-        if (threshold > 0 && elapsed > threshold && ExecutionStack.current().depth() == 0) {
+        if (threshold > 0 && elapsed > threshold && ExecutionStack.current().depth() == 0
+                && platform.scheduler().isTickThread()) {
             reportSlow(function, elapsed);
         }
     }
@@ -551,10 +761,11 @@ public final class ScriptEngine {
             return;
         }
         CountDownLatch done = new CountDownLatch(1);
+        java.util.concurrent.atomic.AtomicBoolean cancelled = new java.util.concurrent.atomic.AtomicBoolean();
         RuntimeException[] failure = new RuntimeException[1];
         scheduler.runGlobal(() -> {
             try {
-                action.run();
+                if (!cancelled.get()) action.run();
             } catch (RuntimeException e) {
                 failure[0] = e;
             } finally {
@@ -563,11 +774,13 @@ public final class ScriptEngine {
         });
         try {
             if (!done.await(ACTIVATION_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
-                platform.logger().error("The server thread did not run the script activation within "
-                        + ACTIVATION_TIMEOUT_SECONDS + " seconds.");
+                cancelled.set(true);
+                throw new IllegalStateException("Server-thread activation timed out; queued activation cancelled");
             }
         } catch (InterruptedException e) {
+            cancelled.set(true);
             Thread.currentThread().interrupt();
+            throw new IllegalStateException("Script activation interrupted and cancelled", e);
         }
         if (failure[0] != null) {
             throw failure[0];
@@ -576,14 +789,11 @@ public final class ScriptEngine {
 
     /** Deactivates every script (plugin shutdown) and writes the saved variables. Later loads are refused. */
     public void shutdown() {
-        loadLock.lock();
-        try {
-            if (closed) {
-                return;
-            }
-            closed = true;
-            Generation last = current;
-            onGlobalThread(() -> {
+        if (closed) return;
+        closed = true;
+        security.close();
+        Generation last = current;
+        onGlobalThread(() -> {
                 List<LoadedScript> scripts = new ArrayList<>(last.scripts().values());
                 for (int i = scripts.size() - 1; i >= 0; i--) {
                     retire(scripts.get(i));
@@ -596,11 +806,15 @@ public final class ScriptEngine {
                     platform.logger().warn("Cannot unregister script commands: " + e.getMessage());
                 }
                 platform.events().activeEventsChanged(Map.of());
+        });
+        if (loadLock.tryLock()) {
+            try { data.close(); databases.close(); } finally { loadLock.unlock(); }
+        } else {
+            // The global thread cannot wait for a loader which is itself waiting for that thread.
+            Thread.ofVirtual().name("TachyonScript-Shutdown").start(() -> {
+                loadLock.lock();
+                try { data.close(); databases.close(); } finally { loadLock.unlock(); }
             });
-        } finally {
-            loadLock.unlock();
-            data.close();
-            databases.close();
         }
     }
 
@@ -635,7 +849,7 @@ public final class ScriptEngine {
             try {
                 Interpreter.invokeHandler(handler.function(), event);
             } catch (ScriptRuntimeException error) {
-                errors.report(handler, error);
+                if (error.kind() != ScriptRuntimeException.Kind.SECURITY_REVOKED) errors.report(handler, error);
             }
         }
     }
@@ -649,7 +863,7 @@ public final class ScriptEngine {
             try {
                 Interpreter.invokeHandler(handler.function(), event);
             } catch (ScriptRuntimeException error) {
-                errors.report(handler, error);
+                if (error.kind() != ScriptRuntimeException.Kind.SECURITY_REVOKED) errors.report(handler, error);
             }
             measured(handler.function(), start);
         }
@@ -657,11 +871,13 @@ public final class ScriptEngine {
 
     private void reportSlow(CompiledFunction function, long elapsed) {
         long now = System.nanoTime();
-        Long last = slowReported.get(function);
-        if (last != null && now - last < SLOW_REPORT_INTERVAL_NANOS) {
-            return;
-        }
-        slowReported.put(function, now);
+        boolean[] report = {false};
+        slowReported.compute(function, (key, last) -> {
+            if (last != null && now - last < SLOW_REPORT_INTERVAL_NANOS) return last;
+            report[0] = true;
+            return now;
+        });
+        if (!report[0]) return;
         var source = function.source();
         int line = source.line(dev.tachyonscript.ir.Spans.start(function.unit().span()));
         platform.logger().warn(String.format(Locale.ROOT, "Slow script execution: %s:%d, %s, %.2f ms",
@@ -797,7 +1013,7 @@ public final class ScriptEngine {
         try {
             return Interpreter.callClosure(closure, arguments);
         } catch (ScriptRuntimeException error) {
-            errors.report(script.path(), error);
+            if (error.kind() != ScriptRuntimeException.Kind.SECURITY_REVOKED) errors.report(script.path(), error);
         } catch (RuntimeException error) {
             platform.logger().error("Internal error while running " + closure.describe() + ": " + error);
         } finally {
@@ -818,7 +1034,7 @@ public final class ScriptEngine {
         try {
             Interpreter.callClosure(block, arguments);
         } catch (ScriptRuntimeException error) {
-            errors.report(script.path(), error);
+            if (error.kind() != ScriptRuntimeException.Kind.SECURITY_REVOKED) errors.report(script.path(), error);
         } catch (RuntimeException error) {
             platform.logger().error("Internal error while running " + block.describe() + ": " + error);
         } finally {

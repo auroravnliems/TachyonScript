@@ -36,7 +36,7 @@ command shop {
 }
 ```
 
-> **Status: 0.2.0-SNAPSHOT.** The language, the standard library (menus, items,
+> **Status: 0.5.1-SNAPSHOT.** The language, the standard library (menus, items,
 > databases, saved data, boss bars, sidebars, Vault, PlaceholderAPI, ...), the
 > Paper/Folia platform and the plugin work, are covered by tests, and have been run on
 > a live Paper 1.21.11 server. There is no published release yet. See
@@ -66,6 +66,11 @@ command shop {
 * **Reloads never break a working server.** `/tys reload` compiles in the background
   and switches atomically; a script with errors keeps its previous working version, and
   everything a reloaded script started (timers, menus, boss bars) is cleaned up.
+
+* **Scripts pass security review before activation.** Compiler-backed static and taint
+  checks report exact source locations and quarantine dangerous code, including active
+  versions and dependents. Optional Qwen review and Discord alerts use configured
+  credentials. See [security configuration and administration](docs/security.md).
 * **Safe by construction.** Values inserted into messages are plain text, so players
   cannot inject formatting; SQL can only be written in the script, so SQL injection is a
   compile error; `null` must be handled before a value is used.
@@ -104,7 +109,7 @@ There is no published release yet; build the plugin from source:
 ./gradlew build
 ```
 
-Copy `tachyon-plugin/build/libs/TachyonScript-0.2.0-SNAPSHOT.jar` into `plugins/`
+Copy `tachyon-plugin/build/libs/TachyonScript-0.5.1-SNAPSHOT.jar` into `plugins/`
 on a Paper or Folia 1.21.x server (Java 21), start it, and edit scripts in
 `plugins/TachyonScript/scripts/`. See [docs/plugin.md](docs/plugin.md) for commands,
 permissions and configuration, and the [wiki](wiki/Home.md) for a guided tour.

@@ -240,7 +240,7 @@ event player.signChange = org.bukkit.event.block.SignChangeEvent cancellable reg
   fn setLine(index: int, text: Component) : Changes a line (0 to 3) before it is saved.
     do: $.line(Math.max(0, Math.min(3, index)), text)
 
-event player.inventoryClick = org.bukkit.event.inventory.InventoryClickEvent cancellable entity : A player clicks a slot of an open inventory (menus made with Menu handle their own clicks).
+event player.inventoryClick = org.bukkit.event.inventory.InventoryClickEvent cancellable entity : A player clicks an inventory; never dispatched while a Menu is open, including bottom and outside slots. Menu owns its clicks.
   var player: Player = Players.of($.getWhoClicked()) : The player.
   var slot: int = $.getSlot() : The slot number in the clicked inventory.
   var rawSlot: int = $.getRawSlot() : The slot number in the whole view (top inventory first).
@@ -253,7 +253,7 @@ event player.inventoryClick = org.bukkit.event.inventory.InventoryClickEvent can
     get: Items.orNull($.getCurrentItem())
     set: $.setCurrentItem(v)
 
-event player.inventoryDrag = org.bukkit.event.inventory.InventoryDragEvent cancellable entity : A player drags items over several slots.
+event player.inventoryDrag = org.bukkit.event.inventory.InventoryDragEvent cancellable entity : A player drags items over several slots; never dispatched while a Menu is open. Menu owns its drag policy.
   var player: Player = Players.of($.getWhoClicked()) : The player.
   var slots: List<int> = new ArrayList<Object>($.getRawSlots()) : The raw slots the items go to.
   var inventory: Inventory = $.getInventory() : The top inventory.

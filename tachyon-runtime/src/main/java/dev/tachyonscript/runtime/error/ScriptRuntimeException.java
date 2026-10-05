@@ -36,6 +36,8 @@ public final class ScriptRuntimeException extends RuntimeException {
         TIMEOUT("timeout", false),
         /** Calls nested too deeply; cannot be caught. */
         RECURSION("recursion", false),
+        /** Security retirement cannot be caught or run a malicious finally/unload block. */
+        SECURITY_REVOKED("security-revoked", false),
         /** Invalid runtime state; indicates a TachyonScript bug. Cannot be caught. */
         INTERNAL("internal", false);
 
@@ -103,16 +105,32 @@ public final class ScriptRuntimeException extends RuntimeException {
     /** Readable report; includes the Java cause only when {@code debug} is set. */
     public String render(boolean debug) {
         StringBuilder out = new StringBuilder("TachyonRuntimeError: ").append(getMessage());
+        if (!frames.isEmpty()) {
+            ScriptFrame first = frames.getFirst();
+            out.append("\n  --> ").append(first.path()).append(':').append(first.line()).append(':')
+                    .append(first.column()).append(" [").append(kind.scriptName()).append(']');
+        }
         for (int i = 0; i < frames.size(); i++) {
             ScriptFrame frame = frames.get(i);
             out.append("\n  at ").append(frame.path()).append(':').append(frame.line())
                     .append(" (").append(frame.function()).append(')');
             if (i == 0 && !frame.lineText().isBlank()) {
-                String text = frame.lineText().replace('\t', ' ');
-                out.append("\n      ").append(text);
-                int column = Math.max(1, frame.column());
-                int length = Math.max(1, Math.min(frame.length(), Math.max(1, text.length() - column + 1)));
-                out.append("\n      ").append(" ".repeat(column - 1)).append("^".repeat(length));
+                String raw = frame.lineText();
+                StringBuilder expanded = new StringBuilder();
+                int from = Math.min(raw.length(), Math.max(0, frame.column() - 1));
+                int to = Math.min(raw.length(), from + Math.max(1, frame.length()));
+                int column = 0, end = 0;
+                for (int c = 0; c < raw.length(); c++) {
+                    if (c == from) column = expanded.length();
+                    if (raw.charAt(c) == '\t') expanded.append(" ".repeat(4 - expanded.length() % 4));
+                    else expanded.append(raw.charAt(c));
+                    if (c < to) end = expanded.length();
+                }
+                if (from == raw.length()) column = expanded.length();
+                String number = Integer.toString(frame.line());
+                out.append("\n  ").append(number).append(" | ").append(expanded);
+                out.append("\n  ").append(" ".repeat(number.length())).append(" | ")
+                        .append(" ".repeat(column)).append("^".repeat(Math.max(1, end - column)));
             }
             // A function calling itself shows up once, not once per call (up to the recursion limit).
             int same = 0;
@@ -125,6 +143,8 @@ public final class ScriptRuntimeException extends RuntimeException {
                         .append(" at the same place");
             }
         }
+        if (!frames.isEmpty()) out.append("\n  Use /tys errors to review; /tys disable ")
+                .append(frames.getFirst().path()).append(" to stop this script.");
         if (debug && getCause() != null) {
             out.append("\n  caused by: ").append(getCause());
         }

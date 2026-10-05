@@ -1,0 +1,244 @@
+# Gaps identified against the supplied Skript source. Uses the existing typed registry and Paper bindings.
+area Extensions
+
+type Statistic keyed=enum:org/bukkit/Statistic.java lookup=enum = org.bukkit.Statistic : A Minecraft statistic, with material or entity parameters where required.
+type DyeColor keyed=enum:org/bukkit/DyeColor.java lookup=enum = org.bukkit.DyeColor : One of Minecraft's sixteen dye colors.
+type SignSide keyed=list:FRONT,BACK lookup=enum = org.bukkit.block.sign.Side : The front or back of a sign.
+type Billboard keyed=list:FIXED,VERTICAL,HORIZONTAL,CENTER lookup=enum = org.bukkit.entity.Display.Billboard : The axes on which a display faces its viewer.
+type ItemDisplayTransform keyed=list:NONE,THIRDPERSON_LEFTHAND,THIRDPERSON_RIGHTHAND,FIRSTPERSON_LEFTHAND,FIRSTPERSON_RIGHTHAND,HEAD,GUI,GROUND,FIXED lookup=enum = org.bukkit.entity.ItemDisplay.ItemDisplayTransform : The model transform of an item display.
+type TextAlignment keyed=list:CENTER,LEFT,RIGHT lookup=enum = org.bukkit.entity.TextDisplay.TextAlignment : Text alignment inside a text display.
+type BlockData = org.bukkit.block.data.BlockData : Typed block state data. Copying and merging create independent values.
+type ItemDisplay extends Display = org.bukkit.entity.ItemDisplay : An entity displaying an item model.
+type BlockDisplay extends Display = org.bukkit.entity.BlockDisplay : An entity displaying a block model.
+type Quaternion = org.joml.Quaternionf : A normalized quaternion describing a rotation.
+type Brightness = org.bukkit.entity.Display.Brightness : A display's block and sky light override, each from 0 to 15.
+type BoundingBox = org.bukkit.util.BoundingBox : An axis-aligned box. Operations return new boxes.
+
+# Statistics use typed overloads, so material/entity arguments cannot be confused.
+fn Player.statistic(statistic: Statistic): int entity reads : A statistic that does not require an extra parameter.
+  do: $.getStatistic(statistic)
+  ex: log(player.statistic(Statistic.JUMP))
+fn Player.statistic(statistic: Statistic, material: Material): int entity reads : A statistic for a block or item material.
+  do: $.getStatistic(statistic, material)
+fn Player.statistic(statistic: Statistic, entity: EntityType): int entity reads : A statistic for an entity type.
+  do: $.getStatistic(statistic, entity)
+fn Player.setStatistic(statistic: Statistic, value: int) entity modifies : Sets an unparameterized statistic to a nonnegative value.
+  do: $.setStatistic(statistic, value)
+fn Player.setStatistic(statistic: Statistic, material: Material, value: int) entity modifies : Sets a material statistic.
+  do: $.setStatistic(statistic, material, value)
+fn Player.setStatistic(statistic: Statistic, entity: EntityType, value: int) entity modifies : Sets an entity statistic.
+  do: $.setStatistic(statistic, entity, value)
+fn Player.incrementStatistic(statistic: Statistic, amount: int) entity modifies : Increases a statistic by a positive amount.
+  do: $.incrementStatistic(statistic, amount)
+fn Player.incrementStatistic(statistic: Statistic, material: Material, amount: int) entity modifies : Increases a material statistic.
+  do: $.incrementStatistic(statistic, material, amount)
+fn Player.incrementStatistic(statistic: Statistic, entity: EntityType, amount: int) entity modifies : Increases an entity statistic.
+  do: $.incrementStatistic(statistic, entity, amount)
+fn Player.decrementStatistic(statistic: Statistic, amount: int) entity modifies : Decreases a statistic by a positive amount.
+  do: $.decrementStatistic(statistic, amount)
+fn Player.decrementStatistic(statistic: Statistic, material: Material, amount: int) entity modifies : Decreases a material statistic.
+  do: $.decrementStatistic(statistic, material, amount)
+fn Player.decrementStatistic(statistic: Statistic, entity: EntityType, amount: int) entity modifies : Decreases an entity statistic.
+  do: $.decrementStatistic(statistic, entity, amount)
+prop Statistic.name: string pure : The enum name of the statistic.
+  get: $.name()
+prop Statistic.parameterType: string pure : UNTYPED, ITEM, BLOCK or ENTITY.
+  get: $.getType().name()
+fn Statistic.values(): List<Statistic> static : All statistic types.
+  do: new ArrayList<Object>(List.of(org.bukkit.Statistic.values()))
+
+# Shared temporary values are owned by the writer's script version and removed when it stops.
+fn Entity.metadata(key: string): any? reads : A shared temporary value, or null; cleared on writer reload/disable or entity removal.
+  do: ctx.metadata().get($, key)
+fn Entity.setMetadata(key: string, value: any?) modifies : Sets temporary metadata. Prefix shared keys with your module; null removes the value.
+  do: ctx.metadata().set($, key, value)
+fn Entity.hasMetadata(key: string): bool reads : Whether temporary metadata exists at a key.
+  do: ctx.metadata().get($, key) != null
+fn Entity.removeMetadata(key: string) modifies : Removes a temporary TachyonScript value.
+  do: ctx.metadata().set($, key, null)
+fn Block.metadata(key: string): any? reads : Temporary metadata of a block, or null; cleared on writer retirement or chunk unload.
+  do: ctx.metadata().get($, key)
+fn Block.setMetadata(key: string, value: any?) modifies : Sets a block's temporary metadata; null removes it.
+  do: ctx.metadata().set($, key, value)
+fn Block.hasMetadata(key: string): bool reads : Whether temporary metadata exists.
+  do: ctx.metadata().get($, key) != null
+fn Block.removeMetadata(key: string) modifies : Removes a block's temporary metadata.
+  do: ctx.metadata().set($, key, null)
+fn World.metadata(key: string): any? reads : Temporary metadata shared across scripts on this world.
+  do: ctx.metadata().get($, key)
+fn World.setMetadata(key: string, value: any?) modifies : Sets a world's temporary metadata; cleared on writer retirement or world unload.
+  do: ctx.metadata().set($, key, value)
+fn World.hasMetadata(key: string): bool reads : Whether the world has a temporary value at this key.
+  do: ctx.metadata().get($, key) != null
+fn World.removeMetadata(key: string) modifies : Removes a world's temporary value.
+  do: ctx.metadata().set($, key, null)
+
+fn BlockData(text: string): BlockData : Parses a namespaced block state, such as minecraft:oak_stairs[facing=east].
+  do: Extensions.blockData(text)
+  ex: let stairs = BlockData("minecraft:oak_stairs[facing=east]")
+fn Material.createBlockData(): BlockData : Default state of a block material; an error for a non-block material.
+  do: $.createBlockData()
+prop Block.data: BlockData rw region : The typed block state (a copy); assignment applies it to the block. blockData remains the string API.
+  get: $.getBlockData()
+  set: $.setBlockData(v)
+fn Block.setBlockData(data: BlockData, physics: bool) region modifies : Applies a typed state with optional physics updates.
+  do: $.setBlockData(data, physics)
+prop BlockData.material: Material pure : The material of this block state.
+  get: $.getMaterial()
+prop BlockData.asString: string pure : The full namespaced block state string.
+  get: $.getAsString()
+prop BlockData.lightEmission: int pure : Emitted light level from 0 to 15.
+  get: $.getLightEmission()
+prop BlockData.occluding: bool pure : Whether this state occludes light.
+  get: $.isOccluding()
+prop BlockData.requiresCorrectTool: bool pure : Whether the right tool is required for drops.
+  get: $.requiresCorrectToolForDrops()
+prop BlockData.replaceable: bool pure : Whether placement can replace this block.
+  get: $.isReplaceable()
+prop BlockData.mapColor: Color pure : Color shown on a map.
+  get: $.getMapColor()
+fn BlockData.matches(other: BlockData): bool pure : Matches properties explicitly set in the other parsed data.
+  do: $.matches(other)
+fn BlockData.merge(other: BlockData): BlockData pure : New data with explicitly set properties from compatible parsed data.
+  do: Extensions.merge($, other)
+fn BlockData.copy(): BlockData pure : An independent copy of the block data.
+  do: $.clone()
+fn BlockData.isPreferredTool(tool: ItemStack): bool pure : Whether the tool is appropriate for this block.
+  do: $.isPreferredTool(tool)
+fn BlockData.toString(): string pure : The full block state string.
+  do: $.getAsString()
+
+fn Block.signLine(side: SignSide, index: int): Component region reads : A sign line on either side; index is 0 to 3. Errors if not a sign.
+  do: Extensions.signLine($, side, index)
+fn Block.setSignLine(side: SignSide, index: int, text: Component) region modifies : Writes one line on the selected side and updates the sign.
+  do: Extensions.signLine($, side, index, text)
+fn Block.signGlowing(side: SignSide): bool region reads : Whether a side uses glowing text.
+  do: Extensions.signGlowing($, side)
+fn Block.setSignGlowing(side: SignSide, value: bool) region modifies : Changes glowing text on one side.
+  do: Extensions.signGlowing($, side, value)
+fn Block.signColor(side: SignSide): DyeColor region reads : The text dye color of a sign side.
+  do: Extensions.signColor($, side)
+fn Block.setSignColor(side: SignSide, color: DyeColor) region modifies : Changes the text dye color of a sign side.
+  do: Extensions.signColor($, side, color)
+prop Block.signWaxed: bool rw region : Whether the sign is waxed; an error for a non-sign block.
+  get: Extensions.signWaxed($)
+  set: Extensions.signWaxed($, v)
+
+prop Display.billboardMode: Billboard rw entity : How the display faces its viewer.
+  get: $.getBillboard()
+  set: $.setBillboard(v)
+prop Display.interpolationDuration: int rw entity : Transformation interpolation time in ticks.
+  get: $.getInterpolationDuration()
+  set: $.setInterpolationDuration(v)
+prop Display.interpolationDelay: int rw entity : Delay before interpolation starts, in ticks.
+  get: $.getInterpolationDelay()
+  set: $.setInterpolationDelay(v)
+prop Display.teleportDuration: int rw entity : Position interpolation time in ticks, from 0 to 59.
+  get: $.getTeleportDuration()
+  set: $.setTeleportDuration(v)
+prop Display.viewRange: double rw entity : Visibility multiplier (1 is the default).
+  get: $.getViewRange()
+  set: $.setViewRange((float) v)
+prop Display.shadowRadius: double rw entity : Radius of the display's shadow.
+  get: $.getShadowRadius()
+  set: $.setShadowRadius((float) v)
+prop Display.shadowStrength: double rw entity : Opacity of the display's shadow.
+  get: $.getShadowStrength()
+  set: $.setShadowStrength((float) v)
+prop Display.displayWidth: double rw entity : Width used for visibility culling.
+  get: $.getDisplayWidth()
+  set: $.setDisplayWidth((float) v)
+prop Display.displayHeight: double rw entity : Height used for visibility culling.
+  get: $.getDisplayHeight()
+  set: $.setDisplayHeight((float) v)
+prop Display.glowColor: Color? rw entity : Glowing outline color, or null to use the team color.
+  get: $.getGlowColorOverride()
+  set: $.setGlowColorOverride(v)
+prop Display.brightness: Brightness? rw entity : Light override, or null for natural lighting.
+  get: $.getBrightness()
+  set: $.setBrightness(v)
+prop Display.translation: Vector rw entity : Translation relative to the entity location; getter returns a copy.
+  get: Extensions.vector($.getTransformation().getTranslation())
+  set: Extensions.translation($, v)
+prop Display.displayScale: Vector rw entity : Separate x/y/z scale factors; getter returns a copy.
+  get: Extensions.vector($.getTransformation().getScale())
+  set: Extensions.scale($, v)
+prop Display.leftRotation: Quaternion rw entity : Rotation before scaling; getter returns a copy.
+  get: new org.joml.Quaternionf($.getTransformation().getLeftRotation())
+  set: Extensions.rotation($, v, true)
+prop Display.rightRotation: Quaternion rw entity : Rotation after scaling; getter returns a copy.
+  get: new org.joml.Quaternionf($.getTransformation().getRightRotation())
+  set: Extensions.rotation($, v, false)
+prop ItemDisplay.item: ItemStack rw entity : The displayed item (a copy).
+  get: $.getItemStack()
+  set: $.setItemStack(v)
+prop ItemDisplay.transform: ItemDisplayTransform rw entity : The item model's pose.
+  get: $.getItemDisplayTransform()
+  set: $.setItemDisplayTransform(v)
+prop BlockDisplay.blockData: BlockData rw entity : The displayed block state (a copy).
+  get: $.getBlock()
+  set: $.setBlock(v)
+prop TextDisplay.alignment: TextAlignment rw entity : Alignment within the text box.
+  get: $.getAlignment()
+  set: $.setAlignment(v)
+prop TextDisplay.opacity: int rw entity : Unsigned text opacity from 0 to 255; 255 is fully opaque.
+  get: Byte.toUnsignedInt($.getTextOpacity())
+  set: $.setTextOpacity((byte) Math.clamp(v, 0, 255))
+prop TextDisplay.defaultBackground: bool rw entity : Whether to use the default background color.
+  get: $.isDefaultBackground()
+  set: $.setDefaultBackground(v)
+fn Brightness(blockLight: int, skyLight: int): Brightness pure : A light override; values must be from 0 to 15.
+  do: Extensions.brightness(blockLight, skyLight)
+prop Brightness.blockLight: int pure : Overridden block light.
+  get: $.getBlockLight()
+prop Brightness.skyLight: int pure : Overridden sky light.
+  get: $.getSkyLight()
+fn Quaternion(x: double, y: double, z: double, w: double): Quaternion pure : Creates and normalizes a finite, nonzero rotation quaternion.
+  do: Extensions.quaternion(x, y, z, w)
+fn Quaternion.axisAngle(axis: Vector, radians: double): Quaternion static pure : A rotation about a nonzero axis by an angle in radians.
+  do: Extensions.axisAngle(axis, radians)
+prop Quaternion.x: double pure : The x component.
+  get: $.x()
+prop Quaternion.y: double pure : The y component.
+  get: $.y()
+prop Quaternion.z: double pure : The z component.
+  get: $.z()
+prop Quaternion.w: double pure : The w component.
+  get: $.w()
+fn Quaternion.copy(): Quaternion pure : An independent copy.
+  do: new org.joml.Quaternionf($)
+
+fn BoundingBox(x1: double, y1: double, z1: double, x2: double, y2: double, z2: double): BoundingBox pure : A box between two opposite corners; coordinates are normalized.
+  do: new org.bukkit.util.BoundingBox(x1, y1, z1, x2, y2, z2)
+prop Entity.boundingBox: BoundingBox entity reads : A copy of the entity's current collision box.
+  get: $.getBoundingBox()
+prop Block.boundingBox: BoundingBox region reads : A copy of the block's bounding box in world coordinates.
+  get: $.getBoundingBox()
+prop BoundingBox.min: Vector pure : Minimum corner as a new vector.
+  get: $.getMin()
+prop BoundingBox.max: Vector pure : Maximum corner as a new vector.
+  get: $.getMax()
+prop BoundingBox.center: Vector pure : Center as a new vector.
+  get: $.getCenter()
+prop BoundingBox.volume: double pure : Volume in cubic blocks.
+  get: $.getVolume()
+prop BoundingBox.width: double pure : Width along x.
+  get: $.getWidthX()
+prop BoundingBox.height: double pure : Height along y.
+  get: $.getHeight()
+prop BoundingBox.depth: double pure : Width along z.
+  get: $.getWidthZ()
+fn BoundingBox.contains(point: Vector): bool pure : Whether a point is inside; maximum faces are excluded.
+  do: $.contains(point)
+fn BoundingBox.contains(other: BoundingBox): bool pure : Whether this box completely contains another box.
+  do: $.contains(other)
+fn BoundingBox.overlaps(other: BoundingBox): bool pure : Whether boxes overlap with positive extent.
+  do: $.overlaps(other)
+fn BoundingBox.expand(amount: double): BoundingBox pure : An expanded copy (negative amounts shrink it).
+  do: $.clone().expand(amount)
+fn BoundingBox.shift(offset: Vector): BoundingBox pure : A translated copy.
+  do: $.clone().shift(offset)
+fn BoundingBox.union(other: BoundingBox): BoundingBox pure : A new box containing both boxes.
+  do: $.clone().union(other)
+fn BoundingBox.copy(): BoundingBox pure : An independent copy.
+  do: $.clone()

@@ -92,7 +92,7 @@ class PluginSupportTest {
         assertEquals(LoadMode.LENIENT, settings.mode());
         assertEquals(128, settings.recursionLimit());
         assertEquals(1000, settings.maxExecutionMillis());
-        assertEquals(5, settings.slowWarningMillis());
+        assertEquals(0, settings.slowWarningMillis());
         assertEquals(5, warnings.size(), warnings::toString);
         assertTrue(warnings.stream().anyMatch(w -> w.contains("bytecode")), warnings::toString);
     }
@@ -102,6 +102,26 @@ class PluginSupportTest {
         YamlConfiguration config = new YamlConfiguration();
         config.set("reload.mode", "STRICT");
         assertEquals(LoadMode.STRICT, TachyonSettings.from(config, logger()).mode());
+    }
+
+    @Test
+    void slowWarningsRequireExplicitOptInEvenWithLegacyThreshold() {
+        YamlConfiguration config = new YamlConfiguration();
+        config.set("performance.slow-execution-warning-ms", 10);
+        assertEquals(0, TachyonSettings.from(config, logger()).slowWarningMillis());
+        config.set("performance.slow-execution-warnings", true);
+        assertEquals(10, TachyonSettings.from(config, logger()).slowWarningMillis());
+    }
+
+    @Test
+    void selectedReadDoesNotOpenUnrelatedOversizedScripts() throws IOException {
+        Path scripts = directory.resolve("selected");
+        Files.createDirectories(scripts);
+        Files.writeString(scripts.resolve("shop.tys"), "on load { log(\"shop\") }");
+        Files.write(scripts.resolve("unrelated.tys"), new byte[5 * 1024 * 1024]);
+        ScriptDirectory source = new ScriptDirectory(scripts);
+        assertEquals(List.of("shop.tys"), source.read(java.util.Set.of("shop.tys")).stream().map(SourceFile::path).toList());
+        assertThrows(IOException.class, () -> source.read(java.util.Set.of("../outside.tys")));
     }
 
     @Test

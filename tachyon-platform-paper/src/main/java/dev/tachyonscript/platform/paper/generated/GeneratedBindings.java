@@ -63,6 +63,7 @@ public final class GeneratedBindings {
         b.bindType(GeneratedTypes.EXPERIENCE_ORB, org.bukkit.entity.ExperienceOrb.class);
         b.bindType(GeneratedTypes.FALLING_BLOCK, org.bukkit.entity.FallingBlock.class);
         b.bindType(GeneratedTypes.TNTPRIMED, org.bukkit.entity.TNTPrimed.class);
+        b.bindType(GeneratedTypes.DISPLAY, org.bukkit.entity.Display.class);
         b.bindType(GeneratedTypes.TEXT_DISPLAY, org.bukkit.entity.TextDisplay.class);
         b.bindType(GeneratedTypes.BOSS_BAR, net.kyori.adventure.bossbar.BossBar.class);
         b.bindType(GeneratedTypes.SIDEBAR, dev.tachyonscript.platform.paper.lib.Sidebar.class);
@@ -171,6 +172,18 @@ public final class GeneratedBindings {
         b.bindType(GeneratedTypes.CHUNK_UNLOAD_EVENT, org.bukkit.event.world.ChunkUnloadEvent.class);
         b.bindType(GeneratedTypes.PAPER_SERVER_LIST_PING_EVENT, com.destroystokyo.paper.event.server.PaperServerListPingEvent.class);
         b.bindType(GeneratedTypes.SERVER_COMMAND_EVENT, org.bukkit.event.server.ServerCommandEvent.class);
+        b.bindType(GeneratedTypes.STATISTIC, org.bukkit.Statistic.class);
+        b.bindType(GeneratedTypes.DYE_COLOR, org.bukkit.DyeColor.class);
+        b.bindType(GeneratedTypes.SIGN_SIDE, org.bukkit.block.sign.Side.class);
+        b.bindType(GeneratedTypes.BILLBOARD, org.bukkit.entity.Display.Billboard.class);
+        b.bindType(GeneratedTypes.ITEM_DISPLAY_TRANSFORM, org.bukkit.entity.ItemDisplay.ItemDisplayTransform.class);
+        b.bindType(GeneratedTypes.TEXT_ALIGNMENT, org.bukkit.entity.TextDisplay.TextAlignment.class);
+        b.bindType(GeneratedTypes.BLOCK_DATA, org.bukkit.block.data.BlockData.class);
+        b.bindType(GeneratedTypes.ITEM_DISPLAY, org.bukkit.entity.ItemDisplay.class);
+        b.bindType(GeneratedTypes.BLOCK_DISPLAY, org.bukkit.entity.BlockDisplay.class);
+        b.bindType(GeneratedTypes.QUATERNION, org.joml.Quaternionf.class);
+        b.bindType(GeneratedTypes.BRIGHTNESS, org.bukkit.entity.Display.Brightness.class);
+        b.bindType(GeneratedTypes.BOUNDING_BOX, org.bukkit.util.BoundingBox.class);
         b.bindKeys(GeneratedTypes.MATERIAL, PaperKeys.keyedEnum(org.bukkit.Material.class));
         b.bindKeys(GeneratedTypes.ENTITY_TYPE, PaperKeys.keyedEnum(org.bukkit.entity.EntityType.class));
         b.bindKeys(GeneratedTypes.SOUND, PaperKeys.registry(io.papermc.paper.registry.RegistryKey.SOUND_EVENT));
@@ -192,6 +205,12 @@ public final class GeneratedBindings {
         b.bindKeys(GeneratedTypes.ENVIRONMENT, PaperKeys.enumConstants(org.bukkit.World.Environment.class));
         b.bindKeys(GeneratedTypes.BAR_COLOR, PaperKeys.enumConstants(net.kyori.adventure.bossbar.BossBar.Color.class));
         b.bindKeys(GeneratedTypes.BAR_STYLE, PaperKeys.enumConstants(net.kyori.adventure.bossbar.BossBar.Overlay.class));
+        b.bindKeys(GeneratedTypes.STATISTIC, PaperKeys.enumConstants(org.bukkit.Statistic.class));
+        b.bindKeys(GeneratedTypes.DYE_COLOR, PaperKeys.enumConstants(org.bukkit.DyeColor.class));
+        b.bindKeys(GeneratedTypes.SIGN_SIDE, PaperKeys.enumConstants(org.bukkit.block.sign.Side.class));
+        b.bindKeys(GeneratedTypes.BILLBOARD, PaperKeys.enumConstants(org.bukkit.entity.Display.Billboard.class));
+        b.bindKeys(GeneratedTypes.ITEM_DISPLAY_TRANSFORM, PaperKeys.enumConstants(org.bukkit.entity.ItemDisplay.ItemDisplayTransform.class));
+        b.bindKeys(GeneratedTypes.TEXT_ALIGNMENT, PaperKeys.enumConstants(org.bukkit.entity.TextDisplay.TextAlignment.class));
         TypesBindings.bind(b, ctx);
         EntitiesBindings.bind(b, ctx);
         PlayersBindings.bind(b, ctx);
@@ -201,6 +220,7 @@ public final class GeneratedBindings {
         DataBindings.bind(b, ctx);
         PlayerEventsBindings.bind(b, ctx);
         WorldEventsBindings.bind(b, ctx);
+        ExtensionsBindings.bind(b, ctx);
     }
 
     /** The Bukkit event class of every generated event. */
@@ -214,6 +234,7 @@ public final class GeneratedBindings {
         DataBindings.events(classes);
         PlayerEventsBindings.events(classes);
         WorldEventsBindings.events(classes);
+        ExtensionsBindings.events(classes);
     }
 
     /** Replaces the built-in constant tables with the contents of the running server's registries. */
@@ -239,5 +260,11 @@ public final class GeneratedBindings {
         PaperKeys.live(builder, GeneratedTypes.ENVIRONMENT, PaperKeys.enumConstants(org.bukkit.World.Environment.class));
         PaperKeys.live(builder, GeneratedTypes.BAR_COLOR, PaperKeys.enumConstants(net.kyori.adventure.bossbar.BossBar.Color.class));
         PaperKeys.live(builder, GeneratedTypes.BAR_STYLE, PaperKeys.enumConstants(net.kyori.adventure.bossbar.BossBar.Overlay.class));
+        PaperKeys.live(builder, GeneratedTypes.STATISTIC, PaperKeys.enumConstants(org.bukkit.Statistic.class));
+        PaperKeys.live(builder, GeneratedTypes.DYE_COLOR, PaperKeys.enumConstants(org.bukkit.DyeColor.class));
+        PaperKeys.live(builder, GeneratedTypes.SIGN_SIDE, PaperKeys.enumConstants(org.bukkit.block.sign.Side.class));
+        PaperKeys.live(builder, GeneratedTypes.BILLBOARD, PaperKeys.enumConstants(org.bukkit.entity.Display.Billboard.class));
+        PaperKeys.live(builder, GeneratedTypes.ITEM_DISPLAY_TRANSFORM, PaperKeys.enumConstants(org.bukkit.entity.ItemDisplay.ItemDisplayTransform.class));
+        PaperKeys.live(builder, GeneratedTypes.TEXT_ALIGNMENT, PaperKeys.enumConstants(org.bukkit.entity.TextDisplay.TextAlignment.class));
     }
 }

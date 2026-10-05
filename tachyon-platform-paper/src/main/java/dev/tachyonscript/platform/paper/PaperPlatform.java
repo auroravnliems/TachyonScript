@@ -119,10 +119,13 @@ public final class PaperPlatform implements Platform {
         events.attach(engine);
         context.attach(engine);
         Bukkit.getPluginManager().registerEvents(new MenuListener(), plugin);
+        Bukkit.getPluginManager().registerEvents(context.metadata(), plugin);
     }
 
     /** Removes every listener (plugin disable). */
     public void shutdown() {
+        context.web().close();
+        context.metadata().clear();
         events.unregisterAll();
     }
 

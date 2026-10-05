@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.nio.file.LinkOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
@@ -18,7 +19,7 @@ import java.util.stream.Stream;
 public final class ScriptFiles {
 
     /** Largest file scripts may read at once. */
-    private static final long MAX_READ = 16L * 1024 * 1024;
+    private static final int MAX_READ = 16 * 1024 * 1024;
 
     private final Path root;
 
@@ -35,19 +36,47 @@ public final class ScriptFiles {
         if (!resolved.startsWith(root)) {
             throw new ScriptError("The file path '" + path + "' leaves the files folder.");
         }
+        confined(resolved);
         return resolved;
+    }
+
+    private static void noLinks(Path path) {
+        for (Path current = path; current != null; current = current.getParent())
+            if (Files.isSymbolicLink(current)) throw new ScriptError("Symbolic links are not permitted in the script files directory.");
+    }
+
+    private void confined(Path path) {
+        noLinks(path);
+        try {
+            if (!Files.exists(root, LinkOption.NOFOLLOW_LINKS)) return;
+            Path realRoot = root.toRealPath();
+            // Real paths also reject Windows directory junctions inside the files root.
+            for (Path existing = path; existing != null && existing.startsWith(root); existing = existing.getParent()) {
+                if (Files.exists(existing, LinkOption.NOFOLLOW_LINKS)) {
+                    if (!existing.toRealPath().startsWith(realRoot))
+                        throw new ScriptError("The file path leaves the files folder through a filesystem link.");
+                    return;
+                }
+            }
+        } catch (IOException e) {
+            throw new ScriptError("Cannot validate the script file path.");
+        }
     }
 
     public String read(String path) {
         Path file = resolve(path);
         try {
-            if (!Files.isRegularFile(file)) {
+            if (!Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS)) {
                 return null;
             }
             if (Files.size(file) > MAX_READ) {
                 throw new ScriptError("The file '" + path + "' is larger than 16 MB.");
             }
-            return Files.readString(file, StandardCharsets.UTF_8);
+            try (var input = Files.newInputStream(file, LinkOption.NOFOLLOW_LINKS)) {
+                byte[] bytes = input.readNBytes(MAX_READ + 1);
+                if (bytes.length > MAX_READ) throw new ScriptError("The file is larger than 16 MB.");
+                return StandardCharsets.UTF_8.newDecoder().decode(java.nio.ByteBuffer.wrap(bytes)).toString();
+            }
         } catch (IOException e) {
             throw new ScriptError("Cannot read '" + path + "': " + e.getMessage());
         }
@@ -62,10 +91,12 @@ public final class ScriptFiles {
         Path file = resolve(path);
         try {
             Files.createDirectories(file.getParent());
+            confined(file);
             if (append) {
-                Files.writeString(file, text, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+                Files.writeString(file, text, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.APPEND, LinkOption.NOFOLLOW_LINKS);
             } else {
-                Files.writeString(file, text, StandardCharsets.UTF_8);
+                Files.writeString(file, text, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING,
+                        StandardOpenOption.WRITE, LinkOption.NOFOLLOW_LINKS);
             }
         } catch (IOException e) {
             throw new ScriptError("Cannot write '" + path + "': " + e.getMessage());
@@ -86,6 +117,7 @@ public final class ScriptFiles {
 
     public List<Object> list(String folder) {
         Path directory = folder.isBlank() ? root : resolve(folder);
+        confined(directory);
         List<Object> names = new ArrayList<>();
         if (!Files.isDirectory(directory)) {
             return names;

@@ -4,6 +4,7 @@ import dev.tachyonscript.api.TachyonVersion;
 import dev.tachyonscript.api.addon.AddonRegistrar;
 import dev.tachyonscript.engine.LoadReport;
 import dev.tachyonscript.engine.ScriptEngine;
+import dev.tachyonscript.engine.ScriptControls;
 import dev.tachyonscript.engine.addon.AddonAssembly;
 import dev.tachyonscript.language.diagnostic.Diagnostic;
 import dev.tachyonscript.language.diagnostic.DiagnosticRenderer;
@@ -11,6 +12,13 @@ import dev.tachyonscript.language.diagnostic.Severity;
 import dev.tachyonscript.platform.paper.PaperPlatform;
 import dev.tachyonscript.platform.paper.PlatformCapabilities;
 import dev.tachyonscript.stdlib.StandardLibrary;
+import dev.tachyonscript.security.SecurityAuditStore;
+import dev.tachyonscript.security.SecurityIncident;
+import dev.tachyonscript.security.SecurityMessages;
+import dev.tachyonscript.security.SecurityService;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.ServicePriority;
@@ -18,6 +26,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -92,7 +101,11 @@ public final class TachyonPlugin extends JavaPlugin {
                     assembly.eventClasses());
             ScriptEngine started = new ScriptEngine(assembly.registry(), created,
                     settings.engineOptions(getDataFolder().toPath()),
-                    new CrashReports(getDataFolder().toPath().resolve("logs"), getLogger(), Bukkit.getVersion()));
+                    new CrashReports(getDataFolder().toPath().resolve("logs"), getLogger(), Bukkit.getVersion()),
+                    new SecurityService(SecuritySettings.from(getConfig()),
+                            new SecurityAuditStore(getDataFolder().toPath().resolve("security")),
+                            this::notifySecurity, message -> getLogger().severe(message)));
+            started.controls(new ScriptControls(getDataFolder().toPath().resolve("disabled-scripts.properties")));
             created.attach(started);
             platform = created;
             engine = started;
@@ -102,14 +115,31 @@ public final class TachyonPlugin extends JavaPlugin {
                     + ", interpreter backend) on " + capabilities.serverName() + " " + capabilities.minecraftVersion()
                     + (capabilities.folia() ? " with regionized multithreading" : "")
                     + (addons.isEmpty() ? "" : "; addons: " + String.join(", ", addons)));
-            LoadReport report = started.load(scripts);
-            lastReport = report;
-            logReport(report);
             registerPlaceholders();
-        } catch (RuntimeException | LinkageError e) {
+            // Required security approval completes on a worker before the engine links/activates any script.
+            reloadAsync(Set.of(), report -> { });
+        } catch (IOException | RuntimeException | LinkageError e) {
             startFailure = e.toString();
             getLogger().log(Level.SEVERE, "TachyonScript failed to start; no scripts are active.", e);
         }
+    }
+
+    private void notifySecurity(SecurityIncident incident) {
+        String detail = SecurityMessages.detail(incident, true);
+        if (incident.decision().deniesExecution() || incident.severity().ordinal() >= dev.tachyonscript.security.SecuritySeverity.HIGH.ordinal())
+            getLogger().severe(detail);
+        else getLogger().warning(detail);
+        if (!isEnabled()) return;
+        Bukkit.getGlobalRegionScheduler().run(this, task -> {
+            Component inspect = Component.text("/tys security inspect " + incident.id(), NamedTextColor.AQUA)
+                    .clickEvent(ClickEvent.suggestCommand("/tys security inspect " + incident.id()))
+                    .hoverEvent(Component.text("Inspect the complete source location and data flow"));
+            for (var player : getServer().getOnlinePlayers()) {
+                if (!player.hasPermission("tachyonscript.security.alerts")) continue;
+                for (String line : SecurityMessages.admin(incident)) player.sendMessage(Component.text(line, NamedTextColor.RED));
+                player.sendMessage(inspect);
+            }
+        });
     }
 
     /** Registers %tys_...% with PlaceholderAPI when it is installed. */
@@ -188,12 +218,12 @@ public final class TachyonPlugin extends JavaPlugin {
         }
         Bukkit.getAsyncScheduler().runNow(this, task -> {
             try {
-                LoadReport report = current.load(scripts, forceRecompile);
+                LoadReport report = forceRecompile.isEmpty() ? current.load(scripts) : current.reload(scripts, forceRecompile);
                 lastReport = report;
                 logReport(report);
                 done.accept(report);
             } catch (RuntimeException | LinkageError e) {
-                getLogger().log(Level.SEVERE, "Reload failed unexpectedly; the previous scripts stay active.", e);
+                getLogger().log(Level.SEVERE, "Reload failed unexpectedly; security-revoked scripts remain disabled.", e);
             } finally {
                 reloading.set(false);
             }
@@ -205,18 +235,19 @@ public final class TachyonPlugin extends JavaPlugin {
     void logReport(LoadReport report) {
         Logger log = getLogger();
         if (report.failure() != null) {
-            log.severe(report.failure() + " The previous scripts stay active.");
+            log.severe(report.failure() + " Security-revoked scripts remain disabled.");
             return;
         }
         DiagnosticRenderer renderer = new DiagnosticRenderer(false, SCRIPTS_PREFIX);
         for (Diagnostic diagnostic : report.diagnostics()) {
-            String text = "\n" + renderer.render(diagnostic);
+            String text = renderer.renderCompact(diagnostic);
+            if (engine != null) text = engine.security().options().redactor().withSource(diagnostic.file()).redact(text);
             if (diagnostic.severity() == Severity.ERROR) {
-                log.severe(text);
+                text.lines().forEach(log::severe);
             } else if (diagnostic.severity() == Severity.WARNING) {
-                log.warning(text);
+                text.lines().forEach(log::warning);
             } else if (settings.debug()) {
-                log.info(text);
+                text.lines().forEach(log::info);
             }
         }
         for (Map.Entry<String, List<String>> entry : report.linkProblems().entrySet()) {
@@ -225,8 +256,8 @@ public final class TachyonPlugin extends JavaPlugin {
             }
         }
         if (!report.activated()) {
-            log.severe("Load cancelled (reload.mode: strict): " + report.errorCount() + " errors in "
-                    + report.failed().size() + " scripts. The previous scripts stay active.");
+            log.severe("Load cancelled: " + report.errorCount() + " errors in "
+                    + report.failed().size() + " scripts. Approved previous versions remain; security-revoked scripts stay disabled.");
             return;
         }
         if (report.failed().isEmpty()) {
