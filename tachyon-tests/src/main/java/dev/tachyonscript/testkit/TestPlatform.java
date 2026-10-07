@@ -135,8 +135,15 @@ public final class TestPlatform implements Platform {
         };
     }
 
-    /** An engine running on this platform. */
+    /**
+     * An engine running on this platform. The system property {@code tachyon.test.backend}
+     * ({@code -Ptachyon.backend=bytecode} in Gradle) runs every engine test on that backend.
+     */
     public ScriptEngine engine(EngineOptions options) {
+        String backend = System.getProperty("tachyon.test.backend", "");
+        if (!backend.isBlank()) {
+            options = options.withBackend(dev.tachyonscript.runtime.ExecutionBackend.valueOf(backend.toUpperCase(java.util.Locale.ROOT)));
+        }
         ScriptEngine engine = new ScriptEngine(registry, this, options, InternalErrorHandler.IGNORE);
         interactions.engine(engine);
         return engine;

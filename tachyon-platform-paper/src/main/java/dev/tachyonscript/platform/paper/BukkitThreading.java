@@ -74,6 +74,6 @@ final class BukkitThreading implements Threading {
 
     @Override
     public boolean onTickThread() {
-        return Bukkit.isPrimaryThread();
+        return Bukkit.isPrimaryThread() || (folia && Bukkit.isGlobalTickThread());
     }
 }

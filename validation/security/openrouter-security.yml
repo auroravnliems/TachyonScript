@@ -5,7 +5,7 @@ security:
   provider: qwen
   ai:
     enabled: true
-    required: true
+    failure-policy: warn
     endpoint: "https://openrouter.ai/api/v1/chat/completions"
     model: "qwen/qwen3-coder"
     api-key: "${OPENROUTER_API_KEY}"

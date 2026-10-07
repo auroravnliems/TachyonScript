@@ -93,7 +93,13 @@ class SecurityProviderAuditTest {
         }
         String audit = Files.readString(folder.resolve("audit.jsonl"));
         Files.writeString(folder.resolve("audit.jsonl"), audit.replace("COMMAND_INJECTION", "PRIVILEGE_ESCALATION"));
-        assertThrows(IOException.class, () -> new SecurityAuditStore(folder));
+        // Tampering is detected and recovered from the write-ahead report; the quarantine stays in force.
+        try (SecurityAuditStore recovered = new SecurityAuditStore(folder)) {
+            assertEquals(1, recovered.recoveries().size());
+            assertTrue(recovered.recoveries().getFirst().contains("was changed after it was written"));
+            assertEquals(incident, recovered.blocked().get(incident.scriptId()));
+            assertEquals(incident, recovered.incident(incident.id()), "the untampered report is what counts");
+        }
     }
     @Test void qwenHttpRetriesValidatesEnvelopeAndSendsOnlyRedactedManifest() throws Exception {
         HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
@@ -170,7 +176,12 @@ class SecurityProviderAuditTest {
             var options = new SecurityOptions(true, ai, SecurityOptions.Discord.disabled(), Set.of(), Map.of(), 25_000, 500);
             try (var provider = new QwenSecurityProvider(options)) { assertTrue(provider.review(manifest, source).isEmpty()); }
             assertTrue(requests.get() > 1); assertTrue(largest.get() <= 16_384);
-            assertEquals(manifest.nodes().stream().map(SecurityNode::id).collect(java.util.stream.Collectors.toSet()), seen);
+            // Every piece of code the reviewer needs reaches it (here: every dispatch), across all batches.
+            assertEquals(manifest.nodes().stream().filter(QwenSecurityProvider::reviewable).map(node -> node.span().startOffset())
+                    .collect(java.util.stream.Collectors.toSet()), manifest.nodes().stream().filter(node -> seen.contains(node.id()))
+                    .map(node -> node.span().startOffset()).collect(java.util.stream.Collectors.toSet()));
+            assertEquals(80, manifest.nodes().stream().filter(node -> node.capability() == Capability.CONSOLE_COMMAND)
+                    .filter(node -> seen.contains(node.id())).map(node -> node.span().startOffset()).distinct().count());
         } finally { server.stop(0); }
     }
     @Test void stagedWebhookNeverDeliversBeforeItsAuditCommit() throws Exception {

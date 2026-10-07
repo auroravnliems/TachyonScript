@@ -1,5 +1,9 @@
 package dev.tachyonscript.runtime.link;
 
+import dev.tachyonscript.runtime.ExecutionBackend;
+import dev.tachyonscript.runtime.bytecode.BytecodeCompiler;
+import dev.tachyonscript.runtime.interpreter.BytecodeBody;
+
 import dev.tachyonscript.api.declaration.NativeDeclaration;
 import dev.tachyonscript.api.natives.Arguments;
 import dev.tachyonscript.api.natives.NativeFunction;
@@ -77,15 +81,27 @@ public final class Linker {
 
     /** Links a module that imports nothing, keeping its variables in a private in-memory environment. */
     public static LinkedModule link(AssembledModule module, Bindings bindings, TextService text) throws LinkException {
+        return link(module, bindings, text, ExecutionBackend.INTERPRETER);
+    }
+
+    public static LinkedModule link(AssembledModule module, Bindings bindings, TextService text,
+                                    ExecutionBackend backend) throws LinkException {
         StandaloneEnvironment environment = new StandaloneEnvironment();
-        LinkedModule linked = link(module, bindings, text, environment);
+        LinkedModule linked = link(module, bindings, text, environment, backend);
         environment.register(linked);
         return linked;
     }
 
     public static LinkedModule link(AssembledModule module, Bindings bindings, TextService text,
                                     LinkEnvironment environment) throws LinkException {
+        return link(module, bindings, text, environment, ExecutionBackend.INTERPRETER);
+    }
+
+    public static LinkedModule link(AssembledModule module, Bindings bindings, TextService text,
+                                    LinkEnvironment environment, ExecutionBackend backend) throws LinkException {
+        java.util.Objects.requireNonNull(backend, "backend");
         List<String> problems = new ArrayList<>();
+        List<String> notes = new ArrayList<>();
         Map<String, CompiledFunction> functions = new LinkedHashMap<>();
         Map<String, GlobalCell> globals = new LinkedHashMap<>();
         Map<String, PlayerDataSlot> playerData = new LinkedHashMap<>();
@@ -116,7 +132,7 @@ public final class Linker {
             }
         }
         for (CodeUnit unit : module.units()) {
-            functions.put(unit.key(), linkUnit(unit, module, bindings, text, environment, problems));
+            functions.put(unit.key(), linkUnit(unit, module, bindings, text, environment, backend, problems, notes));
         }
         for (CodeUnit unit : module.units()) {
             CompiledFunction[] callees = new CompiledFunction[unit.functions().size()];
@@ -150,7 +166,7 @@ public final class Linker {
             throw new LinkException(module.name(), problems.stream().distinct().toList());
         }
         return new LinkedModule(module.name(), module.source(), functions, handlers, globals, playerData, records,
-                environment.owner());
+                environment.owner(), notes);
     }
 
     /** Whether a resolved function has the parameter and result representations the reference expects. */
@@ -170,7 +186,8 @@ public final class Linker {
     }
 
     private static CompiledFunction linkUnit(CodeUnit unit, AssembledModule module, Bindings bindings, TextService text,
-                                             LinkEnvironment environment, List<String> problems) {
+                                             LinkEnvironment environment, ExecutionBackend backend, List<String> problems,
+                                             List<String> notes) {
         String path = module.source().path();
         NativeFunction[] natives = new NativeFunction[unit.natives().size()];
         for (int i = 0; i < natives.length; i++) {
@@ -231,8 +248,27 @@ public final class Linker {
                 problems.add(path + " uses record " + unit.records().get(i) + ", which is not loaded");
             }
         }
+        BytecodeBody bytecode = null;
+        if (backend == ExecutionBackend.BYTECODE) {
+            // The interpreter is the reference implementation, so a function can always run on it
+            // with identical behaviour. It does so, visibly (see LinkedModule.notes), when its JVM
+            // body would be too large for HotSpot to compile, or if generation fails.
+            try {
+                byte[] bytes = BytecodeCompiler.generate(unit, module.source());
+                int size = BytecodeCompiler.methodSize(bytes);
+                if (size > BytecodeCompiler.JIT_LIMIT) {
+                    notes.add(unit.displayName() + " runs in the interpreter: its JVM body (" + size
+                            + " bytes) would exceed HotSpot's " + BytecodeCompiler.JIT_LIMIT + "-byte compilation limit");
+                } else {
+                    bytecode = BytecodeBody.define(bytes, unit.key());
+                }
+            } catch (RuntimeException | LinkageError error) {
+                notes.add(unit.displayName() + " runs in the interpreter: bytecode generation failed (" + error
+                        + "); this is a TachyonScript bug, please report it");
+            }
+        }
         return new CompiledFunction(unit, module.source(), references, natives, classes, templates, globals, playerData,
-                records, text, environment.owner());
+                records, text, environment.owner(), bytecode);
     }
 
     private static Object resolveKey(Bindings bindings, KeyedConstant constant, String path, List<String> problems) {

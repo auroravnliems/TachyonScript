@@ -1,0 +1,6 @@
+name: TachyonIntegrationProbe
+version: '${version}'
+main: dev.tachyonscript.integration.ServerProbe
+api-version: '1.21'
+folia-supported: true
+depend: [TachyonScript]

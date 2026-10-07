@@ -22,7 +22,11 @@ performance:
   slow-execution-warning-ms: 50
 
 runtime:
-  # Execution backend. Only 'interpreter' exists yet; the bytecode backend is planned.
+  # How scripts execute (restart to change):
+  #   interpreter - the reference implementation; fast to load, the default
+  #   bytecode    - functions are translated to JVM bytecode for HotSpot to compile; faster
+  #                 loops and calls, slower loading. Functions too large for HotSpot to
+  #                 compile stay interpreted, with a warning in the console.
   backend: interpreter
 
 storage:
@@ -89,7 +93,16 @@ security:
   native-capabilities: {} # Resolved native declaration ID -> capability for addons.
   ai:
     enabled: false # Enable after configuring an endpoint, model and secret.
-    required: true # When enabled, failures keep new/modified revisions pending.
+    # AI outages warn by default; deterministic security enforcement remains active.
+    # Set keep-pending to explicitly hold new/modified revisions when AI is unavailable.
+    # Replaces legacy required (including required: true in older configurations).
+    failure-policy: warn
+    # background: loading never waits for the AI. A new or changed script keeps running its
+    # previous version (a new script waits) until its review is done, then activates by itself.
+    # Reviews are stored in security/ai-reviews.json, so unchanged scripts are never sent again.
+    # blocking: every load waits for the reviews of the scripts it changes.
+    review-mode: background
+    max-concurrent-reviews: 2 # Reviews sent to the provider at the same time (1-8).
     endpoint: "" # Full Qwen-compatible chat/completions URL; no endpoint/model is hard-coded.
     model: ""
     api-key: "${QWEN_API_KEY}"

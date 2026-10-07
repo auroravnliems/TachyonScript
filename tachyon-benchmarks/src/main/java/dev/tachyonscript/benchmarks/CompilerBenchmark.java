@@ -2,6 +2,8 @@ package dev.tachyonscript.benchmarks;
 
 import dev.tachyonscript.compiler.CompilationResult;
 import dev.tachyonscript.compiler.Compiler;
+import dev.tachyonscript.compiler.CompilerOptions;
+import dev.tachyonscript.compiler.InternalErrorHandler;
 import dev.tachyonscript.language.source.SourceFile;
 import dev.tachyonscript.stdlib.StandardLibrary;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -10,6 +12,7 @@ import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
+import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
@@ -26,6 +29,9 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 5, time = 1)
 @Fork(2)
 public class CompilerBenchmark {
+
+    @Param({"false", "true"})
+    public boolean optimize;
 
     private Compiler compiler;
     private List<SourceFile> files;
@@ -60,7 +66,8 @@ public class CompilerBenchmark {
                     """.formatted(i));
         }
         files = List.of(new SourceFile("large.tys", source.toString()));
-        compiler = new Compiler(StandardLibrary.registry());
+        compiler = new Compiler(StandardLibrary.registry(), CompilerOptions.DEFAULT.withOptimization(optimize),
+                InternalErrorHandler.IGNORE);
         CompilationResult check = compiler.compile(files);
         if (!check.succeeded()) {
             throw new IllegalStateException(check.diagnostics().sorted().toString());

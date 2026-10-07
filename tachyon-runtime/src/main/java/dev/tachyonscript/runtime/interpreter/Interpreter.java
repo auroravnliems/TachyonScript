@@ -28,9 +28,11 @@ import static dev.tachyonscript.runtime.code.Opcodes.*;
  * dispatch method stays well below HotSpot's 8000-byte limit for JIT compilation (a test
  * enforces this).
  *
- * <p>Checks are placed where they are cheap: loop back edges decrement a counter and only
- * read the clock when it runs out; script calls check the depth counter. Any exception is
- * converted into a {@link ScriptRuntimeException} carrying a TachyonScript stack trace.
+ * <p>Checks are placed where they are cheap: loop back edges and function entries decrement a
+ * counter and only read the clock when it runs out; script calls check the depth counter.
+ * Revocation ({@link ExecutionGuard}) is checked at function entry, before natives and with
+ * the clock, never per instruction. Any exception is converted into a
+ * {@link ScriptRuntimeException} carrying a TachyonScript stack trace.
  *
  * <p>An error raised at a pc covered by the function's handler table ({@code try}) is caught
  * in the same frame: frames above it are abandoned, the error value is stored in the
@@ -180,6 +182,7 @@ public final class Interpreter {
         stack.referenceTop = referenceBase;
         if (savedDepth == 0) {
             stack.owner = null;
+            stack.verified = null;
         }
     }
 
@@ -197,8 +200,20 @@ public final class Interpreter {
     // =================================================================== dispatch loop
 
     static void execute(CompiledFunction fn, ExecutionStack stack, int pb, int rb) {
+        final ExecutionGuard guard = fn.guard;
+        if (--stack.loopBudget <= 0 || guard != stack.verified) {
+            try {
+                enter(stack, guard);
+            } catch (ScriptRuntimeException error) {
+                // Neither a timeout nor a revocation is catchable: only record where it happened.
+                throw error.addFrame(frame(fn, 0));
+            }
+        }
+        if (fn.bytecode != null) {
+            fn.bytecode.execute(fn, stack, pb, rb);
+            return;
+        }
         final int[] code = fn.code;
-        final ExecutionGuard guard = fn.owner() instanceof ExecutionGuard owner ? owner : null;
         final int depth = stack.depth;
         stack.primitiveTop = pb + fn.primitiveSlots;
         stack.referenceTop = rb + fn.referenceSlots;
@@ -208,9 +223,6 @@ public final class Interpreter {
         while (true) {
             try {
                 while (true) {
-                    if (guard != null && guard.securityRevoked())
-                        throw new ScriptRuntimeException(ScriptRuntimeException.Kind.SECURITY_REVOKED,
-                                "Script execution revoked by the security controller.", null);
                     switch (code[pc]) {
                         case NOP -> pc += 1;
                         case CONST_I -> {
@@ -468,7 +480,7 @@ public final class Interpreter {
                         case CALL_NATIVE_V -> {
                             int count = code[pc + 2];
                             ((NativeFunction.OfVoid) fn.natives[code[pc + 1]])
-                                    .call(stack.arguments(code, pc + 3, count, pb, rb));
+                                    .call(nativeArguments(stack, guard, code, pc + 3, count, pb, rb));
                             p = stack.primitives;
                             r = stack.references;
                             pc += 3 + count;
@@ -476,7 +488,7 @@ public final class Interpreter {
                         case CALL_NATIVE_I -> {
                             int count = code[pc + 3];
                             int result = ((NativeFunction.OfInt) fn.natives[code[pc + 2]])
-                                    .call(stack.arguments(code, pc + 4, count, pb, rb));
+                                    .call(nativeArguments(stack, guard, code, pc + 4, count, pb, rb));
                             p = stack.primitives;
                             r = stack.references;
                             p[pb + code[pc + 1]] = result;
@@ -485,7 +497,7 @@ public final class Interpreter {
                         case CALL_NATIVE_L -> {
                             int count = code[pc + 3];
                             long result = ((NativeFunction.OfLong) fn.natives[code[pc + 2]])
-                                    .call(stack.arguments(code, pc + 4, count, pb, rb));
+                                    .call(nativeArguments(stack, guard, code, pc + 4, count, pb, rb));
                             p = stack.primitives;
                             r = stack.references;
                             p[pb + code[pc + 1]] = result;
@@ -494,7 +506,7 @@ public final class Interpreter {
                         case CALL_NATIVE_F -> {
                             int count = code[pc + 3];
                             float result = ((NativeFunction.OfFloat) fn.natives[code[pc + 2]])
-                                    .call(stack.arguments(code, pc + 4, count, pb, rb));
+                                    .call(nativeArguments(stack, guard, code, pc + 4, count, pb, rb));
                             p = stack.primitives;
                             r = stack.references;
                             p[pb + code[pc + 1]] = fbits(result);
@@ -503,7 +515,7 @@ public final class Interpreter {
                         case CALL_NATIVE_D -> {
                             int count = code[pc + 3];
                             double result = ((NativeFunction.OfDouble) fn.natives[code[pc + 2]])
-                                    .call(stack.arguments(code, pc + 4, count, pb, rb));
+                                    .call(nativeArguments(stack, guard, code, pc + 4, count, pb, rb));
                             p = stack.primitives;
                             r = stack.references;
                             p[pb + code[pc + 1]] = dbits(result);
@@ -512,7 +524,7 @@ public final class Interpreter {
                         case CALL_NATIVE_Z -> {
                             int count = code[pc + 3];
                             boolean result = ((NativeFunction.OfBool) fn.natives[code[pc + 2]])
-                                    .call(stack.arguments(code, pc + 4, count, pb, rb));
+                                    .call(nativeArguments(stack, guard, code, pc + 4, count, pb, rb));
                             p = stack.primitives;
                             r = stack.references;
                             p[pb + code[pc + 1]] = result ? 1 : 0;
@@ -521,7 +533,7 @@ public final class Interpreter {
                         case CALL_NATIVE_R -> {
                             int count = code[pc + 3];
                             Object result = ((NativeFunction.OfRef) fn.natives[code[pc + 2]])
-                                    .call(stack.arguments(code, pc + 4, count, pb, rb));
+                                    .call(nativeArguments(stack, guard, code, pc + 4, count, pb, rb));
                             p = stack.primitives;
                             r = stack.references;
                             r[rb + code[pc + 1]] = result;
@@ -669,7 +681,7 @@ public final class Interpreter {
                         case JMP -> pc = code[pc + 1];
                         case LOOP -> {
                             if (--stack.loopBudget <= 0) {
-                                stack.checkDeadline();
+                                loopCheck(stack, guard);
                             }
                             pc = code[pc + 1];
                         }
@@ -701,6 +713,50 @@ public final class Interpreter {
             p = stack.primitives;
             r = stack.references;
         }
+    }
+
+    /**
+     * Function entry, when the call used up the watchdog budget or enters another script. A call
+     * counts against the loop budget like a back edge, so recursion that never loops
+     * ({@code f(n - 1) + f(n - 1)}) still times out. A revoked script cannot start an execution
+     * or be entered from another script; within one script the next native or loop check stops it.
+     */
+    private static void enter(ExecutionStack stack, ExecutionGuard guard) {
+        if (stack.loopBudget <= 0) {
+            stack.checkDeadline();
+        }
+        checkRevoked(guard);
+        stack.verified = guard;
+    }
+
+    /** A loop back edge whose budget ran out: the watchdog's clock check, then revocation. */
+    static void loopCheck(ExecutionStack stack, ExecutionGuard guard) {
+        stack.checkDeadline();
+        checkRevoked(guard);
+    }
+
+    /**
+     * The argument view of a native call. Natives are how a script acts on the server, so a
+     * revoked script reaches none of them, even in straight-line code after its revocation.
+     */
+    static CallArguments nativeArguments(ExecutionStack stack, ExecutionGuard guard, int[] code, int position,
+                                         int count, int pb, int rb) {
+        checkRevoked(guard);
+        return stack.arguments(code, position, count, pb, rb);
+    }
+
+    /** Shared with generated code: identical guard failures and script error recovery. */
+    static void checkRevoked(ExecutionGuard guard) {
+        if (guard != null && guard.securityRevoked()) {
+            throw new ScriptRuntimeException(ScriptRuntimeException.Kind.SECURITY_REVOKED,
+                    "Script execution revoked by the security controller.", null);
+        }
+    }
+
+    static int bytecodeFailure(CompiledFunction fn, ExecutionStack stack, int depth, int pb, int rb, int pc,
+                               Throwable error) {
+        return recover(fn, stack, depth, pb, rb, pc,
+                error instanceof ScriptRuntimeException script ? script : translate(error, fn, pc));
     }
 
     /**
@@ -737,7 +793,7 @@ public final class Interpreter {
     }
 
     /** The error raised by {@code throw value}: a new one for a message, the original for a caught error. */
-    private static ScriptRuntimeException thrown(Object value) {
+    static ScriptRuntimeException thrown(Object value) {
         if (value instanceof ScriptFailure failure && failure.exception() instanceof ScriptRuntimeException original) {
             return original.copy();
         }
@@ -746,7 +802,7 @@ public final class Interpreter {
 
     // =================================================================== calls and frames
 
-    private static void invoke(CompiledFunction caller, CompiledFunction callee, ExecutionStack stack, int pb, int rb,
+    static void invoke(CompiledFunction caller, CompiledFunction callee, ExecutionStack stack, int pb, int rb,
                                int[] code, int position, int count) {
         int calleePrimitives = pb + caller.primitiveSlots;
         int calleeReferences = rb + caller.referenceSlots;
@@ -773,7 +829,7 @@ public final class Interpreter {
     }
 
     /** Calls a function value; its captured values fill the first parameters, the arguments the rest. */
-    private static void invokeClosure(CompiledFunction caller, Object value, ExecutionStack stack, int pb, int rb,
+    static void invokeClosure(CompiledFunction caller, Object value, ExecutionStack stack, int pb, int rb,
                                       int[] code, int position, int count) {
         if (value == null) {
             throw new ScriptRuntimeException(ScriptRuntimeException.Kind.NULL, "Cannot call a null function value.", null);
@@ -816,7 +872,7 @@ public final class Interpreter {
     }
 
     /** {@code NEW_CLOSURE Rd kf n captures...}: copies the captured registers into a new function value. */
-    private static Closure newClosure(CompiledFunction fn, long[] p, Object[] r, int pb, int rb, int[] code, int pc) {
+    static Closure newClosure(CompiledFunction fn, long[] p, Object[] r, int pb, int rb, int[] code, int pc) {
         CompiledFunction callee = fn.callees[code[pc + 2]];
         int count = code[pc + 3];
         if (count == 0) {
@@ -844,7 +900,7 @@ public final class Interpreter {
     }
 
     /** Top-level variable restores and player data, which may call back into scripts (initial values). */
-    private static void storage(CompiledFunction fn, ExecutionStack stack, int pb, int rb, int[] code, int pc) {
+    static void storage(CompiledFunction fn, ExecutionStack stack, int pb, int rb, int[] code, int pc) {
         switch (code[pc]) {
             case GLOBAL_RESTORE -> {
                 boolean restored = fn.globals[code[pc + 2]].restore();
@@ -865,7 +921,7 @@ public final class Interpreter {
     }
 
     /** Leaves a frame normally: clears its reference slots and pops it. */
-    private static void leave(ExecutionStack stack, CompiledFunction fn, int pb, int rb) {
+    static void leave(ExecutionStack stack, CompiledFunction fn, int pb, int rb) {
         Object[] r = stack.references;
         for (int i = rb, end = rb + fn.referenceSlots; i < end; i++) {
             r[i] = null;
@@ -936,7 +992,7 @@ public final class Interpreter {
         };
     }
 
-    private static long numericConversion(int opcode, long value) {
+    static long numericConversion(int opcode, long value) {
         return switch (opcode) {
             case I2L -> (int) value;
             case L2I -> (int) value;
@@ -953,7 +1009,7 @@ public final class Interpreter {
         };
     }
 
-    private static Object box(int opcode, long value) {
+    static Object box(int opcode, long value) {
         return switch (opcode) {
             case BOX_I -> (int) value;
             case BOX_L -> value;
@@ -963,7 +1019,7 @@ public final class Interpreter {
         };
     }
 
-    private static long unbox(int opcode, Object value) {
+    static long unbox(int opcode, Object value) {
         if (value == null) {
             throw new ScriptRuntimeException(ScriptRuntimeException.Kind.NULL, "Unexpected null value.", null);
         }
@@ -976,7 +1032,7 @@ public final class Interpreter {
         };
     }
 
-    private static String primitiveText(int opcode, long value) {
+    static String primitiveText(int opcode, long value) {
         return switch (opcode) {
             case I2S -> Values.toString((int) value);
             case L2S -> Values.toString(value);
@@ -988,7 +1044,7 @@ public final class Interpreter {
         };
     }
 
-    private static Object cast(CompiledFunction fn, boolean safe, Object value, int classIndex) {
+    static Object cast(CompiledFunction fn, boolean safe, Object value, int classIndex) {
         Class<?> type = fn.classes[classIndex];
         if (type.isInstance(value)) {
             return value;
@@ -1002,7 +1058,7 @@ public final class Interpreter {
                 : "Cannot cast this value to " + target + ".", null);
     }
 
-    private static String concat(Object[] r, int rb, int[] code, int position, int count) {
+    static String concat(Object[] r, int rb, int[] code, int position, int count) {
         if (count == 2) {
             return ((String) r[rb + code[position]]).concat((String) r[rb + code[position + 1]]);
         }
@@ -1017,7 +1073,7 @@ public final class Interpreter {
         return builder.toString();
     }
 
-    private static ScriptList newList(Object[] r, int rb, int[] code, int position, int count) {
+    static ScriptList newList(Object[] r, int rb, int[] code, int position, int count) {
         ScriptList list = new ScriptList(Math.max(count, 4));
         for (int i = 0; i < count; i++) {
             list.add(r[rb + code[position + i]]);
@@ -1025,7 +1081,7 @@ public final class Interpreter {
         return list;
     }
 
-    private static ScriptMap newMap(Object[] r, int rb, int[] code, int position, int count) {
+    static ScriptMap newMap(Object[] r, int rb, int[] code, int position, int count) {
         ScriptMap map = new ScriptMap(Math.max(count, 4));
         for (int i = 0; i < count; i++) {
             map.put(r[rb + code[position + 2 * i]], r[rb + code[position + 2 * i + 1]]);
@@ -1034,7 +1090,7 @@ public final class Interpreter {
     }
 
     /** {@code NEW_RECORD Rd kr n fields...} */
-    private static RecordValue newRecord(CompiledFunction fn, Object[] r, int rb, int[] code, int pc) {
+    static RecordValue newRecord(CompiledFunction fn, Object[] r, int rb, int[] code, int pc) {
         int count = code[pc + 3];
         Object[] fields = new Object[count];
         for (int i = 0; i < count; i++) {
@@ -1044,11 +1100,11 @@ public final class Interpreter {
     }
 
     /** Record values keep their type across reloads of the declaring script, so types compare by key. */
-    private static boolean isRecord(Object value, RecordType type) {
+    static boolean isRecord(Object value, RecordType type) {
         return value instanceof RecordValue record && (record.type() == type || record.type().key().equals(type.key()));
     }
 
-    private static Object recordCast(RecordType type, boolean safe, Object value) {
+    static Object recordCast(RecordType type, boolean safe, Object value) {
         if (isRecord(value, type)) {
             return value;
         }
@@ -1060,7 +1116,7 @@ public final class Interpreter {
                 : "Cannot cast this value to " + type.name() + ".", null);
     }
 
-    private static Object listGet(Object target, int index) {
+    static Object listGet(Object target, int index) {
         List<?> list = (List<?>) target;
         if (index < 0 || index >= list.size()) {
             throw new ScriptRuntimeException(ScriptRuntimeException.Kind.INDEX,
@@ -1070,7 +1126,7 @@ public final class Interpreter {
     }
 
     @SuppressWarnings("unchecked")
-    private static void listSet(Object target, int index, Object value) {
+    static void listSet(Object target, int index, Object value) {
         List<Object> list = (List<Object>) target;
         if (index < 0 || index >= list.size()) {
             throw new ScriptRuntimeException(ScriptRuntimeException.Kind.INDEX,
@@ -1084,7 +1140,7 @@ public final class Interpreter {
     }
 
     @SuppressWarnings("unchecked")
-    private static void listAdd(Object target, Object value) {
+    static void listAdd(Object target, Object value) {
         try {
             ((List<Object>) target).add(value);
         } catch (UnsupportedOperationException readOnly) {
@@ -1094,7 +1150,7 @@ public final class Interpreter {
 
     // =================================================================== errors
 
-    private static ScriptRuntimeException divisionByZero() {
+    static ScriptRuntimeException divisionByZero() {
         return new ScriptRuntimeException(ScriptRuntimeException.Kind.DIVISION_BY_ZERO, "Division by zero.", null);
     }
 

@@ -1,0 +1,15 @@
+{
+  "date": "2026-10-06",
+  "config": "C:\\Users\\cnoc7\\OneDrive\\Desktop\\TachyonScript-hotfix-0.5.1\\config.yml",
+  "runtime_config_validation": "passed",
+  "literal_api_key_wrapper_removed": true,
+  "failure_policy": "warn",
+  "ai_enabled": true,
+  "discord_enabled": false,
+  "openrouter_key_http_status": 200,
+  "discord_webhook_http_status": 200,
+  "external_checks": "GET metadata only",
+  "model_calls": 0,
+  "discord_messages_sent": 0,
+  "secrets_in_report": false
+}

@@ -2037,7 +2037,7 @@ Something that can run commands and receive messages: a player or the console.
 | `dispatch(command: string)` | `bool` | Runs a command as this sender (without the leading /); false if it does not exist. |
 | `hasPermission(permission: string)` | `bool` | Whether the sender has a permission. |
 | `isConsole` | `bool` | Whether the sender is the server console. |
-| `name` | `string` | The sender's name (the player name, or CONSOLE). |
+| `name` | `string` | The sender's name (the player name, or CONSOLE). Entity senders require their owning thread. |
 | `op` | `bool` | Whether the sender is a server operator. |
 | `send(message: Component)` | `void` | Sends a chat message. |
 
@@ -2238,7 +2238,7 @@ Any entity in a world.
 | `tag(key: string)` | `string?` | A text tag of the entity, or null. |
 | `tags` | `List<string>` | The keys of the entity's tags. |
 | `teleport(destination: Location)` | `void` | Teleports the entity to a location. |
-| `teleport(target: Entity)` | `void` | Teleports the entity to another entity. |
+| `teleport(target: Entity)` | `void` | Teleports to a snapshot of the target's location. Reading that location requires the target's owning thread; the teleport is forwarded to this entity's owner. |
 | `ticksLived` | `int` | Ticks since the entity spawned. |
 | `toString()` | `string` | The entity's name. |
 | `type` | `EntityType` | The kind of entity. |

@@ -105,21 +105,31 @@ public final class DiscordSecurityNotifier implements AutoCloseable {
     private void load() throws IOException {
         if (folder == null) return;
         Set<String> delivered = new HashSet<>();
-        read("discord-delivered.jsonl", value -> delivered.add(SecurityJson.string(value, "id")));
-        read("discord-outbox.jsonl", value -> {
+        int unreadable = read("discord-delivered.jsonl", value -> delivered.add(SecurityJson.string(value, "id")));
+        unreadable += read("discord-outbox.jsonl", value -> {
             String id = SecurityJson.string(value, "id"), payload = SecurityJson.string(value, "payload");
             if (!id.matches("TS-SEC-[0-9]{8}-[0-9a-f]{32}\\.[0-9]+")) throw new IllegalArgumentException("Invalid security outbox identity");
             recorded.add(id);
             if (!delivered.contains(id)) pending.put(id, payload);
-            if (pending.size() > 100_000) throw new IllegalArgumentException("Security outbox backlog requires administrator attention");
+            if (pending.size() > 100_000) throw new IllegalStateException("Security outbox backlog requires administrator attention");
         });
+        // A message is only a copy of an audited incident: losing an unreadable one must not stop the plugin.
+        if (unreadable > 0) lastFailure = "Skipped " + unreadable + " unreadable Discord outbox record(s); the incidents remain in the audit.";
     }
-    private void read(String name, Consumer<Map<String, Object>> consumer) throws IOException {
+    /** Reads one record per line and returns how many lines could not be read (a write cut off by a crash). */
+    private int read(String name, Consumer<Map<String, Object>> consumer) throws IOException {
         Path path = folder.resolve(name); SecurityAuditStore.safe(path);
-        if (!Files.exists(path, LinkOption.NOFOLLOW_LINKS)) return;
-        try (var reader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
-            for (String line; (line = reader.readLine()) != null;) consumer.accept(SecurityJson.object(SecurityJson.parse(line)));
-        } catch (IllegalArgumentException e) { throw new IOException("Invalid Discord security outbox"); }
+        if (!Files.exists(path, LinkOption.NOFOLLOW_LINKS)) return 0;
+        int unreadable = 0;
+        try (var reader = new java.io.BufferedReader(new java.io.InputStreamReader(Files.newInputStream(path, LinkOption.NOFOLLOW_LINKS),
+                StandardCharsets.UTF_8.newDecoder().onMalformedInput(java.nio.charset.CodingErrorAction.REPLACE)
+                        .onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPLACE)))) {
+            for (String line; (line = reader.readLine()) != null;) {
+                try { consumer.accept(SecurityJson.object(SecurityJson.parse(line))); }
+                catch (IllegalArgumentException e) { unreadable++; }
+            }
+        } catch (IllegalStateException e) { throw new IOException(e.getMessage()); }
+        return unreadable;
     }
     @Override public void close() { closed = true; worker.shutdownNow(); if (client != null) client.shutdownNow(); }
 }

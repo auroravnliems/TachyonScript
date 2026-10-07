@@ -29,9 +29,20 @@ final class SecurityCommands {
         SecurityService service = plugin.engine().security();
         if (action.equals("status")) {
             send(sender, "Security: " + (service.options().enabled() ? "enabled" : "disabled") + "; Qwen: " + service.options().ai().enabled()
-                    + "; required: " + service.options().ai().required() + "; quarantined/disabled: " + service.audit().blocked().size());
-            send(sender, "Incidents: " + service.audit().incidents().size() + "; Discord pending: " + service.discord().pendingCount()
+                    + "; failure-policy: " + (service.options().ai().required() ? "keep-pending" : "warn")
+                    + "; review-mode: " + (service.options().ai().background() ? "background" : "blocking")
+                    + "; quarantined/disabled: " + service.audit().blocked().size());
+            if (service.options().ai().enabled()) {
+                send(sender, "AI reviews running: " + service.reviewsRunning() + "; stored: " + service.storedReviews()
+                        + "; waiting to activate: " + String.join(", ", plugin.engine().awaitingReview()));
+            }
+            send(sender, "Incidents: " + service.audit().incidentCount() + "; Discord pending: " + service.discord().pendingCount()
                     + (service.discord().lastFailure().isEmpty() ? "" : "; " + service.discord().lastFailure()));
+            var recoveries = service.audit().recoveries();
+            if (!recoveries.isEmpty()) {
+                send(sender, "Audit recovered " + recoveries.size() + " time(s) since start; the latest: " + recoveries.getLast()
+                        + " Details are in the server log.");
+            }
             return;
         }
         if (action.equals("incidents")) {
@@ -101,6 +112,8 @@ final class SecurityCommands {
                     }
                     case "reload" -> {
                         plugin.reloadConfig(); service.reloadOptions(SecuritySettings.from(plugin.getConfig()));
+                        String migration = SecuritySettings.migrationNotice(plugin.getConfig());
+                        if (!migration.isEmpty()) plugin.getLogger().info(migration);
                         plugin.engine().scanSecurity(plugin.scripts());
                         send(sender, "Security configuration reloaded and sources rescanned.");
                     }

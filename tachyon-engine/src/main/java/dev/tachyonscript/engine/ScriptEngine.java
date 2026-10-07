@@ -104,6 +104,20 @@ public final class ScriptEngine {
     private volatile Map<String, Placeholder> placeholders = Map.of();
     private long nextGeneration = 1;
     private volatile boolean closed;
+    /** The source of the latest load: background security reviews activate their revisions from it. */
+    private volatile ScriptSource lastSource;
+    /** New revisions held back until their background AI review finishes (their old versions keep running). */
+    private final Set<String> awaitingReview = ConcurrentHashMap.newKeySet();
+    /** Reviewed paths not yet followed up; drained by one follow-up at a time. */
+    private final Set<String> reviewedPaths = ConcurrentHashMap.newKeySet();
+    private final java.util.concurrent.atomic.AtomicBoolean followUpQueued = new java.util.concurrent.atomic.AtomicBoolean();
+    private final java.util.concurrent.ThreadPoolExecutor followUps = new java.util.concurrent.ThreadPoolExecutor(0, 1,
+            30, TimeUnit.SECONDS, new java.util.concurrent.LinkedBlockingQueue<>(), runnable -> {
+                Thread thread = new Thread(runnable, "TachyonScript-Security-FollowUp");
+                thread.setDaemon(true);
+                return thread;
+            });
+    private volatile java.util.function.Consumer<LoadReport> reviewActivations = report -> { };
 
     /** A placeholder declared by a script. */
     private record Placeholder(LoadedScript script, CompiledFunction function) {
@@ -117,7 +131,7 @@ public final class ScriptEngine {
     private static SecurityService defaultSecurity(Platform platform) {
         try {
             return new SecurityService(SecurityOptions.defaults(), new dev.tachyonscript.security.SecurityAuditStore(null),
-                    incident -> platform.logger().warn(dev.tachyonscript.security.SecurityMessages.detail(incident, true)),
+                    incident -> platform.logger().warn(dev.tachyonscript.security.SecurityMessages.console(incident)),
                     message -> platform.logger().error(message));
         } catch (IOException e) { throw new IllegalStateException("Cannot initialize script security", e); }
     }
@@ -141,6 +155,20 @@ public final class ScriptEngine {
         this.timed = options.slowThresholdNanos() > 0;
         this.slowThresholdNanos = options.slowThresholdNanos();
         ExecutionStack.configure(options.limits());
+        security.onReviewed(this::reviewsFinished);
+    }
+
+    /**
+     * Receives the report of every load that background security reviews start by themselves
+     * (activating reviewed revisions), so the host can log it like a reload.
+     */
+    public void onReviewActivation(java.util.function.Consumer<LoadReport> listener) {
+        reviewActivations = java.util.Objects.requireNonNull(listener, "listener");
+    }
+
+    /** Paths of new revisions waiting for their background AI review. */
+    public Set<String> awaitingReview() {
+        return Set.copyOf(awaitingReview);
     }
 
     public SymbolRegistry registry() {
@@ -246,6 +274,7 @@ public final class ScriptEngine {
 
     private LoadReport load(ScriptSource source, Set<String> forceRecompile, boolean selected) {
         long start = System.nanoTime();
+        lastSource = source;
         boolean onGlobal = platform.scheduler().isGlobalThread();
         try {
             // The global thread must never wait for a load that waits for the global thread.
@@ -361,10 +390,18 @@ public final class ScriptEngine {
         Set<String> denied = new HashSet<>(review.denied());
         for (String path : byPath.keySet()) if (security.blocked(path)) denied.add(path);
         denied.addAll(securityDependents(denied, previousScripts.values()));
+        // Only new revisions wait for a background review; unchanged scripts keep running meanwhile.
+        Set<String> awaiting = new TreeSet<>(review.awaiting());
+        awaiting.removeAll(denied);
+        awaiting.retainAll(changed);
+        // A selected reload reconsiders only its own files; other revisions keep waiting.
+        awaitingReview.removeIf(path -> changed.contains(path) || !selected && !byPath.containsKey(path));
+        awaitingReview.addAll(awaiting);
         // Stop in-flight instructions before audit fsync or platform-thread cleanup can wait.
         denied.forEach(path -> { LoadedScript active = current.scripts().get(path); if (active != null) active.revokeSecurity(); });
         try {
-            security.commit(new SecurityService.Batch(review.reviews(), denied, review.pending(), review.policyVersion()), securityInput);
+            security.commit(new SecurityService.Batch(review.reviews(), denied, review.pending(), review.awaiting(),
+                    review.policyVersion()), securityInput);
         } catch (IOException | RuntimeException error) {
             // Revocation is independent of audit/transport availability and of strict reload rollback.
             denied.addAll(byPath.keySet().stream().filter(security::blocked).toList());
@@ -376,7 +413,7 @@ public final class ScriptEngine {
         Set<String> ineligible = new HashSet<>(denied);
         ineligible.addAll(review.pending());
         reused.keySet().removeAll(denied);
-        succeeded.removeIf(module -> ineligible.contains(module.file().path()));
+        succeeded.removeIf(module -> ineligible.contains(module.file().path()) || awaiting.contains(module.file().path()));
         for (String path : ineligible) {
             if (!failed.contains(path)) failed.add(path);
             linkProblems.put(path, List.of(denied.contains(path) ? "Security denied activation; previous runtime revoked. Use /tys security incidents."
@@ -390,10 +427,12 @@ public final class ScriptEngine {
         for (CompiledModule module : importOrder(succeeded)) {
             String path = module.file().path();
             LoadedScript script = new LoadedScript(path, module.file().hash(), module, security.revocation(path),
-                    () -> security.options().maxPendingTasks(), () -> controls.allowed(path));
+                    () -> security.options().maxPendingTasks(), controls.allowance(path));
             ModuleEnvironment environment = new ModuleEnvironment(script, byModule::get, data, platform.players());
             try {
-                LinkedModule linked = Linker.link(Assembler.assemble(module.ir()), bindings, platform.text(), environment);
+                LinkedModule linked = Linker.link(Assembler.assemble(module.ir()), bindings, platform.text(), environment,
+                        options.backend());
+                for (String note : linked.notes()) platform.logger().warn(path + ": " + note);
                 script.link(linked);
                 prepared.add(script);
                 byModule.put(script.module(), script);
@@ -410,10 +449,15 @@ public final class ScriptEngine {
         if (!failed.isEmpty() && (selected || options.mode() == LoadMode.STRICT)) {
             return new LoadReport(false, previous.id(), previous.scripts().size(), changed.size(), reused.size(), failed,
                     List.of(), previous.handlers().size(), diagnostics, linkProblems, result.timings(),
-                    System.nanoTime() - start, null);
+                    System.nanoTime() - start, null, List.copyOf(awaiting));
         }
         Map<String, LoadedScript> next = new LinkedHashMap<>(reused);
         prepared.forEach(script -> next.put(script.path(), script));
+        // A revision under review is not a failure: its previous version simply stays until it is decided.
+        for (String path : awaiting) {
+            LoadedScript old = previousScripts.get(path);
+            if (old != null && old.isActive() && byPath.containsKey(path)) next.put(path, old);
+        }
         List<String> keptPrevious = new ArrayList<>();
         for (String path : failed) {
             LoadedScript old = previousScripts.get(path);
@@ -440,7 +484,130 @@ public final class ScriptEngine {
         catch (IllegalStateException error) { return failure(current, start, error.getMessage()); }
         return new LoadReport(true, generation.id(), generation.scripts().size(), changed.size(), reused.size(), failed,
                 keptPrevious, generation.handlers().size(), diagnostics, linkProblems, result.timings(),
-                System.nanoTime() - start, null);
+                System.nanoTime() - start, null, List.copyOf(awaiting));
+    }
+
+    // =================================================================== background security reviews
+
+    /** Called on a review thread; one follow-up at a time handles everything reviewed so far. */
+    private void reviewsFinished(Set<String> paths) {
+        reviewedPaths.addAll(paths);
+        if (!closed && followUpQueued.compareAndSet(false, true)) {
+            try {
+                followUps.execute(this::followUp);
+            } catch (java.util.concurrent.RejectedExecutionException e) {
+                followUpQueued.set(false);
+            }
+        }
+    }
+
+    /**
+     * Activates reviewed revisions with a selected reload (the review is now stored, so the
+     * reload decides at once), together with the revisions that waited for them through an
+     * import; and re-checks active scripts whose review finished after they were activated
+     * (after a provider outage): a denial revokes them. Everything is decided under the load
+     * lock, after any load that was still registering its waiting revisions.
+     */
+    private void followUp() {
+        followUpQueued.set(false);
+        Set<String> paths = new TreeSet<>();
+        for (String path : List.copyOf(reviewedPaths)) {
+            if (reviewedPaths.remove(path)) paths.add(path);
+        }
+        if (paths.isEmpty() || closed) return;
+        LoadReport report = null;
+        loadLock.lock();
+        try {
+            if (closed) return;
+            Set<String> targets = waitingOn(paths);
+            ScriptSource source = lastSource;
+            if (!targets.isEmpty() && source != null) {
+                report = loadLocked(source, targets, System.nanoTime(), 0, true);
+            }
+            if (!awaitingReview.containsAll(paths)) recheckActive();
+        } catch (RuntimeException e) {
+            platform.logger().warn("Applying a finished security review failed; reload the script to retry: " + e);
+        } finally {
+            loadLock.unlock();
+        }
+        if (report != null) reviewActivations.accept(report);
+    }
+
+    /**
+     * The waiting revisions to load after {@code reviewed} finished: the reviewed ones and the
+     * waiting revisions importing them (transitively), except those that import a waiting module
+     * which is not loaded with them. A selected reload compiles against the active versions of
+     * everything else, so a revision can only activate together with the waiting modules it uses.
+     */
+    private Set<String> waitingOn(Set<String> reviewed) {
+        Map<String, String> waitingModules = new HashMap<>();
+        for (String path : awaitingReview) {
+            var manifest = security.manifest(path);
+            if (manifest != null) waitingModules.put(manifest.module(), path);
+        }
+        Set<String> targets = new TreeSet<>(reviewed);
+        targets.retainAll(awaitingReview);
+        Set<String> modules = new HashSet<>();
+        for (String path : reviewed) {
+            var manifest = security.manifest(path);
+            if (manifest != null) modules.add(manifest.module());
+        }
+        boolean grew;
+        do {
+            grew = false;
+            for (String path : awaitingReview) {
+                var manifest = security.manifest(path);
+                if (manifest == null || targets.contains(path)) continue;
+                if (manifest.imports().stream().anyMatch(modules::contains)) {
+                    targets.add(path);
+                    modules.add(manifest.module());
+                    grew = true;
+                }
+            }
+        } while (grew);
+        boolean removed;
+        do {
+            removed = false;
+            for (var iterator = targets.iterator(); iterator.hasNext(); ) {
+                var manifest = security.manifest(iterator.next());
+                if (manifest == null || manifest.imports().stream().anyMatch(module ->
+                        waitingModules.containsKey(module) && !targets.contains(waitingModules.get(module)))) {
+                    iterator.remove();
+                    removed = true;
+                }
+            }
+        } while (removed);
+        return targets;
+    }
+
+    /**
+     * Reviews the active generation again without recompiling; denied scripts and their importers
+     * are revoked. Runs under the load lock.
+     */
+    private void recheckActive() {
+        List<BoundModule> modules = new ArrayList<>();
+        for (LoadedScript script : current.scripts().values()) {
+            if (script.compiled().bound() != null && !script.securityRevoked()) modules.add(script.compiled().bound());
+        }
+        if (modules.isEmpty()) return;
+        SecurityService.Batch batch = security.review(modules);
+        // Scripts with a newer revision on disk are decided by that revision's load, not here.
+        Map<String, SecurityService.Review> decided = new LinkedHashMap<>(batch.reviews());
+        decided.entrySet().removeIf(entry -> !security.current(entry.getKey(), entry.getValue().manifest().sha256()));
+        Set<String> denied = new HashSet<>(batch.denied());
+        denied.retainAll(decided.keySet());
+        denied = securityDependents(denied, current.scripts().values());
+        for (String path : denied) {
+            LoadedScript active = current.scripts().get(path);
+            if (active != null) active.revokeSecurity();
+        }
+        try {
+            security.commit(new SecurityService.Batch(decided, denied, Set.of(), Set.of(), batch.policyVersion()), modules);
+        } catch (IOException e) {
+            platform.logger().warn("Security audit commit failed during a background re-check; denied scripts stay revoked.");
+        } finally {
+            revokeSecurity(denied);
+        }
     }
 
     private static boolean unchanged(ScriptSource source, Map<String, SourceFile> snapshot) {
@@ -789,11 +956,26 @@ public final class ScriptEngine {
 
     /** Deactivates every script (plugin shutdown) and writes the saved variables. Later loads are refused. */
     public void shutdown() {
+        shutdown(this::onGlobalThread);
+    }
+
+    /**
+     * Deactivates scripts directly in the host's exclusive disable callback. The host must
+     * have stopped dispatching new script work and permit registry teardown on this thread.
+     * Unlike {@link #shutdown()}, this does not schedule onto a possibly halted global thread.
+     * Normal reload/unload operations must continue to use the global thread.
+     */
+    public void shutdownOnPlatformThread() {
+        shutdown(Runnable::run);
+    }
+
+    private void shutdown(java.util.function.Consumer<Runnable> dispatch) {
         if (closed) return;
         closed = true;
+        followUps.shutdownNow();
         security.close();
         Generation last = current;
-        onGlobalThread(() -> {
+        dispatch.accept(() -> {
                 List<LoadedScript> scripts = new ArrayList<>(last.scripts().values());
                 for (int i = scripts.size() - 1; i >= 0; i--) {
                     retire(scripts.get(i));

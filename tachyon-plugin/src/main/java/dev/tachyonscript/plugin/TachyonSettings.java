@@ -7,6 +7,7 @@ import dev.tachyonscript.engine.LoadMode;
 import dev.tachyonscript.engine.database.DatabaseConfig;
 import dev.tachyonscript.engine.storage.JdbcBackend;
 import dev.tachyonscript.engine.storage.StorageBackend;
+import dev.tachyonscript.runtime.ExecutionBackend;
 import dev.tachyonscript.runtime.interpreter.RuntimeLimits;
 import org.bukkit.configuration.ConfigurationSection;
 
@@ -25,10 +26,11 @@ import java.util.logging.Logger;
  * @param flushSeconds how often changed saved variables are written
  * @param databases    databases scripts open with {@code Database("name")}
  * @param messages     overridden messages of script commands, by key
+ * @param backend      how scripts execute: the interpreter (reference) or JVM bytecode
  */
 record TachyonSettings(LoadMode mode, int recursionLimit, long maxExecutionMillis, long slowWarningMillis,
                        boolean debug, Storage storage, long flushSeconds, Map<String, Database> databases,
-                       Map<String, String> messages) {
+                       Map<String, String> messages, ExecutionBackend backend) {
 
     /** Keys of {@code commands.messages}. */
     private static final Set<String> MESSAGE_KEYS = Set.of("usage", "no-permission", "player-only", "cooldown",
@@ -70,10 +72,15 @@ record TachyonSettings(LoadMode mode, int recursionLimit, long maxExecutionMilli
         // Explicit opt-in also silences legacy configs with a 5/10 ms threshold.
         if (!config.getBoolean("performance.slow-execution-warnings", false)) slow = 0;
         slow = Math.min(slow, Long.MAX_VALUE / 1_000_000L);
-        String backend = config.getString("runtime.backend", "interpreter");
-        if (!backend.equalsIgnoreCase("interpreter")) {
-            logger.warning("runtime.backend '" + backend + "' is not available yet; using 'interpreter'.");
-        }
+        String backendName = config.getString("runtime.backend", "interpreter").toLowerCase(Locale.ROOT);
+        ExecutionBackend backend = switch (backendName) {
+            case "interpreter" -> ExecutionBackend.INTERPRETER;
+            case "bytecode" -> ExecutionBackend.BYTECODE;
+            default -> {
+                logger.warning("Unknown runtime.backend '" + backendName + "' (interpreter or bytecode); using 'interpreter'.");
+                yield ExecutionBackend.INTERPRETER;
+            }
+        };
         long flush = config.getLong("storage.flush-interval-seconds", 30);
         if (flush < 0) {
             logger.warning("storage.flush-interval-seconds must not be negative; using 30.");
@@ -81,7 +88,7 @@ record TachyonSettings(LoadMode mode, int recursionLimit, long maxExecutionMilli
         }
         return new TachyonSettings(mode, recursion, maxTime, slow, config.getBoolean("debug.enabled", false),
                 storage(config, logger), flush, databases(config.getConfigurationSection("databases"), logger),
-                messages(config.getConfigurationSection("commands.messages"), logger));
+                messages(config.getConfigurationSection("commands.messages"), logger), backend);
     }
 
     private static Storage storage(ConfigurationSection config, Logger logger) {
@@ -165,7 +172,7 @@ record TachyonSettings(LoadMode mode, int recursionLimit, long maxExecutionMilli
         RuntimeLimits limits = new RuntimeLimits(recursionLimit, maxExecutionMillis * 1_000_000L,
                 RuntimeLimits.DEFAULT.loopCheckInterval());
         return new EngineOptions(mode, CompilerOptions.DEFAULT, limits, slowWarningMillis * 1_000_000L, debug)
-                .withMessages(CommandMessages.DEFAULT.with(messages));
+                .withMessages(CommandMessages.DEFAULT.with(messages)).withBackend(backend);
     }
 
     /** The complete engine options, with files relative to the plugin folder. */

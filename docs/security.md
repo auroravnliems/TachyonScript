@@ -19,7 +19,8 @@ ScriptDirectory -> lexer/parser -> binder -> compiler/IR verifier
                                                 |
                            dependency hashes + security manifests
                                                 |
-                          optional bounded Qwen review batches
+              optional Qwen review (stored by exact input; in the background
+              by default, while the previous version keeps running)
                                                 |
                        exact-hash policy and durable audit commit
                                    /                        \
@@ -45,10 +46,20 @@ callee findings point to the callee file; dependency disables point to the impor
 statement. An unavailable location uses `UNKNOWN` (-1), with an explicit explanation.
 The AI cannot replace locations, code snippets, sources, sinks or compiler taint paths.
 
-Qwen receives normalized compiler nodes with stable IDs, resolved native declaration
-IDs, capabilities/effects, arguments, permissions, imports/exports, handlers, commands,
-tasks, loops, dependency hashes and taint paths. Large manifests are divided into
-bounded requests without dropping nodes. All parts must succeed when AI is required.
+Qwen receives a compact view of the compiler nodes: stable node IDs, resolved native
+targets, capabilities/effects, arguments, permissions, imports/exports, handlers,
+commands, tasks, loops, dependency hashes and taint paths. Pure computations and
+property reads without untrusted or secret data cannot be the dangerous step of a
+flow; they are counted (`omittedNodes`) instead of sent. Every action (including
+economy and message calls), capability, loop, import, source, tainted or secret
+argument and compiler-proven danger is sent. Code reached from several handlers is
+sent once, listing every context, the merged argument flags and the other sources
+reaching it. Positions are `line:column`, a path keeps its sources and the steps
+nearest the node (a long middle is summarized by count), and each rule's explanation
+is stated once. For a real 32-script server archive (measured with
+`validation/perf/ReviewRequestSize.java`), requests shrank from about 6 MB to 1.2 MB,
+and its largest script from 1.4 MB in two requests to 156 KB in one. Large views are still divided into bounded requests without dropping
+reviewable nodes. All parts must succeed when AI is required.
 Responses use strict JSON; duplicate keys, malformed or truncated envelopes, tool
 calls, foreign identities and stale hashes are rejected. AI finding IDs are converted
 to opaque internal identifiers before reporting.
@@ -60,7 +71,8 @@ to opaque internal identifiers before reporting.
 | Concrete deterministic CRITICAL finding | Automatic quarantine |
 | AI CRITICAL, confidence at least the configured threshold, matching identity/hash, valid compiler node/span, compatible dangerous capability and concrete evidence | Automatic quarantine |
 | HIGH/MEDIUM finding or ungrounded confident AI statement | Warn and retain evidence for administrator review |
-| Required provider failure, invalid response or scanner budget failure | Revision remains pending; it cannot activate |
+| Provider failure or invalid response | Warn by default; deterministic enforcement remains active |
+| Explicit AI failure policy `keep-pending`, or scanner budget failure | Revision remains pending; it cannot activate |
 | Explicit administrator approval | Audited override for the source SHA-256 and reviewed importer/dependency context; compilation and required-provider checks still apply |
 
 The analyzer follows locals, globals, branches, loop-carried flows, captures, callback
@@ -118,7 +130,9 @@ security:
   native-capabilities: {}
   ai:
     enabled: false
-    required: true
+    failure-policy: warn
+    review-mode: background # or blocking
+    max-concurrent-reviews: 2
     endpoint: ""
     model: ""
     api-key: "${QWEN_API_KEY}"
@@ -139,6 +153,54 @@ security:
     timeout-ms: 10000
     max-retries: 2
 ```
+
+The 0.5.1 security hotfix replaces `security.ai.required` with
+`security.ai.failure-policy`. The default `warn` also applies to existing configurations
+containing `required: true`; startup reports this migration. Use `keep-pending` explicitly
+to hold new revisions when AI is unavailable. Existing valid runtimes are retained by
+ordinary reload rollback. Deterministic critical findings and existing quarantines still
+block execution in either mode.
+
+### Background reviews and stored results
+
+With `review-mode: background` (the default) a load or reload never waits for the
+provider. A new or changed revision that needs an AI review is held back while its
+previous version, if any, keeps running; scripts importing it wait with it. Everything
+else activates immediately. When the review finishes, the engine applies it by itself
+with a selected reload of that file (and of the waiting importers whose dependencies
+are all reviewed): an approved revision activates, a denied one is quarantined as
+before. The reload report and `/tys security status` list the waiting scripts. Up to
+`max-concurrent-reviews` (1-8) reviews run at once; threads exist only while they run.
+
+Finished reviews are stored in `security/ai-reviews.json` by exact input: the manifest
+(source hash, nodes and deterministic findings), the dependency/importer hashes and
+network exceptions, and the provider, model, prompt and request limits. An unchanged
+script is therefore never sent again, including after a restart; only its decision is
+recomputed with the current thresholds. The file is a cache, not an audit record: if
+it is missing or damaged, scripts are simply reviewed again (at most 512 reviews are
+kept, least recently used first). Deterministic analysis still runs on every load.
+
+`keep-pending` keeps its meaning in the background: a revision whose review failed
+stays pending. With `warn`, a failed review activates the revision on deterministic
+checks alone and reports the outage once. An active script that was activated without
+a review (during an outage) is reviewed again on a later load; a denial then revokes
+it. `review-mode: blocking` restores the earlier behaviour, where every load waits for
+its reviews before activating anything; only the storage of results is shared.
+
+A provider failure pauses further review requests for 60 seconds across all scripts.
+Failures are summarized once per scan, with repeated alerts limited to once per five
+minutes. HTTP authentication, credit, rate-limit and response-format errors have safe
+diagnostic reasons; response bodies and credentials are never logged. Repeated
+`scanall` does not bypass the cooldown; `security reload` resets it after configuration
+changes. Empty manifests do not need an external review. Null tool-call envelope fields
+are accepted; actual tool/function calls and malformed or partial responses are rejected.
+
+Routine event scheduling no longer generates a warning by itself. Deferred menu/HTTP
+callbacks do not inherit the loop in which they were registered. Actual scheduling
+inside loops or scheduled callbacks and runtime task quotas remain checked.
+AI cannot turn a compiler-established command permission boundary into an automatic
+quarantine merely by assigning a higher severity. Warnings remain in the audit;
+`security inspect` retains the complete source and flow.
 
 Production provider/webhook endpoints require HTTPS. Literal loopback HTTP endpoints
 are accepted for local protocol tests. Invalid configuration or missing enabled
@@ -219,13 +281,35 @@ newly edited importer merely because the callee's source hash is unchanged.
 `plugins/TachyonScript/security` contains an append-only, fsynced hash-chained
 `audit.jsonl`, immutable per-incident `.report.json` files and exact `.source.tys`
 snapshots for disables/quarantines. Quarantine is logical: the original script stays
-on disk and cannot run until explicitly restored. Nothing is automatically deleted
-or renamed. Reports are redacted; source archives preserve the original source and
+on disk and cannot run until explicitly restored. Nothing is automatically deleted;
+recovery (below) only renames unreadable reports and keeps a copy of a damaged journal.
+Reports are redacted; source archives preserve the original source and
 must have the same access restrictions as the scripts they contain.
 
 Write-ahead reports recover revocation after an interrupted journal append. An older
-recovered restore cannot undo a newer committed quarantine. Corrupt audit state blocks
-startup instead of silently losing revocations. All approvals/restores are audited.
+recovered restore cannot undo a newer committed quarantine; recovered reports replay in
+the order they happened. All approvals/restores are audited.
+
+Damage never stops the plugin, and never silently loses a revocation. When a journal
+record does not verify (edited, removed, reordered, cut off, or the journal replaced by
+another copy), the records before it stay in force, the damaged journal is kept as
+`audit-damaged-<UTC time>.jsonl`, and the rest is rebuilt from the write-ahead reports.
+A quarantine or disable found only in the damaged part is kept; an approval or restore
+needs its report. An unreadable report is renamed `*.report.json.unreadable`. Each
+recovery is logged as SEVERE and repeated by `/tys security status`. The journal is
+checked before every append as well, so a copy restored over it while the server runs
+is recovered rather than extended into a broken chain. Storage writes run on a thread
+that nothing interrupts, and a failed append is cut off again: an interrupted thread
+(the engine stopping while a background review is committed) used to leave an empty
+report or a record the chain did not know about. Do not edit or replace this folder
+while the server runs.
+
+The audit only grows, so memory holds a bounded part of it: the 512 most recent
+incidents, every incident deciding a script's state (quarantines, disables and
+approvals), all incident IDs and one fingerprint per incident to suppress duplicates.
+`/tys security inspect` reads older incidents back from their report files, and the
+status line counts all of them. After a review the service keeps manifests without
+their nodes (they dominate a manifest's size) and at most 256 decided reviews.
 
 Console and in-game alerts include actionable locations and an incident inspection
 command. Discord uses colored cards with Vietnamese labels, inline script/location/
@@ -256,8 +340,8 @@ and can still be delivered; upgrading the display does not recreate past alerts.
 .\gradlew.bat :tachyon-plugin:jar
 ```
 
-The packaged artifact is `tachyon-plugin/build/libs/TachyonScript-0.5.1-SNAPSHOT.jar`.
-OkHttp, Okio and Kotlin are relocated to avoid other plugins' dependency versions.
+The packaged artifact is `tachyon-plugin/build/libs/TachyonScript-0.7.0-SNAPSHOT.jar`.
+Script HTTP uses the JDK; the only bundled library, ASM, is relocated.
 
 Tests check compiler/IR/source agreement, multiline/nested calls, Unicode, comments,
 blank lines, LF/CRLF/CR, interprocedural imports, exact source/sink paths, stale async

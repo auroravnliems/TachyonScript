@@ -27,18 +27,16 @@ tasks.processResources {
     }
 }
 
-// Keep the established artifact name; HTTP libraries are isolated from other server plugins.
+// Keep the established artifact name. The only bundled library is ASM (bytecode backend),
+// relocated so that other plugins' ASM versions cannot collide with it.
 tasks.jar { enabled = false; dependsOn(tasks.shadowJar) }
 tasks.shadowJar {
     archiveBaseName = "TachyonScript"
     archiveClassifier = ""
-    relocate("okhttp3", "dev.tachyonscript.internal.okhttp3")
-    relocate("okio", "dev.tachyonscript.internal.okio")
-    relocate("kotlin", "dev.tachyonscript.internal.kotlin")
-    relocate("org.jetbrains.annotations", "dev.tachyonscript.internal.annotations")
+    relocate("org.objectweb.asm", "dev.tachyonscript.internal.asm")
     mergeServiceFiles()
-    exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA")
+    exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA", "module-info.class", "META-INF/versions/*/module-info.class")
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    filesMatching(listOf("META-INF/*.kotlin_module", "META-INF/services/**")) { duplicatesStrategy = DuplicatesStrategy.INCLUDE }
+    filesMatching("META-INF/services/**") { duplicatesStrategy = DuplicatesStrategy.INCLUDE }
 }
 tasks.assemble { dependsOn(tasks.shadowJar) }

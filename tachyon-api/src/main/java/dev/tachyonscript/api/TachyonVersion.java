@@ -10,7 +10,7 @@ package dev.tachyonscript.api;
 public final class TachyonVersion {
 
     /** Runtime (implementation) version. */
-    public static final String RUNTIME = "0.5.1-SNAPSHOT";
+    public static final String RUNTIME = "0.7.0-SNAPSHOT";
 
     /** Language level accepted by this compiler. Incremented on incompatible language changes. */
     public static final int LANGUAGE_LEVEL = 2;

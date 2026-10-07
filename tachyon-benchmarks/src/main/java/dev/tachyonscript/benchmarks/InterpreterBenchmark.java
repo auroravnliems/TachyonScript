@@ -1,6 +1,8 @@
 package dev.tachyonscript.benchmarks;
 
+import dev.tachyonscript.compiler.CompilerOptions;
 import dev.tachyonscript.engine.ScriptEngine;
+import dev.tachyonscript.runtime.ExecutionBackend;
 import dev.tachyonscript.runtime.interpreter.CompiledFunction;
 import dev.tachyonscript.runtime.interpreter.Interpreter;
 import dev.tachyonscript.testkit.TestPlatform;
@@ -66,13 +68,22 @@ public class InterpreterBenchmark {
     @Param({"20"})
     public int fibArgument;
 
+    @Param({"false", "true"})
+    public boolean optimize;
+
+    /** {@code interpreter} or {@code bytecode} (see {@code runtime.backend}). */
+    @Param({"interpreter", "bytecode"})
+    public String backend;
+
     private CompiledFunction sum;
     private CompiledFunction fib;
     private CompiledFunction distance;
 
     @Setup
     public void setUp() {
-        ScriptEngine engine = Scripts.load(new TestPlatform(), "bench.tys", SCRIPT);
+        ScriptEngine engine = Scripts.load(new TestPlatform(), "bench.tys", SCRIPT,
+                CompilerOptions.DEFAULT.withOptimization(optimize),
+                ExecutionBackend.valueOf(backend.toUpperCase(java.util.Locale.ROOT)));
         sum = Scripts.function(engine, "bench.tys", "sum(int)");
         fib = Scripts.function(engine, "bench.tys", "fib(int)");
         distance = Scripts.function(engine, "bench.tys", "distance(int)");

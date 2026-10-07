@@ -64,6 +64,41 @@ class EngineFeaturesTest {
     // ---------------------------------------------------------------- scheduling
 
     @Test
+    void platformDisableRetiresAndFlushesWithoutASchedulerTick() throws Exception {
+        scripts.put("disable.tys", """
+                persistent var saved = 1
+                command bump { saved += 1 }
+                event player.join { }
+                every 1 second { saved += 100 }
+                on unload { saved += 10; log("disable hook") }
+                """);
+        load();
+        platform.command(platform.console(), "bump");
+        java.util.concurrent.atomic.AtomicReference<Throwable> failure = new java.util.concurrent.atomic.AtomicReference<>();
+        // The host has stopped ticking and calls disable on its separate lifecycle thread.
+        Thread lifecycle = Thread.ofPlatform().name("host-disable").start(() -> {
+            try {
+                assertFalse(platform.scheduler().isGlobalThread());
+                engine.shutdownOnPlatformThread();
+            } catch (Throwable error) {
+                failure.set(error);
+            }
+        });
+        lifecycle.join(5_000);
+        assertFalse(lifecycle.isAlive(), "Disable must not wait for a halted scheduler");
+        assertNull(failure.get());
+        assertTrue(engine.generation().scripts().isEmpty());
+        assertTrue(platform.activeEvents().isEmpty());
+        assertEquals(0, platform.scheduler().pending());
+        assertEquals("12", storage.get("", "disable", "saved"));
+        assertEquals(1, platform.logs().stream().filter(line -> line.contains("disable hook")).count());
+        engine.shutdownOnPlatformThread();
+        assertEquals("12", storage.get("", "disable", "saved"));
+        assertFalse(engine.load(scripts).activated());
+        assertEquals(List.of(), errors());
+    }
+
+    @Test
     void afterAndEveryBlocksRunLaterAndStopWithTheirScript() {
         scripts.put("timers.tys", """
                 event player.join {

@@ -464,7 +464,7 @@ final class TysCommand implements CommandExecutor, TabCompleter {
         send(sender, Component.text("TachyonScript " + TachyonVersion.RUNTIME, ACCENT));
         field(sender, "Language level", String.valueOf(TachyonVersion.LANGUAGE_LEVEL));
         field(sender, "IR format", String.valueOf(TachyonVersion.IR_FORMAT));
-        field(sender, "Backend", "interpreter");
+        field(sender, "Backend", plugin.settings().backend().id());
         field(sender, "Reload mode", plugin.settings().mode().name().toLowerCase(Locale.ROOT));
         field(sender, "Server", capabilities.serverName() + " " + capabilities.minecraftVersion()
                 + (capabilities.folia() ? " (regionized multithreading)" : ""));
@@ -574,6 +574,7 @@ final class TysCommand implements CommandExecutor, TabCompleter {
         List<Component> lines = new ArrayList<>();
         boolean console = sender instanceof ConsoleCommandSender;
         DiagnosticRenderer renderer = new DiagnosticRenderer(false, TachyonPlugin.SCRIPTS_PREFIX);
+        java.util.Map<String, dev.tachyonscript.security.SecretRedactor> redactors = new java.util.HashMap<>();
         for (Diagnostic diagnostic : report.diagnostics()) {
             if (diagnostic.severity() != Severity.ERROR && diagnostic.severity() != Severity.WARNING) {
                 continue;
@@ -581,7 +582,8 @@ final class TysCommand implements CommandExecutor, TabCompleter {
             String text = console ? renderer.renderCompact(diagnostic)
                     : diagnostic.severity() + " " + TachyonPlugin.SCRIPTS_PREFIX + diagnostic.position()
                     + " [" + diagnostic.code().id() + "] " + diagnostic.message();
-            var redactor = plugin.engine().security().options().redactor().withSource(diagnostic.file());
+            var redactor = redactors.computeIfAbsent(diagnostic.file().path(),
+                    ignored -> plugin.engine().security().options().redactor().withSource(diagnostic.file()));
             lines.add(Component.text(redactor.redact(text), diagnostic.isError() ? NamedTextColor.RED : NamedTextColor.YELLOW)
                     .hoverEvent(Component.text(redactor.redact(renderer.renderCompact(diagnostic))))
                     .clickEvent(ClickEvent.copyToClipboard(TachyonPlugin.SCRIPTS_PREFIX + diagnostic.position())));

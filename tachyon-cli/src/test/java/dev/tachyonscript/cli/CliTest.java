@@ -106,6 +106,54 @@ class CliTest {
     }
 
     @Test
+    void optimizerOptionsAndVerifiedPassDumpsReflectTheActualPipeline() throws IOException {
+        Path file = script("fold.tys", "function run(): int { var a = 10; var b = 20; return a + b }\n");
+        assertEquals(Cli.OK, run("dump", "ir", file.toString()));
+        assertFalse(out().contains("add_i32"), out());
+        String optimized = out();
+        out.reset();
+        assertEquals(Cli.OK, run("dump", "ir", file.toString(), "--no-optimize"));
+        assertTrue(out().contains("add_i32"), out());
+        out.reset();
+        assertEquals(Cli.OK, run("dump", "--disable-pass=constant-propagation", "ir", file.toString()));
+        assertTrue(out().contains("add_i32"), out());
+        out.reset();
+        assertEquals(Cli.OK, run("dump", "passes", file.toString(), "--disable-pass=dead-code"));
+        assertTrue(out().contains("=== input ==="), out());
+        assertTrue(out().contains("=== constant-propagation ==="), out());
+        assertFalse(out().contains("=== dead-code ==="), out());
+        out.reset();
+        assertEquals(Cli.OK, run("dump", "ir", file.toString()));
+        assertEquals(optimized, out(), "flags are local to each invocation");
+        out.reset();
+        assertEquals(Cli.OK, run("check", file.toString(), "--no-optimize", "--disable-pass=dead-code"));
+        assertTrue(out().contains("0 errors"), out());
+        assertEquals(Cli.USAGE, run("check", file.toString(), "--disable-pass=typo"));
+        assertTrue(err().contains("Unknown optimization pass: typo"), err());
+        assertEquals(Cli.USAGE, run("dump", "ir", file.toString(), "--typo"));
+    }
+
+    @Test
+    void bytecodeDumpShowsTheGeneratedClassOfEveryFunction() throws IOException {
+        Path file = script("loop.tys", """
+                function total(n: int): int {
+                    var sum = 0
+                    for i in 0..<n { sum += i * 2 }
+                    return sum
+                }
+                event player.join { log("joined") }
+                """);
+        assertEquals(Cli.OK, run("dump", "bytecode", file.toString()));
+        String text = out();
+        assertTrue(text.contains("=== function total [total(int)]:"), text);
+        assertTrue(text.contains("bytes of JVM code"), text);
+        assertTrue(text.contains("implements dev/tachyonscript/runtime/interpreter/BytecodeBody"), text);
+        assertTrue(text.contains("LINENUMBER 3"), "source lines are kept: " + text);
+        assertTrue(text.contains("IMUL"), "arithmetic is JVM code, not an interpreter call: " + text);
+        assertFalse(text.contains("over the JIT limit"), text);
+    }
+
+    @Test
     void dumpOfABrokenScriptPrintsDiagnostics() throws IOException {
         Path file = script("broken.tys", "event player.join {\n    player.send(1 +)\n}\n");
         assertEquals(Cli.COMPILE_ERRORS, run("dump", "ir", file.toString()));

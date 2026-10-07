@@ -1,0 +1,5 @@
+Tiếp tục hoàn thiện TachyonScript toàn diện tại C:\Users\cnoc7\OneDrive\Desktop\TachyonScript-main.
+Đọc AGENTS.md, TASK-HANDOFF.md và docs/master-development-mission.md trước khi làm.
+Giữ toàn bộ thay đổi đang có; mốc optimizer/differential và probe Paper/Folia 0.6.0 đã được kiểm chứng trong TASK-HANDOFF.md. Không làm lại hotfix bảo mật đã bàn giao.
+Tiếp nối đúng WIP mới nhất trong handoff, triển khai các ưu tiên còn lại (JVM bytecode/equivalence, mở rộng Folia, LSP/formatter); sau mỗi mốc kiểm thử/build, đo khi cần và cập nhật sách/wiki/PDF.
+Tự xử lý các quyết định kỹ thuật theo kiến trúc hiện tại, báo trạng thái trung thực; không tự commit/push/deploy và không làm lộ credential.

@@ -15,7 +15,7 @@ them without reflection.
 // build.gradle.kts of your plugin
 dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT")
-    compileOnly(files("libs/TachyonScript-0.5.1-SNAPSHOT.jar"))
+    compileOnly(files("libs/TachyonScript-0.7.0-SNAPSHOT.jar"))
 }
 ```
 

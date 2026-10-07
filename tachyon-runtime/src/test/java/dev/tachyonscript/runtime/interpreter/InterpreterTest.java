@@ -209,6 +209,27 @@ class InterpreterTest {
     }
 
     @Test
+    void stopsRunawayRecursionThatNeverLoops() {
+        // Far below the depth limit and without a loop back edge: function entries must count
+        // towards the watchdog too, or this would run for 2^60 calls.
+        ExecutionStack.configure(new RuntimeLimits(128, 50_000_000L, 1024));
+        String source = """
+                function branch(n: int): int {
+                    if n == 0 {
+                        return 1
+                    }
+                    return branch(n - 1) + branch(n - 1)
+                }
+                """;
+        long start = System.nanoTime();
+        ScriptRuntimeException error = assertThrows(ScriptRuntimeException.class,
+                () -> ScriptHarness.run(source, "branch(int)", 60));
+        assertEquals(ScriptRuntimeException.Kind.TIMEOUT, error.kind());
+        assertTrue(System.nanoTime() - start < 5_000_000_000L, "the watchdog fires promptly");
+        assertEquals(0, ExecutionStack.current().depth(), "the stack is reset after an error");
+    }
+
+    @Test
     void limitsRecursionDepth() {
         String source = """
                 function forever(n: int): int {

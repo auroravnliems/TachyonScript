@@ -87,14 +87,27 @@ class PluginSupportTest {
         config.set("safety.recursion-limit", -1);
         config.set("safety.max-execution-time-ms", 0);
         config.set("performance.slow-execution-warning-ms", -5);
-        config.set("runtime.backend", "bytecode");
+        config.set("runtime.backend", "turbo");
         TachyonSettings settings = TachyonSettings.from(config, logger());
         assertEquals(LoadMode.LENIENT, settings.mode());
         assertEquals(128, settings.recursionLimit());
         assertEquals(1000, settings.maxExecutionMillis());
         assertEquals(0, settings.slowWarningMillis());
+        assertEquals(dev.tachyonscript.runtime.ExecutionBackend.INTERPRETER, settings.backend());
         assertEquals(5, warnings.size(), warnings::toString);
-        assertTrue(warnings.stream().anyMatch(w -> w.contains("bytecode")), warnings::toString);
+        assertTrue(warnings.stream().anyMatch(w -> w.contains("turbo")), warnings::toString);
+    }
+
+    @Test
+    void selectsTheBytecodeBackend() {
+        YamlConfiguration config = new YamlConfiguration();
+        assertEquals(dev.tachyonscript.runtime.ExecutionBackend.INTERPRETER,
+                TachyonSettings.from(config, logger()).engineOptions().backend(), "the interpreter stays the default");
+        config.set("runtime.backend", "Bytecode");
+        TachyonSettings settings = TachyonSettings.from(config, logger());
+        assertEquals(dev.tachyonscript.runtime.ExecutionBackend.BYTECODE, settings.backend());
+        assertEquals(dev.tachyonscript.runtime.ExecutionBackend.BYTECODE, settings.engineOptions().backend());
+        assertTrue(warnings.isEmpty(), warnings::toString);
     }
 
     @Test

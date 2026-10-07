@@ -36,6 +36,42 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.junit.jupiter.api.Assertions.*;
 
 class SecurityIntegrationTest {
+    @Test void optionalAiOutageLoadsUnrelatedScriptsWhileOnlyDangerousDependencyGroupIsRevoked() throws Exception {
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        var requests = new java.util.concurrent.atomic.AtomicInteger();
+        server.createContext("/qwen", exchange -> {
+            exchange.getRequestBody().readAllBytes();
+            requests.incrementAndGet();
+            exchange.sendResponseHeaders(401, -1);
+            exchange.close();
+        });
+        server.start();
+        TestPlatform platform = new TestPlatform();
+        var ai = new SecurityOptions.Ai(true, URI.create("http://127.0.0.1:" + server.getAddress().getPort() + "/qwen"),
+                "local-test", "dummy", Duration.ofSeconds(1), Duration.ofSeconds(1), 0, .8, .95,
+                false, 1_048_576, 262_144);
+        var alerts = new ArrayList<SecurityIncident>();
+        var service = new SecurityService(new SecurityOptions(true, ai, SecurityOptions.Discord.disabled(),
+                Set.of(), Map.of(), 25_000, 500), new SecurityAuditStore(directory), alerts::add,
+                error -> { throw new AssertionError(error); });
+        ScriptEngine engine = new ScriptEngine(platform.registry(), platform, EngineOptions.DEFAULT, InternalErrorHandler.IGNORE, service);
+        InMemoryScripts scripts = new InMemoryScripts();
+        for (int i = 0; i < 31; i++) scripts.put("safe" + i + ".tys", "on load { log(\"active-safe-" + i + "\") }");
+        scripts.put("danger.tys", "event player.chat { server.dispatch(message) }");
+        scripts.put("dependent.tys", "import danger\non load { log(\"must not activate\") }");
+        try {
+            var loading = CompletableFuture.supplyAsync(() -> engine.load(scripts));
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+            while (!loading.isDone() && System.nanoTime() < deadline) { platform.scheduler().tick(1); Thread.sleep(2); }
+            var report = loading.get(1, TimeUnit.SECONDS);
+            assertEquals(Set.of("danger.tys", "dependent.tys"), Set.copyOf(report.failed()), report::toString);
+            assertEquals(31, engine.generation().scripts().size());
+            assertEquals(31, platform.logs().stream().filter(line -> line.contains("active-safe-")).count());
+            assertTrue(platform.logs().stream().noneMatch(line -> line.contains("must not activate")));
+            assertEquals(1, requests.get());
+            assertEquals(1, alerts.stream().filter(i -> i.action().equals("API_FAILURE")).count());
+        } finally { engine.shutdown(); server.stop(0); }
+    }
     @TempDir Path directory;
     private static final String SAFE = "on load { log(\"active\") }\non unload { log(\"unsafe unload must not run\") }\n"
             + "command ping { log(\"ping\") }\nevery 1 second { log(\"tick\") }\nfunction exported(): int { return 7 }\n";
@@ -129,7 +165,10 @@ class SecurityIntegrationTest {
             var source = new InMemoryScripts().put("ir.tys", "on load {\n    server.dispatch(\"say safe\")\n}\n");
             assertTrue(safe.load(source).failed().isEmpty());
             var loaded = safe.generation().scripts().get("ir.tys");
-            var node = safe.security().manifest("ir.tys").nodes().stream().filter(n -> n.capability() == Capability.CONSOLE_COMMAND).findFirst().orElseThrow();
+            // The service keeps node-free manifests after a review (memory); analyze the active module again.
+            assertTrue(safe.security().manifest("ir.tys").nodes().isEmpty());
+            var node = new SecurityAnalyzer(SecurityOptions.defaults()).analyze(List.of(loaded.compiled().bound())).get("ir.tys")
+                    .nodes().stream().filter(n -> n.capability() == Capability.CONSOLE_COMMAND).findFirst().orElseThrow();
             var call = loaded.compiled().ir().functions().stream().flatMap(f -> f.blocks().stream())
                     .flatMap(b -> b.instructions().stream()).filter(i -> i instanceof dev.tachyonscript.ir.Instruction.CallNative).findFirst().orElseThrow();
             assertEquals(node.span().startOffset(), Spans.start(call.span()));

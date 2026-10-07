@@ -36,4 +36,5 @@ include(
     "tachyon-cli",
     "tachyon-tests",
     "tachyon-benchmarks",
+    "tachyon-integration",
 )

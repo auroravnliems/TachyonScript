@@ -91,7 +91,7 @@ public final class PaperPlatform implements Platform {
     static Bindings builtInBindings(PaperContext context, Threading threads, Logger logger, BooleanSupplier debug) {
         Bindings.Builder builder = Bindings.builder()
                 .include(StandardLibrary.coreBindings())
-                .include(new PaperBindings(threads, logger, debug).create());
+                .include(new PaperBindings(context, logger, debug).create());
         GeneratedBindings.bind(builder, context);
         return builder.build();
     }

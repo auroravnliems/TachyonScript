@@ -6,6 +6,17 @@ import java.util.List;
 /** Console/inspect retain complete flows; Discord renders bounded security cards. */
 public final class SecurityMessages {
     private SecurityMessages() { }
+    /** Normal logs stay concise; inspect/audit retain the full evidence and source flow. */
+    public static String console(SecurityIncident incident) {
+        if (incident.action().equals("API_FAILURE"))
+            return "[TachyonSecurity] " + compact(incident.summary(), 800)
+                    + " Inspect: /tys security inspect " + incident.id();
+        if (incident.decision().deniesExecution()) return detail(incident, true);
+        return "[TachyonSecurity/" + incident.severity() + "] " + incident.file() + " " + incident.action()
+                + ": " + incident.findings().stream().map(f -> f.ruleId() + " @ " + f.location().display())
+                    .distinct().limit(3).collect(java.util.stream.Collectors.joining("; "))
+                + " — /tys security inspect " + incident.id();
+    }
     public static String detail(SecurityIncident incident, boolean snippets) {
         StringBuilder out = new StringBuilder("[TachyonSecurity/" + incident.severity() + "]\n");
         out.append("Incident: ").append(incident.id()).append("\nAction: ").append(incident.action())
@@ -35,6 +46,7 @@ public final class SecurityMessages {
     }
 
     public static List<String> admin(SecurityIncident incident) {
+        if (incident.action().equals("API_FAILURE")) return List.of(console(incident));
         List<String> result = new ArrayList<>();
         result.add("[TachyonSecurity] " + incident.severity() + " — " + incident.file() + " " + incident.action());
         if (incident.findings().isEmpty()) result.add("Location: UNKNOWN — Precise source location unavailable.");

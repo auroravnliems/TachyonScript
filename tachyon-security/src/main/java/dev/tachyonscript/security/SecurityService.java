@@ -13,15 +13,32 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.function.LongSupplier;
 
 /** Registered identities, exact-revision review, persisted policy and notifications. No Bukkit dependencies. */
 public final class SecurityService implements AutoCloseable {
     public record Review(SecurityManifest manifest, List<SecurityFinding> findings, SecurityDecision decision, String failure) {
         public Review { findings = List.copyOf(findings); }
     }
-    public record Batch(Map<String, Review> reviews, Set<String> denied, Set<String> pending, long policyVersion) {
-        public Batch { reviews = Map.copyOf(reviews); denied = Set.copyOf(denied); pending = Set.copyOf(pending); }
+    /**
+     * The outcome of one review pass.
+     *
+     * @param awaiting revisions whose AI review is still running in the background, with the modules
+     *                 importing them. They are not decided yet: they must not activate, and the service
+     *                 reports their paths to {@link #onReviewed} when the review is done.
+     */
+    public record Batch(Map<String, Review> reviews, Set<String> denied, Set<String> pending, Set<String> awaiting,
+                        long policyVersion) {
+        public Batch {
+            reviews = Map.copyOf(reviews); denied = Set.copyOf(denied); pending = Set.copyOf(pending);
+            awaiting = Set.copyOf(awaiting);
+        }
+        public Batch(Map<String, Review> reviews, Set<String> denied, Set<String> pending, long policyVersion) {
+            this(reviews, denied, pending, Set.of(), policyVersion);
+        }
     }
     private volatile SecurityOptions options;
     private final SecurityAuditStore audit;
@@ -31,20 +48,40 @@ public final class SecurityService implements AutoCloseable {
     private final Consumer<SecurityIncident> notifications;
     private final Consumer<String> errors;
     private final Map<String, SourceFile> registered = new ConcurrentHashMap<>();
-    private final Map<String, Review> cache = new ConcurrentHashMap<>();
+    /** Decided reviews by exact input, least recently used dropped first: edits must not grow memory. */
+    private final Map<String, Review> cache = java.util.Collections.synchronizedMap(new LinkedHashMap<>(64, .75f, true) {
+        @Override protected boolean removeEldestEntry(Map.Entry<String, Review> eldest) { return size() > 256; }
+    });
     private final Map<String, SecurityManifest> manifests = new ConcurrentHashMap<>();
     private final Map<String, String> approvalContexts = new ConcurrentHashMap<>();
     private final Map<String, Map<String, String>> approvalSources = new ConcurrentHashMap<>();
     private final Set<String> immediateBlocks = ConcurrentHashMap.newKeySet();
     private final Map<String, ScriptRevocation> revocations = new ConcurrentHashMap<>();
+    /** AI results by exact input, across restarts (see {@link AiReviewCache}). */
+    private final AiReviewCache aiReviews;
+    /** Keys of background AI reviews that are running or queued. */
+    private final Set<String> inFlight = ConcurrentHashMap.newKeySet();
+    private ThreadPoolExecutor reviewers;
+    private volatile Consumer<Set<String>> reviewed = paths -> { };
     private volatile boolean closed;
+    private final LongSupplier clock;
+    private long aiRetryAt;
+    private long aiFailureNoticeAt;
+    private boolean aiFailureReported;
+    private String aiLastFailure = "";
 
     public SecurityService(SecurityOptions options, SecurityAuditStore audit, Consumer<SecurityIncident> notifications,
                            Consumer<String> errors) throws IOException {
+        this(options, audit, notifications, errors, System::nanoTime);
+    }
+    SecurityService(SecurityOptions options, SecurityAuditStore audit, Consumer<SecurityIncident> notifications,
+                    Consumer<String> errors, LongSupplier clock) throws IOException {
         this.options = options; this.audit = audit; this.notifications = notifications; this.errors = errors;
+        this.clock = clock;
         qwen = new QwenSecurityProvider(options);
         discord = new DiscordSecurityNotifier(options.discord(), audit.folder(), this::discordFailure, id -> audit.incident(id) != null);
         immediateBlocks.addAll(audit.blocked().keySet());
+        aiReviews = new AiReviewCache(audit.folder(), errors);
     }
     public static SecurityService inMemory(SecurityOptions options) {
         try { return new SecurityService(options, new SecurityAuditStore(null), incident -> { }, error -> { }); }
@@ -73,11 +110,26 @@ public final class SecurityService implements AutoCloseable {
     }
     public boolean blocked(String path) { return immediateBlocks.contains(ScriptIdentity.of(path)); }
     public SecurityManifest manifest(String path) { return manifests.get(path); }
+    /** Whether {@code sha256} is the registered (latest read) revision of {@code path}. */
+    public boolean current(String path, String sha256) {
+        SourceFile source = registered.get(ScriptIdentity.of(path));
+        return source != null && source.path().equals(path) && source.hash().equals(sha256);
+    }
+
+    /**
+     * Receives the paths whose background AI review finished, successfully or not, on a review
+     * thread. The engine then activates the reviewed revisions or re-checks active scripts.
+     */
+    public void onReviewed(Consumer<Set<String>> listener) { reviewed = java.util.Objects.requireNonNull(listener, "listener"); }
+    /** Background AI reviews running or queued. */
+    public int reviewsRunning() { return inFlight.size(); }
+    /** AI reviews remembered across restarts. */
+    public int storedReviews() { return aiReviews.size(); }
 
     public synchronized Batch review(List<BoundModule> modules) {
         if (closed) throw new IllegalStateException("Security service closed");
         Map<String, Review> reviews = new LinkedHashMap<>();
-        Set<String> denied = new HashSet<>(), pending = new HashSet<>();
+        Set<String> denied = new HashSet<>(), pending = new HashSet<>(), awaiting = new HashSet<>();
         if (!options.enabled()) {
             for (BoundModule module : modules) if (blocked(module.file().path())) denied.add(module.file().path());
             propagateDenial(modules, denied);
@@ -114,7 +166,8 @@ public final class SecurityService implements AutoCloseable {
         for (BoundModule module : modules) {
             SourceFile source = module.file();
             SecurityManifest manifest = analyzed.get(source.path());
-            manifests.put(source.path(), manifest);
+            // Kept for approvals, imports and findings; the nodes stay only with a running AI review.
+            manifests.put(source.path(), manifest.withoutNodes());
             if (blocked(source.path())) { denied.add(source.path()); continue; }
             String key = cacheKey(manifest) + ":" + approvalContexts.get(source.path());
             Review review = cache.get(key);
@@ -123,14 +176,38 @@ public final class SecurityService implements AutoCloseable {
                 String failure = "";
                 boolean approved = audit.approved(manifest.scriptId(), manifest.sha256(), approvalContexts.get(source.path()));
                 // A deterministic denial already has complete evidence and does not wait on an external advisor.
-                if (options.ai().enabled() && (approved || !SecurityPolicyEngine.decide(findings, options).deniesExecution())) {
-                    try { findings.addAll(qwen.review(manifest, source)); }
-                    catch (IOException | IllegalArgumentException e) { failure = "Qwen review unavailable or invalid; no AI vulnerability was fabricated."; }
-                    catch (InterruptedException e) { Thread.currentThread().interrupt(); failure = "Qwen review cancelled; revision remains pending."; }
+                if (options.ai().enabled() && QwenSecurityProvider.needsReview(manifest)
+                        && (approved || !SecurityPolicyEngine.decide(findings, options).deniesExecution())) {
+                    String aiKey = ScriptIdentity.hash(key + "|" + QwenSecurityProvider.fingerprint(options));
+                    List<SecurityFinding> stored = aiReviews.get(aiKey);
+                    if (stored != null) {
+                        findings.addAll(stored);
+                    } else if (!aiLastFailure.isEmpty() && clock.getAsLong() - aiRetryAt < 0) {
+                        failure = aiLastFailure;
+                    } else if (options.ai().background()) {
+                        // Decided when the review arrives; nothing is cached or reported for it yet.
+                        reviewLater(aiKey, manifest, source);
+                        awaiting.add(source.path());
+                        continue;
+                    } else {
+                        try {
+                            List<SecurityFinding> reviewedFindings = qwen.review(manifest, source);
+                            aiReviews.put(aiKey, reviewedFindings);
+                            findings.addAll(reviewedFindings);
+                            aiLastFailure = "";
+                        } catch (IOException | IllegalArgumentException e) {
+                            failure = unavailable(e);
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            failure = "Qwen review cancelled.";
+                            aiLastFailure = failure;
+                            aiRetryAt = clock.getAsLong() + TimeUnit.SECONDS.toNanos(60);
+                        }
+                    }
                 }
                 SecurityDecision decision = approved ? SecurityDecision.WARN
                         : SecurityPolicyEngine.decide(findings, options);
-                review = new Review(manifest, findings, decision, failure);
+                review = new Review(manifest.withoutNodes(), findings, decision, failure);
                 if (failure.isEmpty()) cache.put(key, review);
             }
             reviews.put(source.path(), review);
@@ -139,7 +216,87 @@ public final class SecurityService implements AutoCloseable {
         }
         propagateDenial(modules, denied);
         propagateDenial(modules, pending);
-        return new Batch(reviews, denied, pending, policyVersion);
+        // A module importing a revision under review was compiled against it: it waits as well.
+        propagateDenial(modules, awaiting);
+        awaiting.removeAll(denied);
+        return new Batch(reviews, denied, pending, awaiting, policyVersion);
+    }
+
+    /** Records a provider failure for the shared cooldown and returns its safe description. */
+    private String unavailable(Exception e) {
+        String failure = "Qwen review unavailable: " + (e instanceof ReviewFailure
+                ? e.getMessage() : "request or response could not be validated.");
+        aiLastFailure = failure;
+        aiRetryAt = clock.getAsLong() + TimeUnit.SECONDS.toNanos(60);
+        return failure;
+    }
+
+    /** Queues one AI review (once per exact input); the provider is called outside the service lock. */
+    private void reviewLater(String aiKey, SecurityManifest manifest, SourceFile source) {
+        if (closed || !inFlight.add(aiKey)) return;
+        QwenSecurityProvider provider = qwen;
+        try {
+            reviewers().execute(() -> backgroundReview(provider, aiKey, manifest, source));
+        } catch (java.util.concurrent.RejectedExecutionException e) {
+            inFlight.remove(aiKey);
+        }
+    }
+
+    private void backgroundReview(QwenSecurityProvider provider, String aiKey, SecurityManifest manifest, SourceFile source) {
+        try {
+            List<SecurityFinding> findings;
+            boolean coolingDown;
+            synchronized (this) { coolingDown = !aiLastFailure.isEmpty() && clock.getAsLong() - aiRetryAt < 0; }
+            try {
+                // Reviews queued before an outage was noticed do not each retry the provider.
+                findings = coolingDown ? null : provider.review(manifest, source);
+            } catch (IOException | IllegalArgumentException e) {
+                synchronized (this) { unavailable(e); }
+                findings = null;
+            }
+            if (findings != null) {
+                synchronized (this) {
+                    if (closed) return;
+                    aiReviews.put(aiKey, findings);
+                    aiLastFailure = "";
+                }
+            }
+        } catch (InterruptedException e) {
+            // Shutting down or reconfiguring: the next load asks again.
+            Thread.currentThread().interrupt();
+            return;
+        } catch (RuntimeException e) {
+            errors.accept("Background security review failed unexpectedly; the script will be reviewed again on the next load.");
+            synchronized (this) {
+                aiLastFailure = "Qwen review failed unexpectedly.";
+                aiRetryAt = clock.getAsLong() + TimeUnit.SECONDS.toNanos(60);
+            }
+        } finally {
+            inFlight.remove(aiKey);
+        }
+        if (closed) return;
+        try {
+            reviewed.accept(Set.of(source.path()));
+        } catch (RuntimeException e) {
+            errors.accept("Activating a reviewed script failed; reload it to retry.");
+        }
+    }
+
+    private synchronized ThreadPoolExecutor reviewers() {
+        if (closed) throw new java.util.concurrent.RejectedExecutionException("Security service closed");
+        if (reviewers == null) {
+            int threads = options.ai().maxConcurrentReviews();
+            java.util.concurrent.atomic.AtomicInteger counter = new java.util.concurrent.atomic.AtomicInteger();
+            reviewers = new ThreadPoolExecutor(threads, threads, 30, TimeUnit.SECONDS, new java.util.concurrent.LinkedBlockingQueue<>(),
+                    runnable -> {
+                        Thread thread = new Thread(runnable, "TachyonSecurity-Review-" + counter.incrementAndGet());
+                        thread.setDaemon(true);
+                        return thread;
+                    });
+            // An idle server keeps no review threads.
+            reviewers.allowCoreThreadTimeOut(true);
+        }
+        return reviewers;
     }
 
     private static String cacheKey(SecurityManifest manifest) {
@@ -160,16 +317,20 @@ public final class SecurityService implements AutoCloseable {
     public synchronized void commit(Batch batch, List<BoundModule> modules) throws IOException {
         if (closed) throw new IOException("Security service closed before commit");
         if (batch.policyVersion() != policyVersion) throw new IOException("Security policy changed during review; scan again");
+        // Check every identity before writing an aggregate provider incident.
+        for (var entry : batch.reviews().entrySet()) {
+            if (!registeredFile(entry.getKey()).hash().equals(entry.getValue().manifest().sha256()))
+                throw new IOException("Stale security review cannot be committed");
+        }
+        reportAiFailure(batch);
         Map<String, List<String>> dependents = affectedDependencies(modules, batch.denied());
         for (var entry : batch.reviews().entrySet()) {
             Review review = entry.getValue();
             SourceFile source = registeredFile(entry.getKey());
             if (!source.hash().equals(review.manifest().sha256())) throw new IOException("Stale security review cannot be committed");
-            if (!review.failure().isEmpty()) failure(source, "API_FAILURE", review.failure());
             if (review.decision() == SecurityDecision.ALLOW && review.findings().isEmpty()) continue;
             String action = review.decision().deniesExecution() ? "AUTO_QUARANTINE" : review.decision() == SecurityDecision.WARN ? "WARN" : "ADVISORY";
-            if (audit.incidents().stream().anyMatch(i -> i.sha256().equals(source.hash()) && i.scriptId().equals(review.manifest().scriptId())
-                    && i.action().equals(action) && i.findings().equals(review.findings()))) continue;
+            if (audit.recorded(review.manifest().scriptId(), source.hash(), action, review.findings())) continue;
             SecurityIncident incident = incident(source, review.decision(), action,
                     review.findings(), review.decision().deniesExecution() ? "Compiler-backed dangerous behavior blocked before activation."
                             : review.decision() == SecurityDecision.WARN ? "Security findings require administrator review."
@@ -192,6 +353,22 @@ public final class SecurityService implements AutoCloseable {
             record(incident(module.file(), SecurityDecision.DISABLE, "AUTO_DISABLE", List.of(finding),
                     "Dependency security revocation.", dependents.getOrDefault(module.file().path(), List.of()), "security-policy", ""), module.file());
         }
+    }
+
+    private void reportAiFailure(Batch batch) {
+        List<Review> unavailable = batch.reviews().values().stream().filter(r -> !r.failure().isEmpty())
+                .sorted(java.util.Comparator.comparing(r -> r.manifest().file())).toList();
+        long now = clock.getAsLong();
+        if (unavailable.isEmpty() || aiFailureReported && now - aiFailureNoticeAt < TimeUnit.MINUTES.toNanos(5)) return;
+        Review first = unavailable.getFirst();
+        String policy = options.ai().required()
+                ? "Explicit failure-policy=keep-pending holds new revisions; previous valid runtimes remain active."
+                : "Deterministic checks remain active; this AI outage does not disable scripts.";
+        failure(registeredFile(first.manifest().file()), "API_FAILURE",
+                first.failure() + " Affects " + unavailable.size() + " source revisions in this scan. "
+                        + policy + " Provider retries pause for 60 seconds; repeated alerts are limited to once per 5 minutes.");
+        aiFailureReported = true;
+        aiFailureNoticeAt = now;
     }
 
     public static Map<String, List<String>> affectedDependencies(List<BoundModule> modules, Set<String> denied) {
@@ -252,6 +429,12 @@ public final class SecurityService implements AutoCloseable {
         try { replacementDiscord = new DiscordSecurityNotifier(updated.discord(), audit.folder(), this::discordFailure, id -> audit.incident(id) != null); }
         catch (IOException | RuntimeException e) { replacementQwen.close(); throw e; }
         qwen.close(); qwen = replacementQwen; discord = replacementDiscord; options = updated;
+        aiLastFailure = ""; aiFailureReported = false;
+        if (reviewers != null) {
+            int threads = updated.ai().maxConcurrentReviews();
+            if (threads > reviewers.getMaximumPoolSize()) { reviewers.setMaximumPoolSize(threads); reviewers.setCorePoolSize(threads); }
+            else { reviewers.setCorePoolSize(threads); reviewers.setMaximumPoolSize(threads); }
+        }
         policyVersion++; cache.clear();
     }
     public synchronized SecurityIncident testWebhook(String path, String actor) throws IOException {
@@ -296,7 +479,9 @@ public final class SecurityService implements AutoCloseable {
         catch (IOException | RuntimeException e) { errors.accept("Cannot persist webhook failure notification; original alert remains in the outbox."); }
     }
     @Override public void close() {
-        closed = true; qwen.close(); discord.close();
+        closed = true;
+        synchronized (this) { if (reviewers != null) reviewers.shutdownNow(); }
+        qwen.close(); discord.close();
         try { audit.close(); } catch (IOException e) { errors.accept("Cannot close security audit cleanly"); }
     }
 }

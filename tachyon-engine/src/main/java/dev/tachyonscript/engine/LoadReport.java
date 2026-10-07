@@ -23,17 +23,28 @@ import java.util.Map;
  * @param timings       compiler timings
  * @param totalNanos    wall time of the whole load
  * @param failure       why the load could not run at all (e.g. unreadable directory), or null
+ * @param awaitingReview new revisions held back until their background AI security review finishes;
+ *                      their previous versions (if any) keep running and they activate by themselves
  */
 public record LoadReport(boolean activated, long generation, int scripts, int compiled, int reused, List<String> failed,
                          List<String> keptPrevious, int handlers, List<Diagnostic> diagnostics,
                          Map<String, List<String>> linkProblems, CompilationTimings timings, long totalNanos,
-                         String failure) {
+                         String failure, List<String> awaitingReview) {
 
     public LoadReport {
         failed = List.copyOf(failed);
         keptPrevious = List.copyOf(keptPrevious);
         diagnostics = List.copyOf(diagnostics);
         linkProblems = Map.copyOf(linkProblems);
+        awaitingReview = List.copyOf(awaitingReview);
+    }
+
+    public LoadReport(boolean activated, long generation, int scripts, int compiled, int reused, List<String> failed,
+                      List<String> keptPrevious, int handlers, List<Diagnostic> diagnostics,
+                      Map<String, List<String>> linkProblems, CompilationTimings timings, long totalNanos,
+                      String failure) {
+        this(activated, generation, scripts, compiled, reused, failed, keptPrevious, handlers, diagnostics, linkProblems,
+                timings, totalNanos, failure, List.of());
     }
 
     public long errorCount() {
@@ -54,6 +65,11 @@ public record LoadReport(boolean activated, long generation, int scripts, int co
                 .append(String.format(Locale.ROOT, " in %.1f ms", totalNanos / 1e6));
         if (!failed.isEmpty()) {
             out.append("; ").append(failed.size()).append(failed.size() == 1 ? " script failed" : " scripts failed");
+        }
+        if (!awaitingReview.isEmpty()) {
+            out.append("; ").append(awaitingReview.size()).append(awaitingReview.size() == 1
+                    ? " script awaits its AI security review (activates automatically)"
+                    : " scripts await their AI security review (activate automatically)");
         }
         return out.toString();
     }

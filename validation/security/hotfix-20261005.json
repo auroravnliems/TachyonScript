@@ -1,0 +1,24 @@
+{
+  "version": "0.5.1-SNAPSHOT",
+  "artifact": "C:\\Users\\cnoc7\\OneDrive\\Desktop\\TachyonScript-hotfix-0.5.1\\TachyonScript-0.5.1-SNAPSHOT.jar",
+  "sha256": "d3f48da19ec7edba510b78f176a4ad26adb795da9323d4fcd4301ec1f3449a9d",
+  "tests": {
+    "tests": 353,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "archive": {
+    "compiled": 32,
+    "counts": {
+      "ALLOW": 18,
+      "WARN": 13,
+      "QUARANTINE": 1
+    },
+    "denied": [
+      "08_GUIs/GUI_DynamicJson.tys"
+    ]
+  },
+  "live_server_validation": false,
+  "optimizer_wip_included": false
+}

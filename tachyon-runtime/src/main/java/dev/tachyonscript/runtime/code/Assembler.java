@@ -19,6 +19,7 @@ import dev.tachyonscript.ir.UnaryOp;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -83,7 +84,22 @@ public final class Assembler {
             List<Register> registers = function.registers();
             this.slots = new int[registers.size()];
             this.isReference = new boolean[registers.size()];
+            Arrays.fill(slots, -1);
+            BitSet used = new BitSet();
+            function.parameters().forEach(r -> used.set(r.index()));
+            for (IrBlock block : function.blocks()) {
+                for (Instruction instruction : block.instructions()) {
+                    if (instruction.target() != null) {
+                        used.set(instruction.target().index());
+                    }
+                    instruction.operands().forEach(r -> used.set(r.index()));
+                }
+                block.terminator().operands().forEach(r -> used.set(r.index()));
+            }
             for (Register register : registers) {
+                if (!used.get(register.index())) {
+                    continue;
+                }
                 boolean reference = register.kind() == Representation.REF;
                 isReference[register.index()] = reference;
                 slots[register.index()] = reference ? referenceSlots++ : primitiveSlots++;

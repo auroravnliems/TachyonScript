@@ -7,6 +7,15 @@ import java.util.HexFormat;
 
 /** Paths originate only from registered compiler sources, never from an AI action. */
 public final class ScriptIdentity {
+    /** Looking up the algorithm costs more than hashing a short key; the analyzer hashes thousands. */
+    private static final ThreadLocal<MessageDigest> SHA_256 = ThreadLocal.withInitial(() -> {
+        try {
+            return MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 unavailable", e);
+        }
+    });
+
     private ScriptIdentity() { }
 
     public static String of(String path) {
@@ -24,11 +33,7 @@ public final class ScriptIdentity {
     }
 
     public static String hash(String content) {
-        try {
-            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
-                    .digest(content.getBytes(StandardCharsets.UTF_8)));
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 unavailable", e);
-        }
+        // digest() also resets the instance for the next call on this thread.
+        return HexFormat.of().formatHex(SHA_256.get().digest(content.getBytes(StandardCharsets.UTF_8)));
     }
 }

@@ -239,7 +239,7 @@ public final class Compiler {
             if (options.optimize()) {
                 phase = "optimization";
                 start = System.nanoTime();
-                ir = Optimizer.optimize(ir);
+                ir = Optimizer.optimize(ir, options.disabledPasses(), null);
                 time[4] += System.nanoTime() - start;
             }
 

@@ -31,8 +31,16 @@ public final class SecurityAnalyzer {
     private final Map<String, LinkedHashMap<String, SecurityNode>> nodes = new HashMap<>();
     private final Map<String, LinkedHashMap<String, SecurityFinding>> findings = new HashMap<>();
     private final Set<String> calls = new HashSet<>();
+    /*
+     * The fixed-point passes revisit the same expressions many times. Their node IDs, source
+     * excerpts and redactions do not change between visits, so they are computed once.
+     */
+    private final Map<String, String> nodeIds = new HashMap<>();
+    private final Map<String, String> redactions = new HashMap<>();
+    private final Map<BoundModule, List<dev.tachyonscript.language.syntax.Declaration.Import>> imports = new IdentityHashMap<>();
     private int visits;
     private boolean globalsChanged;
+    private static final java.util.regex.Pattern EVENT_TEXT = java.util.regex.Pattern.compile(".*Event\\.(message|command|args|input|text|address|url).*");
 
     public SecurityAnalyzer(SecurityOptions options) {
         this.options = options;
@@ -55,6 +63,7 @@ public final class SecurityAnalyzer {
             }
         }
         redactor = new SecretRedactor(secrets);
+        redactions.clear();
         for (BoundModule module : input) {
             ScriptIdentity.of(module.file().path());
             modules.put(module.name(), module);
@@ -100,8 +109,9 @@ public final class SecurityAnalyzer {
 
     private void scanModule(BoundModule module) {
         Context moduleContext = new Context(module, "", "module imports", "", 0, 0, false);
-        var syntax = Parser.parse(Lexer.lex(module.file(), new DiagnosticCollector()), new DiagnosticCollector());
-        for (var imported : syntax.imports()) node(moduleContext, imported.span(), "Import", imported.module().text(),
+        var declarations = imports.computeIfAbsent(module, ignored ->
+                Parser.parse(Lexer.lex(module.file(), new DiagnosticCollector()), new DiagnosticCollector()).imports());
+        for (var imported : declarations) node(moduleContext, imported.span(), "Import", imported.module().text(),
                 Capability.UNKNOWN, List.of(), List.of(), Flow.clean(), false);
         if (module.initializer() != null) scanFunction(module, module.initializer(), List.of(), "on load", "", 0);
         for (BoundFunction function : module.functions()) scanFunction(module, function, List.of(), "", "", 0);
@@ -305,8 +315,14 @@ public final class SecurityAnalyzer {
             }
             case BoundExpression.NativeCall call -> {
                 Capability capability = CapabilityCatalog.resolve(call.target(), options);
-                Context callbackContext = capability == Capability.SCHEDULE
-                        ? new Context(context.module, context.function, context.handler, context.permission, context.depth, context.loops, true) : context;
+                String nativeName = CapabilityCatalog.name(call.target().key());
+                boolean deferred = capability == Capability.SCHEDULE || capability == Capability.NETWORK
+                        || Set.of("Menu.set", "Menu.onOpen", "Menu.onClose").contains(nativeName);
+                // Registering a callback inside a loop does not execute its body inside that loop.
+                // The registration itself below retains the caller's loop context and quota checks.
+                Context callbackContext = deferred
+                        ? new Context(context.module, context.function, context.handler, context.permission, context.depth,
+                                0, capability == Capability.SCHEDULE || context.scheduled) : context;
                 List<Flow> arguments = call.arguments().stream().map(argument -> expression(argument, state,
                         argument instanceof BoundExpression.Lambda ? callbackContext : context)).toList();
                 if (CapabilityCatalog.name(call.target().key()).equals("CommandSender.dispatch") && !call.arguments().isEmpty()
@@ -489,8 +505,9 @@ public final class SecurityAnalyzer {
                     danger = true;
                     finding(context, span, "SCHEDULING_FROM_TASK", SecurityCategory.RECURSIVE_SCHEDULING, SecuritySeverity.HIGH,
                             "A recurring task creates additional scheduled work; review multiplicative growth.", sinkFlow, name, capability, true);
-                } else if (context.handler.startsWith("event ")) finding(context, span, "EVENT_SCHEDULING", SecurityCategory.EVENT_SPAM,
-                        SecuritySeverity.MEDIUM, "Each event creates scheduled work; runtime task quotas provide a backstop.", sinkFlow, name, capability, false);
+                }
+                // One bounded task per event is normal script behavior. A warning needs evidence
+                // of growth (loop/recursive scheduling above), not merely an event callback.
             }
             default -> { }
         }
@@ -505,7 +522,7 @@ public final class SecurityAnalyzer {
         // Native declarations and their effects are always exported, including unknown addon capabilities.
         node(evidenceContext, span, "NativeCall", target.key(), capability, target.effects().stream().map(Enum::name).sorted().toList(),
                 arguments, sinkFlow, danger);
-        if (target.kind() == NativeDeclaration.Kind.EVENT_VARIABLE || name.matches(".*Event\\.(message|command|args|input|text|address|url).*"))
+        if (target.kind() == NativeDeclaration.Kind.EVENT_VARIABLE || EVENT_TEXT.matcher(name).matches())
             return source(context, span, code(context, span), textType(target.returnType().displayName()));
         if (capability == Capability.EXTERNAL_DATA || capability == Capability.FILE_READ && (name.equals("files.read") || name.equals("files.lines")))
             return source(context, span, name, textType(target.returnType().displayName()));
@@ -529,7 +546,7 @@ public final class SecurityAnalyzer {
         String id = nodeId(context, span, kind + nativeId);
         List<Map<String, Object>> args = arguments.stream().<Map<String, Object>>map(argument -> Map.of(
                 "tainted", argument.tainted(), "unsafeText", argument.unsafe, "secret", argument.sensitive,
-                "constant", argument.sensitive ? "[REDACTED]" : argument.constant == null ? "UNKNOWN" : redactor.redact(String.valueOf(argument.constant)),
+                "constant", argument.sensitive ? "[REDACTED]" : argument.constant == null ? "UNKNOWN" : redact(String.valueOf(argument.constant)),
                 "source", sourceNames(argument))).toList();
         SecurityNode result = new SecurityNode(id, kind, location, context.function, context.handler, nativeId,
                 capability, effects, code(context, span), args, flow.steps, concrete, context.permission);
@@ -564,23 +581,28 @@ public final class SecurityAnalyzer {
     }
 
     private Flow source(Context context, Span span, String expression, boolean unsafe) {
-        TaintStep step = new TaintStep(nodeId(context, span, "Source"), SourceSpan.from(context.module.file(), span), redactor.redact(expression), "SOURCE");
+        TaintStep step = new TaintStep(nodeId(context, span, "Source"), SourceSpan.from(context.module.file(), span), redact(expression), "SOURCE");
         node(context, span, "Source", "", Capability.EXTERNAL_DATA, List.of(), List.of(), Flow.clean(), false);
         return new Flow(null, unsafe, false, List.of(step), true);
     }
 
     private Flow step(Flow flow, Context context, Span span, String expression, String kind) {
         if (!flow.tainted() && !flow.sensitive) return flow;
-        return flow.append(new TaintStep(nodeId(context, span, kind), SourceSpan.from(context.module.file(), span), redactor.redact(expression), kind));
+        return flow.append(new TaintStep(nodeId(context, span, kind), SourceSpan.from(context.module.file(), span), redact(expression), kind));
     }
 
     private String nodeId(Context context, Span span, String kind) {
-        return "node-" + ScriptIdentity.hash(context.module.file().hash() + ":" + context.module.file().path() + ":"
-                + span.start() + ":" + span.end() + ":" + kind + ":" + context.function + ":" + context.handler).substring(0, 32);
+        String key = context.module.file().hash() + ":" + context.module.file().path() + ":"
+                + span.start() + ":" + span.end() + ":" + kind + ":" + context.function + ":" + context.handler;
+        return nodeIds.computeIfAbsent(key, value -> "node-" + ScriptIdentity.hash(value).substring(0, 32));
     }
     private String code(Context context, Span span) {
         String text = context.module.file().text(span);
-        return redactor.redact(text.length() > 1500 ? text.substring(0, 1500) + " [truncated]" : text);
+        return redact(text.length() > 1500 ? text.substring(0, 1500) + " [truncated]" : text);
+    }
+    /** The redactor is fixed for one analysis, so equal text redacts equally. */
+    private String redact(String text) {
+        return redactions.computeIfAbsent(text, redactor::redact);
     }
     private static String sourceNames(Flow flow) {
         return flow.steps.stream().filter(step -> step.kind().equals("SOURCE")).map(TaintStep::expression).distinct().reduce((a, b) -> a + ", " + b).orElse("");
@@ -589,7 +611,7 @@ public final class SecurityAnalyzer {
         return type.contains("string") || type.contains("Component") || type.startsWith("List<") || type.startsWith("Map<")
                 || type.equals("Row") || type.equals("DatabaseRow") || type.equals("JsonValue");
     }
-    private static boolean secretName(String name) { return name.toLowerCase(Locale.ROOT).matches(".*(password|passwd|api.?key|secret|token|webhook|credential).*"); }
+    private static boolean secretName(String name) { return SecretRedactor.SECRET_NAME.matcher(name.toLowerCase(Locale.ROOT)).matches(); }
     private static Flow join(List<Flow> values) { Flow result = Flow.clean(); for (Flow value : values) result = result.join(value); return result; }
     private static boolean dangerousCommand(String command) {
         String normalized = command.stripLeading().replaceFirst("^/", "").toLowerCase(Locale.ROOT);
@@ -691,7 +713,10 @@ public final class SecurityAnalyzer {
         static Flow clean() { return new Flow(null, false, false, List.of(), false); }
         static Flow unknown() { return new Flow(null, false, false, List.of(), true); }
         static Flow constant(Object value) { return new Flow(value, false, false, List.of(), true); }
-        boolean tainted() { return steps.stream().anyMatch(step -> step.kind().equals("SOURCE")); }
+        boolean tainted() {
+            for (TaintStep step : steps) if (step.kind().equals("SOURCE")) return true;
+            return false;
+        }
         Flow secret() { return new Flow(constant, unsafe, true, steps, true); }
         Flow safeText() { return new Flow(constant, false, sensitive, steps, present); }
         Flow unsafeText() { return new Flow(constant, true, sensitive, steps, true); }
@@ -699,19 +724,27 @@ public final class SecurityAnalyzer {
         Flow append(TaintStep step) {
             if (steps.contains(step)) return this;
             if (steps.size() >= 512) throw new IllegalStateException("Complete security flow exceeds path budget");
-            List<TaintStep> result = new ArrayList<>(steps); result.add(step);
+            List<TaintStep> result = new ArrayList<>(steps.size() + 1); result.addAll(steps); result.add(step);
             return new Flow(constant, unsafe, sensitive, List.copyOf(result), true);
         }
         Flow join(Flow other) {
             if (!other.present) return this;
             if (!present) return other;
-            List<TaintStep> joined = new ArrayList<>(steps);
-            for (TaintStep step : other.steps) if (!joined.contains(step)) {
-                if (joined.size() >= 512) throw new IllegalStateException("Complete security flow exceeds path budget");
-                joined.add(step);
+            List<TaintStep> joinedSteps;
+            if (other.steps.isEmpty() || other.steps == steps) joinedSteps = steps;
+            else if (steps.isEmpty()) joinedSteps = other.steps;
+            else {
+                // Same order as appending each new step of `other` in turn, without a quadratic scan.
+                java.util.LinkedHashSet<TaintStep> joined = new java.util.LinkedHashSet<>(steps);
+                for (TaintStep step : other.steps) {
+                    if (joined.size() >= 512 && !joined.contains(step))
+                        throw new IllegalStateException("Complete security flow exceeds path budget");
+                    joined.add(step);
+                }
+                joinedSteps = joined.size() == steps.size() ? steps : List.copyOf(joined);
             }
             return new Flow(java.util.Objects.equals(constant, other.constant) ? constant : null,
-                    unsafe || other.unsafe, sensitive || other.sensitive, List.copyOf(joined), true);
+                    unsafe || other.unsafe, sensitive || other.sensitive, joinedSteps, true);
         }
         String signature() { return present + ":" + unsafe + ":" + sensitive + ":" + constant + ":" + steps.stream().filter(s -> s.kind().equals("SOURCE")).map(TaintStep::nodeId).sorted().toList(); }
     }

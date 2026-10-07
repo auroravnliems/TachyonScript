@@ -35,6 +35,12 @@ public final class ExecutionStack {
     Object returnReference;
     private CallArguments[] views = new CallArguments[16];
     int loopBudget;
+    /**
+     * The revocation guard last checked in the current outermost execution. Calls between
+     * functions of the same script skip the entry check; natives and loop checks still ask.
+     * Cleared when the outermost execution ends, so a thread never keeps a retired script.
+     */
+    ExecutionGuard verified;
     private int loopInterval;
     private long maxExecutionNanos;
     private long deadline;
@@ -68,6 +74,7 @@ public final class ExecutionStack {
         loopBudget = loopInterval;
         maxExecutionNanos = current.maxExecutionNanos();
         deadlineArmed = false;
+        verified = null;
     }
 
     /**

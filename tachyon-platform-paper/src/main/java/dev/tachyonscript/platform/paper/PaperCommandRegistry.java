@@ -179,8 +179,10 @@ final class PaperCommandRegistry implements CommandRegistry {
             }
         }
         // Players' clients keep a list of commands for completion; send the new one.
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            player.getScheduler().run(plugin, task -> player.updateCommands(), null);
+        if (plugin.isEnabled()) {
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                player.getScheduler().run(plugin, task -> player.updateCommands(), null);
+            }
         }
     }
 

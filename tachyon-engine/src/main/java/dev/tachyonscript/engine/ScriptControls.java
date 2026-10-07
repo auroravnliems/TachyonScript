@@ -11,6 +11,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.Properties;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.BooleanSupplier;
 
 /** Operator switches, independent of code validity and security approvals. */
 public final class ScriptControls {
@@ -37,6 +38,30 @@ public final class ScriptControls {
     }
 
     public boolean allowed(String path) { State snapshot = state; return !snapshot.all() && !snapshot.paths().contains(path); }
+
+    /**
+     * {@link #allowed} for one path as the interpreter's revocation guard reads it on every
+     * script call: the set lookup is repeated only after the switches change. The cache is a
+     * benign race; an immutable snapshot is compared by identity with the current state.
+     */
+    public BooleanSupplier allowance(String path) {
+        return new BooleanSupplier() {
+            private Allowance seen;
+
+            @Override
+            public boolean getAsBoolean() {
+                State now = state;
+                Allowance cached = seen;
+                if (cached == null || cached.state() != now) {
+                    cached = new Allowance(now, !now.all() && !now.paths().contains(path));
+                    seen = cached;
+                }
+                return cached.allowed();
+            }
+        };
+    }
+
+    private record Allowance(State state, boolean allowed) { }
     public boolean allDisabled() { return state.all(); }
     public Set<String> disabled() { return state.paths(); }
     public long revision() { return state.revision(); }

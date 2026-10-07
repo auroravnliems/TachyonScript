@@ -6,7 +6,7 @@ jmh = "1.37"
 # Paper API for Minecraft 1.21.x (the last Java 21 line). Only compileOnly: the
 # server provides it (and Adventure) at runtime.
 paper = "1.21.11-R0.1-SNAPSHOT"
-okhttp = "5.5.0"
+asm = "9.10.1"
 
 [libraries]
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
@@ -15,6 +15,7 @@ junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher
 jmh-core = { module = "org.openjdk.jmh:jmh-core", version.ref = "jmh" }
 jmh-annprocess = { module = "org.openjdk.jmh:jmh-generator-annprocess", version.ref = "jmh" }
 paper-api = { module = "io.papermc.paper:paper-api", version.ref = "paper" }
-okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
+asm = { module = "org.ow2.asm:asm", version.ref = "asm" }
+asm-util = { module = "org.ow2.asm:asm-util", version.ref = "asm" }
 # The SQLite driver Paper ships with (tests only: on a server Paper provides it).
 sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version = "3.49.1.0" }

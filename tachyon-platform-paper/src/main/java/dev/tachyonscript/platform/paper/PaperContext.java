@@ -120,7 +120,8 @@ public final class PaperContext {
         if (threads.ownsEntity(entity)) {
             return action.get();
         }
-        return await(action, runner -> threads.forEntity(entity, runner), entity.getName());
+        // Even getName() can touch an entity's handle; diagnostics must not read it off-owner.
+        return await(action, runner -> threads.forEntity(entity, runner), "the entity");
     }
 
     public <T> T callRegion(Object target, Supplier<T> action) {

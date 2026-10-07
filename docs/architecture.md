@@ -33,6 +33,8 @@ Binder / type checker ─► bound tree (semantic model)         tachyon-languag
    ▼
 Lowering ─────────────► typed register IR (CFG)              tachyon-compiler
    ▼
+IR verifier ──────────► verified input                       tachyon-ir
+   ▼
 IR optimizer ─────────► optimized IR                         tachyon-ir
    ▼
 IR verifier ──────────► verified IR                          tachyon-ir
@@ -95,6 +97,8 @@ tachyon-cli              Standalone `tys` tool (check, dump tokens/AST/IR/code,
                          docs).
 tachyon-tests            End-to-end tests against an in-memory test platform.
 tachyon-benchmarks       JMH benchmarks.
+tachyon-integration      Test-only plugin for disposable live Paper/Folia servers;
+                         not bundled into the production plugin.
 ```
 
 Dependency direction (arrows point to dependencies):
@@ -128,6 +132,18 @@ contains the region-aware scheduler API (`GlobalRegionScheduler`,
 and on Folia; what differs is *policy* (whether a global main thread exists),
 which is selected once at startup through `PlatformCapabilities`. See
 [ADR 0004](decisions/0004-unified-paper-folia-platform.md).
+
+Ownership-sensitive reads use `PaperContext.callEntity/callRegion`: run inline on
+the owner, schedule and wait from async workers, or reject another tick thread.
+Diagnostics must not inspect entity state before checking ownership. The global
+Folia thread is a tick thread too; waiting there can deadlock.
+
+Normal engine activation/retirement runs on the global thread. Plugin disable uses
+`ScriptEngine.shutdownOnPlatformThread()` in the host lifecycle callback, where
+registry teardown is permitted even after Folia has stopped its region schedulers.
+This explicit path cannot enqueue shutdown work onto a halted scheduler. Client
+command refreshes are skipped once the plugin is disabled. Live coverage and its
+limits are documented in [integration.md](integration.md).
 
 ## 4. Declarations versus bindings
 
@@ -215,6 +231,9 @@ argument counts and kinds against native signatures, and return kinds. See
 
 The assembler turns an IR function into a compact `int[]` instruction stream,
 allocates frame slots for registers, and records a pc → source span table. The
+optimizer preserves exceptions and watchdog back edges; the assembler omits slots
+for unused registers while retaining the function's parameter ABI. It does not yet
+reuse slots across live ranges. See [optimizer invariants](compiler/optimizer.md). The
 linker then materialises everything that needs the platform exactly once:
 native bindings become direct references, message templates are compiled by the
 platform text service, type tests become `Class` references, and calls between
@@ -323,10 +342,27 @@ memory cache → dirty tracking → asynchronous batched writes → pluggable ba
 operations are separate APIs restricted to asynchronous blocks. Keys are stable
 schema identifiers derived from module and variable names, never compiler IDs.
 
-## 12. Bytecode backend (planned)
+## 12. Bytecode backend
 
-Verified IR is also the input of the planned ASM backend. Registers map to JVM
-locals, native calls become calls through constant `NativeFunction` fields (which
-the JIT can inline because each generated call site is monomorphic), and each
-generation is loaded in its own class loader so that a reload can release all
-generated classes.
+`runtime.backend: bytecode` (opt-in; the interpreter is the default and the reference)
+translates each assembled code unit into one JVM class with ASM (`BytecodeCompiler`).
+The generated `execute` method has no dispatch loop: every instruction becomes JVM
+operations and branches on the interpreter's own frame (the same primitive and
+reference slots of the `ExecutionStack`), so calls, natives and exceptions behave
+exactly as interpreted. Values the interpreter handles through helpers (strings,
+collections, records, conversions) use the same helpers. The guard points stay where
+the interpreter has them: function entry goes through the normal call boundary, every
+loop back edge decrements the loop budget and calls the watchdog and revocation check
+when it runs out, and native calls check revocation before their arguments are read.
+Exceptions are caught at the same boundary as the interpreter's (runtime exceptions,
+stack overflow, linkage errors) and routed to the script's handlers.
+
+Classes are defined with `Lookup.defineHiddenClass`, named `Tys_<script>_<function>_<id>`
+for profilers and heap dumps, and become unreachable with their generation, so a reload
+releases them. Line-number tables map JVM frames to `.tys` lines. HotSpot does not
+JIT-compile methods over 8,000 bytes of bytecode; such a function would run in the JVM's
+own interpreter, slower than the script interpreter, so the linker keeps it interpreted
+and records a note that the engine logs as a warning (as it does when generation fails).
+`tys dump bytecode <file>` prints the classes. Tests run the optimizer's differential
+corpus and generated programs on both backends, verify every class with ASM's
+`CheckClassAdapter`, and run the engine suite with `-Ptachyon.backend=bytecode`.

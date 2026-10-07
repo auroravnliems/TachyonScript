@@ -9,6 +9,18 @@ class SecuritySettingsTest {
         var options = SecuritySettings.from(new YamlConfiguration(), ignored -> null);
         assertTrue(options.enabled()); assertFalse(options.ai().enabled()); assertFalse(options.discord().enabled());
         assertEquals(4096, options.ai().maxOutputTokens());
+        assertFalse(options.ai().required());
+    }
+    @Test void legacyRequiredDoesNotTurnProviderOutagesIntoAServerWideStop() {
+        var config = new YamlConfiguration();
+        config.set("security.ai.required", true);
+        assertFalse(SecuritySettings.from(config).ai().required());
+        config.set("security.ai.failure-policy", "keep-pending");
+        assertTrue(SecuritySettings.from(config).ai().required());
+        config.set("security.ai.failure-policy", "warn");
+        assertFalse(SecuritySettings.from(config).ai().required());
+        config.set("security.ai.failure-policy", "typo");
+        assertThrows(IllegalArgumentException.class, () -> SecuritySettings.from(config));
     }
     @Test void configuredProviderExpandsEnvironmentAndRedactsAllSecretBearingViews() {
         var config = new YamlConfiguration();
@@ -28,6 +40,18 @@ class SecuritySettingsTest {
         config.set("security.ai.model", "configured-model");
         var exception = assertThrows(IllegalArgumentException.class, () -> SecuritySettings.from(config));
         assertFalse(exception.getMessage().contains("secret-key")); assertFalse(exception.getMessage().contains("key-is-secret"));
+    }
+    @Test void reviewsRunInTheBackgroundUnlessBlockingIsChosen() {
+        var config = new YamlConfiguration();
+        var defaults = SecuritySettings.from(config, ignored -> null).ai();
+        assertTrue(defaults.background()); assertEquals(2, defaults.maxConcurrentReviews());
+        config.set("security.ai.review-mode", "blocking"); config.set("security.ai.max-concurrent-reviews", 4);
+        var blocking = SecuritySettings.from(config, ignored -> null).ai();
+        assertFalse(blocking.background()); assertEquals(4, blocking.maxConcurrentReviews());
+        config.set("security.ai.max-concurrent-reviews", 9);
+        assertThrows(IllegalArgumentException.class, () -> SecuritySettings.from(config, ignored -> null));
+        config.set("security.ai.max-concurrent-reviews", 2); config.set("security.ai.review-mode", "eventually");
+        assertThrows(IllegalArgumentException.class, () -> SecuritySettings.from(config, ignored -> null));
     }
     @Test void invalidCompletionBudgetsCannotBecomeProviderRequests() {
         var config = new YamlConfiguration();

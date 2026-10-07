@@ -24,7 +24,7 @@ public final class EntityApi {
     // ---------------------------------------------------------------- CommandSender
 
     public static final PropertyDeclaration SENDER_NAME = PropertyDeclaration.member(COMMAND_SENDER, "name", Types.STRING)
-            .doc("The sender's name (the player name, or CONSOLE).").build();
+            .doc("The sender's name (the player name, or CONSOLE). Entity senders require their owning thread.").build();
 
     public static final FunctionDeclaration SEND = FunctionDeclaration.method(COMMAND_SENDER, "send")
             .parameter("message", Types.COMPONENT)
@@ -45,6 +45,7 @@ public final class EntityApi {
     // ---------------------------------------------------------------- Entity
 
     public static final PropertyDeclaration ENTITY_NAME = PropertyDeclaration.member(ENTITY, "name", Types.STRING)
+            .getterThreading(ThreadingRequirement.ENTITY)
             .doc("The entity's name.").build();
 
     public static final PropertyDeclaration ENTITY_UUID = PropertyDeclaration.member(ENTITY, "uuid", UUID)
@@ -55,9 +56,11 @@ public final class EntityApi {
             .doc("A copy of the entity's current location.").build();
 
     public static final PropertyDeclaration ENTITY_WORLD = PropertyDeclaration.member(ENTITY, "world", WORLD)
+            .getterThreading(ThreadingRequirement.ENTITY)
             .doc("The world the entity is in.").build();
 
     public static final PropertyDeclaration ENTITY_VALID = PropertyDeclaration.member(ENTITY, "valid", Types.BOOL)
+            .getterThreading(ThreadingRequirement.ENTITY)
             .doc("Whether the entity still exists (false after it died, despawned or the player left).").build();
 
     public static final FunctionDeclaration TELEPORT = FunctionDeclaration.method(ENTITY, "teleport")
@@ -70,7 +73,7 @@ public final class EntityApi {
             .parameter("target", ENTITY)
             .effects(Effect.MODIFIES_WORLD)
             .threading(ThreadingRequirement.ENTITY)
-            .doc("Teleports the entity to another entity.").build();
+            .doc("Teleports to a snapshot of the target's location. Reading that location requires the target's owning thread; the teleport is forwarded to this entity's owner.").build();
 
     // ---------------------------------------------------------------- LivingEntity
 
@@ -84,6 +87,7 @@ public final class EntityApi {
     // ---------------------------------------------------------------- Player
 
     public static final FunctionDeclaration PLAYER_TO_STRING = FunctionDeclaration.method(PLAYER, "toString")
+            .threading(ThreadingRequirement.ENTITY)
             .returns(Types.STRING).doc("The player's name; used when a player is inserted into text.").build();
 
     public static final PropertyDeclaration FOOD = PropertyDeclaration.member(PLAYER, "food", Types.INT)
@@ -102,12 +106,16 @@ public final class EntityApi {
 
     public static final PropertyDeclaration GAME_MODE_PROPERTY = PropertyDeclaration.member(PLAYER, "gameMode", GAME_MODE)
             .mutable()
+            .getterThreading(ThreadingRequirement.ENTITY)
             .setterThreading(ThreadingRequirement.ENTITY)
             .setterEffects(Effect.MODIFIES_WORLD)
             .doc("The player's game mode.").build();
 
     public static final PropertyDeclaration DISPLAY_NAME = PropertyDeclaration.member(PLAYER, "displayName", Types.COMPONENT)
             .mutable()
+            .getterThreading(ThreadingRequirement.ENTITY)
+            .setterThreading(ThreadingRequirement.ENTITY)
+            .setterEffects(Effect.MODIFIES_WORLD)
             .doc("The name shown in chat.").build();
 
     public static final FunctionDeclaration KICK = FunctionDeclaration.method(PLAYER, "kick")

@@ -1,0 +1,50 @@
+persistent var saved = 1
+persistent var unloads = 0
+var spawned = 0
+on unload { unloads += 1; log("INTEGRATION_UNLOAD saved={saved}") }
+
+event entity.spawn { spawned += 1 }
+command tsprobe(amount: int) { saved += amount }
+function savedValue(): int { return saved }
+function spawnCount(): int { return spawned }
+
+function owned(entity: LivingEntity, block: Block): bool {
+    entity.health = 8.0
+    block.type = Material.STONE
+    return entity.health == 8.0 && block.type == Material.STONE
+}
+
+function deferred(entity: LivingEntity, block: Block) {
+    entity.health = 6.0
+    block.type = Material.GOLD_BLOCK
+}
+
+function readHealth(entity: LivingEntity): double { return entity.health }
+function readName(entity: Entity): string { return entity.name }
+function readLocation(entity: Entity): Location { return entity.location }
+function move(entity: Entity, where: Location) { entity.teleport(where) }
+function spawnAt(where: Location): Entity { return where.spawn(EntityType.COW) }
+function dropAt(where: Location): Item { return where.dropItem(ItemStack(Material.STONE)) }
+
+function later(entity: LivingEntity) {
+    after 1 tick for entity { entity.health = 7.0 }
+}
+
+function roundTrip(entity: LivingEntity) {
+    async { sync { after 1 tick for entity { entity.health = 9.0 } } }
+}
+
+function obsolete(entity: LivingEntity) {
+    after 20 ticks for entity { entity.health = 2.0 }
+}
+
+function makeCallback(): function(): int {
+    return () => { saved += 100; return saved }
+}
+
+// Finite but deliberately too slow for the isolated server's 50 ms budget.
+function spin(): int {
+    var total = 0
+    for i in 0..<100000000 { total += i }
+    return total
+}

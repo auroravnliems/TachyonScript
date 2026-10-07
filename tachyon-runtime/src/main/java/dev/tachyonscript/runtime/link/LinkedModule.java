@@ -26,10 +26,11 @@ public final class LinkedModule {
     private final Map<String, PlayerDataSlot> playerData;
     private final Map<String, RecordType> records;
     private final Object owner;
+    private final List<String> notes;
 
     LinkedModule(String name, SourceText source, Map<String, CompiledFunction> functions, List<CompiledHandler> handlers,
                  Map<String, GlobalCell> globals, Map<String, PlayerDataSlot> playerData, Map<String, RecordType> records,
-                 Object owner) {
+                 Object owner, List<String> notes) {
         this.name = name;
         this.source = source;
         this.functions = Collections.unmodifiableMap(functions);
@@ -38,6 +39,15 @@ public final class LinkedModule {
         this.playerData = Collections.unmodifiableMap(playerData);
         this.records = Collections.unmodifiableMap(records);
         this.owner = owner;
+        this.notes = List.copyOf(notes);
+    }
+
+    /**
+     * What linking could not do as requested without failing: functions that stay interpreted
+     * under the bytecode backend, and why. Hosts report these; they are never silent.
+     */
+    public List<String> notes() {
+        return notes;
     }
 
     public String name() {

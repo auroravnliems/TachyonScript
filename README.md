@@ -1,7 +1,7 @@
 # TachyonScript
 
 A compiled, statically typed scripting language for Paper and Folia Minecraft
-servers: everything Skript does, checked before it runs and many times faster.
+servers, with compile-time checks, transactional reloads and a typed server API.
 
 ```tys
 const PREFIX = "<gold>[Server]</gold> "
@@ -36,10 +36,11 @@ command shop {
 }
 ```
 
-> **Status: 0.5.1-SNAPSHOT.** The language, the standard library (menus, items,
+> **Status: 0.7.0-SNAPSHOT.** The language, the standard library (menus, items,
 > databases, saved data, boss bars, sidebars, Vault, PlaceholderAPI, ...), the
-> Paper/Folia platform and the plugin work, are covered by tests, and have been run on
-> a live Paper 1.21.11 server. There is no published release yet. See
+> Paper/Folia platform and the plugin are covered by tests. The core integration
+> probe passes on live Paper and Folia 1.21.11 with both execution backends; see [scope and evidence](docs/integration.md).
+> There is no published release yet. See
 > [docs/status.md](docs/status.md) for exactly what exists.
 
 ## Why
@@ -70,7 +71,8 @@ command shop {
 * **Scripts pass security review before activation.** Compiler-backed static and taint
   checks report exact source locations and quarantine dangerous code, including active
   versions and dependents. Optional Qwen review and Discord alerts use configured
-  credentials. See [security configuration and administration](docs/security.md).
+  credentials. AI outages warn by default without holding otherwise eligible scripts;
+  deterministic enforcement remains active. See [security configuration and administration](docs/security.md).
 * **Safe by construction.** Values inserted into messages are plain text, so players
   cannot inject formatting; SQL can only be written in the script, so SQL injection is a
   compile error; `null` must be handled before a value is used.
@@ -109,7 +111,7 @@ There is no published release yet; build the plugin from source:
 ./gradlew build
 ```
 
-Copy `tachyon-plugin/build/libs/TachyonScript-0.5.1-SNAPSHOT.jar` into `plugins/`
+Copy `tachyon-plugin/build/libs/TachyonScript-0.7.0-SNAPSHOT.jar` into `plugins/`
 on a Paper or Folia 1.21.x server (Java 21), start it, and edit scripts in
 `plugins/TachyonScript/scripts/`. See [docs/plugin.md](docs/plugin.md) for commands,
 permissions and configuration, and the [wiki](wiki/Home.md) for a guided tour.
@@ -120,9 +122,13 @@ permissions and configuration, and the [wiki](wiki/Home.md) for a guided tour.
 ./gradlew :tachyon-cli:installDist
 tachyon-cli/build/install/tys/bin/tys check plugins/TachyonScript/scripts
 tachyon-cli/build/install/tys/bin/tys dump code my-script.tys
+tachyon-cli/build/install/tys/bin/tys dump passes my-script.tys
 ```
 
 `tys check` exits with status 1 when a script has errors, so it can run in CI.
+Use `--no-optimize` or repeat `--disable-pass=<name>` with `check`/`dump` to
+diagnose optimizer problems. `dump passes` verifies and prints every intermediate
+IR snapshot. See the [optimizer contract and tests](docs/compiler/optimizer.md).
 
 ## Documentation
 
@@ -146,7 +152,7 @@ tachyon-cli/build/install/tys/bin/tys dump code my-script.tys
 ## How it works
 
 ```text
-.tys ─► lexer ─► parser ─► type checker ─► typed register IR ─► verifier
+.tys ─► lexer ─► parser ─► type checker ─► typed register IR ─► verifier ─► optimizer ─► verifier
       ─► assembler (packed int[] code) ─► linker (natives, templates, constants) ─► interpreter
 ```
 

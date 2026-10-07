@@ -5,7 +5,10 @@ import dev.tachyonscript.api.registry.SymbolRegistry;
 import dev.tachyonscript.compiler.CompilationResult;
 import dev.tachyonscript.compiler.CompiledModule;
 import dev.tachyonscript.compiler.Compiler;
+import dev.tachyonscript.compiler.CompilerOptions;
+import dev.tachyonscript.compiler.InternalErrorHandler;
 import dev.tachyonscript.ir.IrPrinter;
+import dev.tachyonscript.ir.opt.Optimizer;
 import dev.tachyonscript.language.diagnostic.Diagnostic;
 import dev.tachyonscript.language.diagnostic.DiagnosticCode;
 import dev.tachyonscript.language.diagnostic.DiagnosticCollector;
@@ -20,17 +23,25 @@ import dev.tachyonscript.language.source.SourceFile;
 import dev.tachyonscript.language.syntax.SourceUnit;
 import dev.tachyonscript.language.syntax.SyntaxPrinter;
 import dev.tachyonscript.runtime.code.Assembler;
+import dev.tachyonscript.runtime.bytecode.BytecodeCompiler;
+import dev.tachyonscript.runtime.code.AssembledModule;
+import dev.tachyonscript.runtime.code.CodeUnit;
 import dev.tachyonscript.runtime.code.Disassembler;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.util.TraceClassVisitor;
 import dev.tachyonscript.stdlib.StandardLibrary;
 
 import java.io.FileDescriptor;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Stream;
@@ -55,11 +66,20 @@ public final class Cli {
               check <path>...                         Type-check scripts; a directory is read like the
                                                       plugin's scripts directory (recursively, skipping
                                                       names that start with '-'), a file on its own
-              dump tokens|ast|bound|ir|code <file>    Print the output of one compiler stage
+              dump tokens|ast|bound|ir|code|passes|bytecode <file>
+                                                      Print a compiler stage; passes shows verified
+                                                      IR before optimization and after each pass;
+                                                      bytecode shows the JVM classes of
+                                                      runtime.backend: bytecode
               docs [--wiki]                           Print the standard library reference (Markdown;
                                                       --wiki: the API-Reference page of the wiki)
               version                                 Print version information
               help                                    Print this help
+
+            Compiler options (check and dump):
+              --no-optimize                           Disable the IR optimizer
+              --disable-pass=<name>                   Disable a named pass (repeatable)
+              --                                      Treat remaining arguments as paths/stages
 
             Exit codes: 0 success, 1 compile errors, 2 usage or I/O errors.
             Set NO_COLOR to disable colored output.
@@ -119,7 +139,7 @@ public final class Cli {
                     yield USAGE;
                 }
             };
-        } catch (IOException e) {
+        } catch (IOException | IllegalArgumentException e) {
             err.println("error: " + e.getMessage());
             return USAGE;
         }
@@ -127,7 +147,9 @@ public final class Cli {
 
     // ================================================================= check
 
-    private int check(List<String> paths) throws IOException {
+    private int check(List<String> arguments) throws IOException {
+        CompilationArguments parsed = CompilationArguments.parse(arguments);
+        List<String> paths = parsed.positional();
         if (paths.isEmpty()) {
             err.println("Usage: tys check <path>...");
             return USAGE;
@@ -142,7 +164,7 @@ public final class Cli {
             if (batch.files().isEmpty()) {
                 continue;
             }
-            CompilationResult result = new Compiler(registry).compile(batch.files());
+            CompilationResult result = compiler(parsed.options()).compile(batch.files());
             DiagnosticRenderer renderer = new DiagnosticRenderer(color, batch.displayPrefix());
             boolean unknownModule = false;
             for (Diagnostic diagnostic : result.diagnostics().sorted()) {
@@ -213,9 +235,11 @@ public final class Cli {
 
     // ================================================================= dump
 
-    private int dump(List<String> args) throws IOException {
+    private int dump(List<String> arguments) throws IOException {
+        CompilationArguments parsed = CompilationArguments.parse(arguments);
+        List<String> args = parsed.positional();
         if (args.size() != 2) {
-            err.println("Usage: tys dump tokens|ast|bound|ir|code <file>");
+            err.println("Usage: tys dump tokens|ast|bound|ir|code|passes|bytecode <file> [compiler options]");
             return USAGE;
         }
         String stage = args.get(0);
@@ -234,17 +258,29 @@ public final class Cli {
                 SourceUnit unit = Parser.parse(Lexer.lex(file, diagnostics), diagnostics);
                 yield BoundPrinter.print(Binder.bind(unit, registry, diagnostics));
             }
-            case "ir", "code" -> {
-                CompilationResult result = new Compiler(registry).compile(List.of(file));
+            case "ir", "code", "passes", "bytecode" -> {
+                CompilerOptions options = stage.equals("passes") ? parsed.options().withOptimization(false) : parsed.options();
+                CompilationResult result = compiler(options).compile(List.of(file));
                 diagnostics.addAll(result.diagnostics());
                 CompiledModule module = result.modules().getFirst();
                 if (!module.succeeded()) {
                     yield null;
                 }
+                if (stage.equals("passes")) {
+                    StringBuilder snapshots = new StringBuilder("=== input ===\n").append(IrPrinter.print(module.ir()));
+                    if (parsed.options().optimize()) {
+                        Optimizer.optimize(module.ir(), parsed.options().disabledPasses(), (pass, ir) ->
+                                snapshots.append("\n=== ").append(pass).append(" ===\n").append(IrPrinter.print(ir)));
+                    }
+                    yield snapshots.toString();
+                }
+                if (stage.equals("bytecode")) {
+                    yield bytecode(Assembler.assemble(module.ir()));
+                }
                 yield stage.equals("ir") ? IrPrinter.print(module.ir()) : Disassembler.disassemble(Assembler.assemble(module.ir()));
             }
             default -> {
-                err.println("Unknown stage '" + stage + "'. Use tokens, ast, bound, ir or code.");
+                err.println("Unknown stage '" + stage + "'. Use tokens, ast, bound, ir, code, passes or bytecode.");
                 yield null;
             }
         };
@@ -256,6 +292,54 @@ public final class Cli {
         }
         out.print(text.endsWith("\n") ? text : text + "\n");
         return diagnostics.hasErrors() ? COMPILE_ERRORS : OK;
+    }
+
+    /** The JVM class of every function, as the bytecode backend would define it. */
+    private static String bytecode(AssembledModule module) {
+        StringBuilder out = new StringBuilder();
+        for (CodeUnit unit : module.units()) {
+            byte[] bytes = BytecodeCompiler.generate(unit, module.source());
+            int size = BytecodeCompiler.methodSize(bytes);
+            out.append("=== ").append(unit.displayName()).append(" [").append(unit.key()).append("]: ").append(size)
+                    .append(" bytes of JVM code")
+                    .append(size > BytecodeCompiler.JIT_LIMIT ? " (over the JIT limit: runs in the interpreter)" : "")
+                    .append(" ===\n");
+            StringWriter text = new StringWriter();
+            new ClassReader(bytes).accept(new TraceClassVisitor(new PrintWriter(text)), 0);
+            out.append(text).append('\n');
+        }
+        return out.toString();
+    }
+
+    private Compiler compiler(CompilerOptions options) {
+        return new Compiler(registry, options, InternalErrorHandler.IGNORE);
+    }
+
+    private record CompilationArguments(List<String> positional, CompilerOptions options) {
+        static CompilationArguments parse(List<String> arguments) {
+            List<String> positional = new ArrayList<>();
+            var disabled = new LinkedHashSet<String>();
+            boolean optimize = true;
+            boolean literal = false;
+            for (String argument : arguments) {
+                if (literal) {
+                    positional.add(argument);
+                } else if (argument.equals("--")) {
+                    literal = true;
+                } else if (argument.equals("--no-optimize")) {
+                    optimize = false;
+                } else if (argument.startsWith("--disable-pass=")) {
+                    disabled.add(argument.substring("--disable-pass=".length()));
+                } else if (argument.startsWith("--")) {
+                    throw new IllegalArgumentException("Unknown compiler option '" + argument + "'. Available passes: "
+                            + String.join(", ", Optimizer.passes()));
+                } else {
+                    positional.add(argument);
+                }
+            }
+            return new CompilationArguments(List.copyOf(positional), CompilerOptions.DEFAULT
+                    .withOptimization(optimize).withDisabledPasses(disabled));
+        }
     }
 
     private static String tokens(LexResult lexed) {

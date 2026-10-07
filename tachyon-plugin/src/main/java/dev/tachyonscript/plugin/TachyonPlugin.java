@@ -85,6 +85,8 @@ public final class TachyonPlugin extends JavaPlugin {
     /** Builds the registry (standard library and addons), the platform and the engine, and loads the scripts. */
     private void start() {
         try {
+            String securityMigration = SecuritySettings.migrationNotice(getConfig());
+            if (!securityMigration.isEmpty()) getLogger().info(securityMigration);
             PlatformCapabilities capabilities = PlatformCapabilities.detect();
             TachyonSettings active = settings;
             // The constant tables (Material.X, Sound.X, ...) come from the server's registries, so
@@ -103,16 +105,21 @@ public final class TachyonPlugin extends JavaPlugin {
                     settings.engineOptions(getDataFolder().toPath()),
                     new CrashReports(getDataFolder().toPath().resolve("logs"), getLogger(), Bukkit.getVersion()),
                     new SecurityService(SecuritySettings.from(getConfig()),
-                            new SecurityAuditStore(getDataFolder().toPath().resolve("security")),
+                            new SecurityAuditStore(getDataFolder().toPath().resolve("security"), message -> getLogger().severe(message)),
                             this::notifySecurity, message -> getLogger().severe(message)));
             started.controls(new ScriptControls(getDataFolder().toPath().resolve("disabled-scripts.properties")));
+            started.onReviewActivation(report -> {
+                getLogger().info("Background AI security review finished; applying the reviewed scripts.");
+                lastReport = report;
+                logReport(report);
+            });
             created.attach(started);
             platform = created;
             engine = started;
             addons = assembly.loaded();
 
             getLogger().info("TachyonScript " + TachyonVersion.RUNTIME + " (language level " + TachyonVersion.LANGUAGE_LEVEL
-                    + ", interpreter backend) on " + capabilities.serverName() + " " + capabilities.minecraftVersion()
+                    + ", " + active.backend().id() + " backend) on " + capabilities.serverName() + " " + capabilities.minecraftVersion()
                     + (capabilities.folia() ? " with regionized multithreading" : "")
                     + (addons.isEmpty() ? "" : "; addons: " + String.join(", ", addons)));
             registerPlaceholders();
@@ -125,8 +132,8 @@ public final class TachyonPlugin extends JavaPlugin {
     }
 
     private void notifySecurity(SecurityIncident incident) {
-        String detail = SecurityMessages.detail(incident, true);
-        if (incident.decision().deniesExecution() || incident.severity().ordinal() >= dev.tachyonscript.security.SecuritySeverity.HIGH.ordinal())
+        String detail = SecurityMessages.console(incident);
+        if (incident.decision().deniesExecution())
             getLogger().severe(detail);
         else getLogger().warning(detail);
         if (!isEnabled()) return;
@@ -168,7 +175,8 @@ public final class TachyonPlugin extends JavaPlugin {
             }
         }
         if (engine != null) {
-            engine.shutdown();
+            // Folia invokes disable after its region schedulers halt; new tasks are forbidden.
+            engine.shutdownOnPlatformThread();
         }
         if (platform != null) {
             platform.shutdown();
@@ -239,9 +247,13 @@ public final class TachyonPlugin extends JavaPlugin {
             return;
         }
         DiagnosticRenderer renderer = new DiagnosticRenderer(false, SCRIPTS_PREFIX);
+        // A file's redactor lexes the whole file: build it once per file, only for lines that are logged.
+        Map<String, dev.tachyonscript.security.SecretRedactor> redactors = new java.util.HashMap<>();
         for (Diagnostic diagnostic : report.diagnostics()) {
+            if (diagnostic.severity() != Severity.ERROR && diagnostic.severity() != Severity.WARNING && !settings.debug()) continue;
             String text = renderer.renderCompact(diagnostic);
-            if (engine != null) text = engine.security().options().redactor().withSource(diagnostic.file()).redact(text);
+            if (engine != null) text = redactors.computeIfAbsent(diagnostic.file().path(),
+                    ignored -> engine.security().options().redactor().withSource(diagnostic.file())).redact(text);
             if (diagnostic.severity() == Severity.ERROR) {
                 text.lines().forEach(log::severe);
             } else if (diagnostic.severity() == Severity.WARNING) {

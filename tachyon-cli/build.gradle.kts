@@ -9,6 +9,8 @@ dependencies {
     implementation(project(":tachyon-compiler"))
     implementation(project(":tachyon-runtime"))
     implementation(project(":tachyon-stdlib"))
+    // Prints the classes of the bytecode backend for `tys dump bytecode` (CLI only, not in the plugin).
+    implementation(libs.asm.util)
 }
 
 application {

@@ -16,6 +16,15 @@ public record SecurityManifest(String scriptId, String sha256, String file, Stri
         nodes = List.copyOf(nodes); findings = List.copyOf(findings);
     }
 
+    /**
+     * The manifest without its nodes, for keeping after a review: nodes are most of a manifest's
+     * size (thousands per script) and are needed only to analyze and to ask the AI reviewer.
+     */
+    public SecurityManifest withoutNodes() {
+        return nodes.isEmpty() ? this : new SecurityManifest(scriptId, sha256, file, module, imports, exports, handlers,
+                commands, tasks, dependencies, List.of(), findings);
+    }
+
     public SecurityNode node(String id) {
         return nodes.stream().filter(node -> node.id().equals(id)).findFirst().orElse(null);
     }

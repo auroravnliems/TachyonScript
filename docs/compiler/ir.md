@@ -70,12 +70,16 @@ compiler error, never silently) any function where:
 
 `Optimizer` runs a pipeline of `IrPass`es; each must preserve semantics exactly,
 including the order of side effects and runtime errors, and the result is
-verified again. Implemented today: removal of unreachable blocks. Constant
-folding of constant expressions is done earlier, by the binder. Planned passes
-(constant and copy propagation, dead code elimination, branch folding, slot
-reuse, superinstructions in the assembler) are listed in
-[`../status.md`](../status.md); each will come with differential tests that run
-programs with and without the pass and compare results.
+verified again. The pipeline removes unreachable blocks, propagates block-local
+copies and constants, folds primitive calculations/branches, removes dead stores
+using liveness with exception edges, threads forwarding jumps and removes newly
+unreachable blocks. Binder constant folding still runs before IR optimization.
+
+See [optimizer algorithms, invariants and differential tests](optimizer.md).
+`tys dump passes file.tys` verifies and prints each intermediate snapshot;
+`--no-optimize` and `--disable-pass=<name>` also work with `dump ir`, `dump code`
+and `check`. The assembler drops slots for registers absent from the optimized
+function, retaining all parameters. Reusing slots across live ranges remains planned.
 
 ## From IR to execution
 

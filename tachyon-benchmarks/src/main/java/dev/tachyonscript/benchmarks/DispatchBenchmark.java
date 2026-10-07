@@ -1,6 +1,7 @@
 package dev.tachyonscript.benchmarks;
 
 import dev.tachyonscript.engine.ScriptEngine;
+import dev.tachyonscript.runtime.ExecutionBackend;
 import dev.tachyonscript.stdlib.EventApi;
 import dev.tachyonscript.testkit.Fakes;
 import dev.tachyonscript.testkit.TestPlatform;
@@ -10,6 +11,7 @@ import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
+import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
@@ -41,6 +43,10 @@ public class DispatchBenchmark {
             }
             """;
 
+    /** {@code interpreter} or {@code bytecode} (see {@code runtime.backend}). */
+    @Param({"interpreter", "bytecode"})
+    public String backend;
+
     private ScriptEngine engine;
     private int moveIndex;
     private int quitIndex;
@@ -51,7 +57,8 @@ public class DispatchBenchmark {
     @Setup
     public void setUp() {
         TestPlatform platform = new TestPlatform();
-        engine = Scripts.load(platform, "move.tys", SCRIPT);
+        engine = Scripts.load(platform, "move.tys", SCRIPT, dev.tachyonscript.compiler.CompilerOptions.DEFAULT,
+                ExecutionBackend.valueOf(backend.toUpperCase(java.util.Locale.ROOT)));
         moveIndex = engine.registry().eventIndex(EventApi.PLAYER_MOVE);
         quitIndex = engine.registry().eventIndex(EventApi.PLAYER_QUIT);
         player = platform.join("Steve");

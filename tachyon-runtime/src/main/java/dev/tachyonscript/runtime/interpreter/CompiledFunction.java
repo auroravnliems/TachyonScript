@@ -4,6 +4,7 @@ import dev.tachyonscript.api.natives.NativeFunction;
 import dev.tachyonscript.ir.IrFunction;
 import dev.tachyonscript.ir.SourceText;
 import dev.tachyonscript.runtime.code.CodeUnit;
+import dev.tachyonscript.runtime.ExecutionBackend;
 import dev.tachyonscript.runtime.spi.MessageTemplate;
 import dev.tachyonscript.runtime.spi.TextService;
 import dev.tachyonscript.runtime.value.GlobalCell;
@@ -38,6 +39,9 @@ public final class CompiledFunction {
     final CodeUnit unit;
     final SourceText source;
     final Object owner;
+    /** The owner as a revocation guard, resolved once instead of on every call. */
+    final ExecutionGuard guard;
+    final BytecodeBody bytecode;
     CompiledFunction[] callees;
 
     /**
@@ -47,6 +51,13 @@ public final class CompiledFunction {
     public CompiledFunction(CodeUnit unit, SourceText source, Object[] referencePool, NativeFunction[] natives,
                             Class<?>[] classes, MessageTemplate[] templates, GlobalCell[] globals,
                             PlayerDataSlot[] playerData, RecordType[] records, TextService text, Object owner) {
+        this(unit, source, referencePool, natives, classes, templates, globals, playerData, records, text, owner, null);
+    }
+
+    public CompiledFunction(CodeUnit unit, SourceText source, Object[] referencePool, NativeFunction[] natives,
+                            Class<?>[] classes, MessageTemplate[] templates, GlobalCell[] globals,
+                            PlayerDataSlot[] playerData, RecordType[] records, TextService text, Object owner,
+                            BytecodeBody bytecode) {
         this.unit = unit;
         this.source = source;
         this.displayName = unit.displayName();
@@ -66,6 +77,8 @@ public final class CompiledFunction {
         this.handlers = unit.handlers();
         this.text = text;
         this.owner = owner;
+        this.guard = owner instanceof ExecutionGuard executionGuard ? executionGuard : null;
+        this.bytecode = bytecode;
     }
 
     /** Sets the functions this one calls or creates closures of (second linking phase, allows recursion). */
@@ -90,6 +103,10 @@ public final class CompiledFunction {
 
     public CodeUnit unit() {
         return unit;
+    }
+
+    public ExecutionBackend backend() {
+        return bytecode == null ? ExecutionBackend.INTERPRETER : ExecutionBackend.BYTECODE;
     }
 
     public SourceText source() {

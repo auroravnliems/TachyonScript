@@ -113,7 +113,10 @@ public final class LoadedScript implements ExecutionGuard {
         return state == State.ACTIVE && !securityRevoked();
     }
 
-    @Override public boolean securityRevoked() { return revoked || !enabled.getAsBoolean() || securityToken.blocked() || securityToken.epoch() != securityEpoch; }
+    /** Read at every script call and native call ({@link ExecutionGuard}): plain field reads first. */
+    @Override public boolean securityRevoked() {
+        return revoked || securityToken.blocked() || securityToken.epoch() != securityEpoch || !enabled.getAsBoolean();
+    }
     void revokeSecurity() { revoked = true; }
 
     void activate() {

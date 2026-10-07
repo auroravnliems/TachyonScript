@@ -35,7 +35,7 @@ final class BoundedHttp {
             catch (ExecutionException | TimeoutException e) {
                 future.cancel(true);
                 if (attempt < retries) { Thread.sleep(Math.min(2_000, 250L << attempt)); continue; }
-                throw new IOException("Security HTTP request failed or timed out");
+                throw new ReviewFailure("Network request failed, timed out, or exceeded the response limit.");
             } catch (InterruptedException e) { future.cancel(true); throw e; }
             if (response.statusCode() >= 200 && response.statusCode() < 300)
                 return new String(response.body(), StandardCharsets.UTF_8);
@@ -46,7 +46,7 @@ final class BoundedHttp {
                 Thread.sleep(delay);
                 continue;
             }
-            throw new IOException("Security HTTP status " + response.statusCode());
+            throw ReviewFailure.status(response.statusCode());
         }
     }
 

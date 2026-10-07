@@ -5,9 +5,27 @@ import dev.tachyonscript.language.source.SourceFile;
 import dev.tachyonscript.stdlib.StandardLibrary;
 import org.junit.jupiter.api.Test;
 import java.util.List;
+import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 
 class SecurityRulesTest {
+    @Test void ordinaryEventAndDeferredMenuTasksAreNotSchedulingStorms() {
+        var manifest = SecurityAnalyzerTest.analyze(new SourceFile("menu.tys", """
+                event player.join {
+                    after 1 tick for player { player.send("welcome") }
+                    let menu = Menu(1, "Menu")
+                    for slot in 0..<9 {
+                        menu.set(slot, ItemStack(Material.STONE), click => {
+                            after 1 tick for click.player { click.player.send("clicked") }
+                        })
+                    }
+                    menu.open(player)
+                }
+                """));
+        assertTrue(manifest.findings().stream().noneMatch(f -> Set.of(SecurityCategory.EVENT_SPAM,
+                SecurityCategory.TASK_EXPLOSION, SecurityCategory.RECURSIVE_SCHEDULING).contains(f.category())),
+                manifest.findings()::toString);
+    }
     @Test void permissionGuardDoesNotRemoveTaintEvidenceButPreventsStaticAutomaticRevocation() {
         var manifest = SecurityAnalyzerTest.analyze(new SourceFile("guard.tys", "@permission(\"admin.run\")\ncommand run(value: string) {\n    server.dispatch(value)\n}\n"));
         var finding = manifest.findings().stream().filter(f -> f.category() == SecurityCategory.COMMAND_INJECTION).findFirst().orElseThrow();

@@ -1,0 +1,356 @@
+{
+  "denied": [
+    "08_GUIs/GUI_DynamicJson.tys"
+  ],
+  "execution": "compile and deterministic analysis only; no script execution or network",
+  "compiled": 32,
+  "scripts": [
+    {
+      "decision": "ALLOW",
+      "file": "01_API/API_Placeholders.tys",
+      "rules": [],
+      "sha256": "c5648da795b41d72e76ea73968dc9c17cc6df49ccec96f445bad74796c2446ea"
+    },
+    {
+      "decision": "ALLOW",
+      "file": "01_API/API_Skills.tys",
+      "rules": [],
+      "sha256": "b508349e0610e5eb9d788b511e3b58ecb57873e7da60cbfbb5f915722fc3af8c"
+    },
+    {
+      "decision": "WARN",
+      "file": "02_Security/Security_BlockCMD_Clone.tys",
+      "rules": [
+        "DYNAMIC_COMMAND:MEDIUM:121",
+        "DYNAMIC_COMMAND:MEDIUM:140"
+      ],
+      "sha256": "138cf7323e3cd9f3ad03524221f2faabdef1438b3d24b26806bb91612c0717bc"
+    },
+    {
+      "decision": "WARN",
+      "file": "02_Security/Security_ExploitGuard.tys",
+      "rules": [
+        "SCHEDULING_IN_LOOP:HIGH:173"
+      ],
+      "sha256": "a599255fb22a0ae479e2f58636a0b18c6b4bb1b3bf1fc143ac59b26ab9add5cd"
+    },
+    {
+      "decision": "WARN",
+      "file": "03_Systems/RedeemCode.tys",
+      "rules": [
+        "DYNAMIC_COMMAND:MEDIUM:103"
+      ],
+      "sha256": "70f6905bc4d7fecccbd5937a8966a0d8cc3bb12377f35f13f91e2a99971e13af"
+    },
+    {
+      "decision": "WARN",
+      "file": "05_Social_Misc/Social_Discord.tys",
+      "rules": [
+        "DYNAMIC_COMMAND:MEDIUM:10",
+        "DYNAMIC_COMMAND:MEDIUM:14",
+        "DYNAMIC_COMMAND:MEDIUM:66"
+      ],
+      "sha256": "7caa49f173597a72794f62be8e10b54f0c8fdceb575586b907ca88dfe9324097"
+    },
+    {
+      "decision": "WARN",
+      "file": "05_Social_Misc/Social_Marry.tys",
+      "rules": [
+        "COMMAND_TAINT:HIGH:135",
+        "COMMAND_TAINT:HIGH:147",
+        "COMMAND_TAINT:HIGH:74",
+        "DYNAMIC_COMMAND:MEDIUM:129",
+        "DYNAMIC_COMMAND:MEDIUM:43"
+      ],
+      "sha256": "b94c1b222eeb35ef91ff9028d8d0edf99b5aca03a625cf38eaa445703cc86e1b"
+    },
+    {
+      "decision": "WARN",
+      "file": "05_Social_Misc/Social_WorldguardAlias.tys",
+      "rules": [
+        "COMMAND_TAINT:HIGH:101",
+        "COMMAND_TAINT:HIGH:108",
+        "COMMAND_TAINT:HIGH:110",
+        "COMMAND_TAINT:HIGH:116",
+        "COMMAND_TAINT:HIGH:118",
+        "COMMAND_TAINT:HIGH:124",
+        "COMMAND_TAINT:HIGH:126",
+        "COMMAND_TAINT:HIGH:132",
+        "COMMAND_TAINT:HIGH:134",
+        "COMMAND_TAINT:HIGH:141",
+        "COMMAND_TAINT:HIGH:143",
+        "COMMAND_TAINT:HIGH:150",
+        "COMMAND_TAINT:HIGH:152",
+        "COMMAND_TAINT:HIGH:159",
+        "COMMAND_TAINT:HIGH:161",
+        "COMMAND_TAINT:HIGH:168",
+        "COMMAND_TAINT:HIGH:170",
+        "COMMAND_TAINT:HIGH:177",
+        "COMMAND_TAINT:HIGH:179",
+        "COMMAND_TAINT:HIGH:186",
+        "COMMAND_TAINT:HIGH:188",
+        "COMMAND_TAINT:HIGH:195",
+        "COMMAND_TAINT:HIGH:197",
+        "COMMAND_TAINT:HIGH:203",
+        "COMMAND_TAINT:HIGH:205",
+        "COMMAND_TAINT:HIGH:211",
+        "COMMAND_TAINT:HIGH:213",
+        "COMMAND_TAINT:HIGH:220",
+        "COMMAND_TAINT:HIGH:222",
+        "COMMAND_TAINT:HIGH:228",
+        "COMMAND_TAINT:HIGH:230",
+        "COMMAND_TAINT:HIGH:236",
+        "COMMAND_TAINT:HIGH:238",
+        "COMMAND_TAINT:HIGH:244",
+        "COMMAND_TAINT:HIGH:246",
+        "COMMAND_TAINT:HIGH:252",
+        "COMMAND_TAINT:HIGH:254",
+        "COMMAND_TAINT:HIGH:261",
+        "COMMAND_TAINT:HIGH:263",
+        "COMMAND_TAINT:HIGH:270",
+        "COMMAND_TAINT:HIGH:272",
+        "COMMAND_TAINT:HIGH:278",
+        "COMMAND_TAINT:HIGH:28",
+        "COMMAND_TAINT:HIGH:280",
+        "COMMAND_TAINT:HIGH:286",
+        "COMMAND_TAINT:HIGH:288",
+        "COMMAND_TAINT:HIGH:295",
+        "COMMAND_TAINT:HIGH:297",
+        "COMMAND_TAINT:HIGH:304",
+        "COMMAND_TAINT:HIGH:306",
+        "COMMAND_TAINT:HIGH:31",
+        "COMMAND_TAINT:HIGH:313",
+        "COMMAND_TAINT:HIGH:315",
+        "COMMAND_TAINT:HIGH:322",
+        "COMMAND_TAINT:HIGH:324",
+        "COMMAND_TAINT:HIGH:331",
+        "COMMAND_TAINT:HIGH:333",
+        "COMMAND_TAINT:HIGH:34",
+        "COMMAND_TAINT:HIGH:340",
+        "COMMAND_TAINT:HIGH:342",
+        "COMMAND_TAINT:HIGH:349",
+        "COMMAND_TAINT:HIGH:351",
+        "COMMAND_TAINT:HIGH:358",
+        "COMMAND_TAINT:HIGH:360",
+        "COMMAND_TAINT:HIGH:367",
+        "COMMAND_TAINT:HIGH:369",
+        "COMMAND_TAINT:HIGH:376",
+        "COMMAND_TAINT:HIGH:378",
+        "COMMAND_TAINT:HIGH:385",
+        "COMMAND_TAINT:HIGH:387",
+        "COMMAND_TAINT:HIGH:39",
+        "COMMAND_TAINT:HIGH:394",
+        "COMMAND_TAINT:HIGH:396",
+        "COMMAND_TAINT:HIGH:402",
+        "COMMAND_TAINT:HIGH:404",
+        "COMMAND_TAINT:HIGH:410",
+        "COMMAND_TAINT:HIGH:412",
+        "COMMAND_TAINT:HIGH:419",
+        "COMMAND_TAINT:HIGH:421",
+        "COMMAND_TAINT:HIGH:426",
+        "COMMAND_TAINT:HIGH:429",
+        "COMMAND_TAINT:HIGH:432",
+        "COMMAND_TAINT:HIGH:435",
+        "COMMAND_TAINT:HIGH:441",
+        "COMMAND_TAINT:HIGH:444",
+        "COMMAND_TAINT:HIGH:447",
+        "COMMAND_TAINT:HIGH:48",
+        "COMMAND_TAINT:HIGH:50",
+        "COMMAND_TAINT:HIGH:56",
+        "COMMAND_TAINT:HIGH:58",
+        "COMMAND_TAINT:HIGH:65",
+        "COMMAND_TAINT:HIGH:67",
+        "COMMAND_TAINT:HIGH:74",
+        "COMMAND_TAINT:HIGH:76",
+        "COMMAND_TAINT:HIGH:82",
+        "COMMAND_TAINT:HIGH:84",
+        "COMMAND_TAINT:HIGH:90",
+        "COMMAND_TAINT:HIGH:92",
+        "COMMAND_TAINT:HIGH:99"
+      ],
+      "sha256": "66796c987cc7936f70b3dfca4bb9fad842bbd69323c873982233b864262aea49"
+    },
+    {
+      "decision": "ALLOW",
+      "file": "06_Mechanics/Mechanic_AFKZone.tys",
+      "rules": [],
+      "sha256": "1b21be8ef0a74909c78aba8a52c91f73b58966346de369df9e3a7ff0096a2f00"
+    },
+    {
+      "decision": "ALLOW",
+      "file": "06_Mechanics/Mechanic_ElytraRepair.tys",
+      "rules": [],
+      "sha256": "204af5b704ce8034b459934981fe016b3bd357aff27b3b0ff17cd006e2ea7211"
+    },
+    {
+      "decision": "ALLOW",
+      "file": "06_Mechanics/Mechanic_EndRestriction.tys",
+      "rules": [],
+      "sha256": "1743da344179b487cc11620675275ec7882f5a73882ac9cb733d986f0b984678"
+    },
+    {
+      "decision": "ALLOW",
+      "file": "06_Mechanics/Mechanic_JoinTabReload.tys",
+      "rules": [],
+      "sha256": "3ddd273e858d52a95bb7ff5f86d37d9aa1f04d75d9158662d25445890f4605d3"
+    },
+    {
+      "decision": "ALLOW",
+      "file": "07_Commands/Admin_AutoTorch.tys",
+      "rules": [],
+      "sha256": "41f4f1d1ad3a5fdfc9036787bf3eb6bd274befbb1541caa2a8d416bf28586489"
+    },
+    {
+      "decision": "ALLOW",
+      "file": "07_Commands/Admin_Broadcast.tys",
+      "rules": [],
+      "sha256": "66a02c95798dd69a7e8c240278b51006f16eb9269e91ca9d144a5fc49dacb0a6"
+    },
+    {
+      "decision": "ALLOW",
+      "file": "07_Commands/Admin_ChunkLoader.tys",
+      "rules": [],
+      "sha256": "04d49c62babb4e0467d7e0b1d46d6c3f866c6cff39bf9a9859b5a4b2da20f16c"
+    },
+    {
+      "decision": "ALLOW",
+      "file": "07_Commands/Admin_ClearChest.tys",
+      "rules": [],
+      "sha256": "2b2c0d8d3ff27244f734a97e6fee850d067eb560387cd40dfbdd0e143b35b355"
+    },
+    {
+      "decision": "ALLOW",
+      "file": "07_Commands/Admin_ConsoleClear.tys",
+      "rules": [],
+      "sha256": "e005d7dee7188902663f8f52368ab4fb91bbff191206c11b6db1a4daf9e46828"
+    },
+    {
+      "decision": "WARN",
+      "file": "07_Commands/Admin_MakePlayerCmd.tys",
+      "rules": [
+        "COMMAND_TAINT:HIGH:23",
+        "COMMAND_TAINT:HIGH:43"
+      ],
+      "sha256": "cb2b1661ccfa422d624be9b770a10ce53228d8361fe53594da17ee37099abd02"
+    },
+    {
+      "decision": "ALLOW",
+      "file": "07_Commands/Admin_SpamPoints.tys",
+      "rules": [],
+      "sha256": "0d002b3c84154782d095c259e75f2f34559452ecdcd439ae5ca4a36cf562168f"
+    },
+    {
+      "decision": "ALLOW",
+      "file": "07_Commands/Economy_Pay.tys",
+      "rules": [],
+      "sha256": "f73248183f34ea9549d7a471a41e582cbf58e214f1e547e7ba49dc922d0b85ea"
+    },
+    {
+      "decision": "ALLOW",
+      "file": "07_Commands/Player_CopyPos.tys",
+      "rules": [],
+      "sha256": "8862f84cfd0252fcb490ae650222d7aaa6b56c6e0201d8b8f253f72cbc08c795"
+    },
+    {
+      "decision": "ALLOW",
+      "file": "07_Commands/Utility_TayTrai.tys",
+      "rules": [],
+      "sha256": "a45dcd528d9d5506c1e0cedbf0f8bccec31daa2c76793fa439709b8863392c62"
+    },
+    {
+      "decision": "ALLOW",
+      "file": "07_Commands/Utility_ThaoBiNgo.tys",
+      "rules": [],
+      "sha256": "6edaf6a670153e87335e3d1801cb35335805be2312db38986a67241d577f81b1"
+    },
+    {
+      "decision": "ALLOW",
+      "file": "08_GUIs/GUI_Donate.tys",
+      "rules": [],
+      "sha256": "12598790d062cffb439d661ccad1c9b0053c9f51c19431c646d9a5f6ff7a2c56"
+    },
+    {
+      "decision": "QUARANTINE",
+      "file": "08_GUIs/GUI_DynamicJson.tys",
+      "rules": [
+        "COMMAND_TAINT:CRITICAL:138",
+        "COMMAND_TAINT:HIGH:135",
+        "FILES_DYNAMIC_PATH:HIGH:20",
+        "FILES_DYNAMIC_PATH:HIGH:219",
+        "FILES_DYNAMIC_PATH:HIGH:226",
+        "SCHEDULING_IN_LOOP:HIGH:147"
+      ],
+      "sha256": "4fa03761df03122ac07db9a52635cbab4794b4c463f2ba19415a784f111934ae"
+    },
+    {
+      "decision": "WARN",
+      "file": "08_GUIs/GUI_GiaTrang.tys",
+      "rules": [
+        "COMMAND_TAINT:HIGH:279",
+        "COMMAND_TAINT:HIGH:280",
+        "COMMAND_TAINT:HIGH:281",
+        "COMMAND_TAINT:HIGH:282",
+        "COMMAND_TAINT:HIGH:283",
+        "DYNAMIC_COMMAND:MEDIUM:158",
+        "DYNAMIC_COMMAND:MEDIUM:203",
+        "DYNAMIC_COMMAND:MEDIUM:294",
+        "DYNAMIC_COMMAND:MEDIUM:300",
+        "DYNAMIC_COMMAND:MEDIUM:308"
+      ],
+      "sha256": "20ff62833d5f8e4c66714499b44d26752c52a66009cb0d98dc53dccf089ee513"
+    },
+    {
+      "decision": "WARN",
+      "file": "08_GUIs/GUI_JobManager.tys",
+      "rules": [
+        "COMMAND_TAINT:HIGH:70"
+      ],
+      "sha256": "f30eb29dd0d119aae2de3ad20f59ad58b493bf3f430ed3185b54425cdfa08156"
+    },
+    {
+      "decision": "WARN",
+      "file": "08_GUIs/GUI_Rank.tys",
+      "rules": [
+        "DYNAMIC_COMMAND:MEDIUM:216",
+        "DYNAMIC_COMMAND:MEDIUM:228"
+      ],
+      "sha256": "d2ffde38fb4f885802fb01436713bfdc1d639816d3cecfdcac1f34b91aab971f"
+    },
+    {
+      "decision": "WARN",
+      "file": "08_GUIs/GUI_ShopVeinminer.tys",
+      "rules": [
+        "DYNAMIC_COMMAND:MEDIUM:136",
+        "DYNAMIC_COMMAND:MEDIUM:139",
+        "DYNAMIC_COMMAND:MEDIUM:175",
+        "DYNAMIC_COMMAND:MEDIUM:176",
+        "DYNAMIC_COMMAND:MEDIUM:93"
+      ],
+      "sha256": "d5bc99053a6a44849c8b01b8d49d2ed88361f2610fadbc09857524b07295bcb6"
+    },
+    {
+      "decision": "WARN",
+      "file": "08_GUIs/GUI_ThuCung.tys",
+      "rules": [
+        "COMMAND_TAINT:HIGH:110"
+      ],
+      "sha256": "450f0b0b1e01218e89f22593dada516772e979bb72bea3f69416238d09117ed4"
+    },
+    {
+      "decision": "WARN",
+      "file": "10_Events/Minigame_TaiXiu.tys",
+      "rules": [
+        "COMMAND_TAINT:HIGH:105",
+        "RECURSIVE_FLOW:MEDIUM:31",
+        "RECURSIVE_FLOW:MEDIUM:50"
+      ],
+      "sha256": "31d80681407e94965677904439f987c2b8f678d6f0d1135a05c1636ee542e5d9"
+    },
+    {
+      "decision": "ALLOW",
+      "file": "test.tys",
+      "rules": [],
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}

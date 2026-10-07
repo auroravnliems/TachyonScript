@@ -5,6 +5,7 @@ import dev.tachyonscript.engine.EngineOptions;
 import dev.tachyonscript.engine.LoadMode;
 import dev.tachyonscript.engine.LoadReport;
 import dev.tachyonscript.engine.ScriptEngine;
+import dev.tachyonscript.runtime.ExecutionBackend;
 import dev.tachyonscript.runtime.interpreter.CompiledFunction;
 import dev.tachyonscript.runtime.interpreter.RuntimeLimits;
 import dev.tachyonscript.testkit.InMemoryScripts;
@@ -24,7 +25,17 @@ final class Scripts {
     }
 
     static ScriptEngine load(TestPlatform platform, String path, String source) {
-        ScriptEngine engine = platform.engine(OPTIONS);
+        return load(platform, path, source, CompilerOptions.DEFAULT);
+    }
+
+    static ScriptEngine load(TestPlatform platform, String path, String source, CompilerOptions compiler) {
+        return load(platform, path, source, compiler, ExecutionBackend.INTERPRETER);
+    }
+
+    static ScriptEngine load(TestPlatform platform, String path, String source, CompilerOptions compiler,
+                             ExecutionBackend backend) {
+        ScriptEngine engine = platform.engine(new EngineOptions(OPTIONS.mode(), compiler, OPTIONS.limits(),
+                OPTIONS.slowThresholdNanos(), OPTIONS.debug()).withBackend(backend));
         LoadReport report = engine.load(new InMemoryScripts().put(path, source));
         if (!report.activated() || !report.failed().isEmpty()) {
             throw new IllegalStateException("Benchmark script failed to compile: " + report.diagnostics()

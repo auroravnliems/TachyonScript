@@ -11,7 +11,54 @@ TachyonScript makes no performance claim that is not backed by a benchmark in
 
 Results are written to `tachyon-benchmarks/build/jmh-results.json`.
 
-## Latest results
+## Lighter runtime — 2026-10-06 (0.5.1 hotfix code vs. 0.6.0)
+
+Same machine as the optimizer comparison below (3 × 1 s warmup, 5 × 1 s measurement,
+optimization on; two forks before, three forks after). 0.5.x checked script revocation
+before every interpreted instruction; 0.6.0 checks it at function entry, before natives
+and with the watchdog's loop check. Raw results:
+[`validation/claude-jmh-before-20261006.json`](../validation/claude-jmh-before-20261006.json)
+and [`validation/claude-jmh-final-20261006.json`](../validation/claude-jmh-final-20261006.json).
+
+| Workload | Before (µs/op) | After (µs/op) | 99.9% error, before/after |
+|---|---:|---:|---:|
+| Integer loop, 1,000 iterations | 50.10 | 28.71 | ±3.52 / ±1.89 |
+| Double loop, 1,000 iterations | 53.40 | 27.73 | ±6.56 / ±2.32 |
+| fib(20), 21,891 calls | 1,361.70 | 934.17 | ±290.70 / ±217.62 |
+| Event handler (ns/op) | 91.49 | 80.51 | ±41.01 / ±9.08 |
+
+The loop and call improvements are well outside the error bars; the handler difference
+is within noise of the earlier run and is not claimed.
+
+Security analysis of a real 32-script archive, measured with
+[`validation/perf/StartupCost.java`](../validation/perf/StartupCost.java) (20 rounds in one
+JVM): 756 ms → 236 ms warm and 2,300 ms → 1,378 ms in the first round, with identical
+decisions and findings. Compilation of the same scripts takes 34 ms warm.
+
+## Optimizer comparison — 2026-10-06
+
+Windows, Intel Core i3-10105F at 3.70 GHz, Microsoft OpenJDK 21.0.12.1;
+JMH 1.37, one thread, two forks, 3 × 1 s warmup and 5 × 1 s measurements per fork.
+Each workload uses the same source and runtime with `optimize=false/true`.
+Raw results: [`validation/master-jmh-optimizer-20261006.json`](../validation/master-jmh-optimizer-20261006.json).
+
+| Workload | Off (µs/op) | On (µs/op) | 99.9% error, off/on |
+|---|---:|---:|---:|
+| Integer loop, 1,000 iterations | 50.67 | 52.61 | ±9.91 / ±7.77 |
+| Double loop, 1,000 iterations | 53.66 | 50.30 | ±21.37 / ±3.53 |
+| Compile 80 declarations | 1,906.48 | 3,243.20 | ±761.12 / ±666.92 |
+
+The loop confidence intervals overlap: this run does **not** establish a speedup
+or a regression. Mean compilation cost increased; the optimizer performs extra
+data-flow and verification work. Smaller IR and fewer allocated frame slots are
+checked separately, but are not a substitute for runtime measurements. The older
+pre-WIP baseline remains in `validation/master-jmh-baseline-20261005.json`.
+
+```sh
+./gradlew :tachyon-benchmarks:jmh -Pjmh.include=InterpreterBenchmark.script.*Loop -Pjmh.args="CompilerBenchmark.compileScript -f 2 -wi 3 -i 5 -w 1s -r 1s"
+```
+
+## Historical results — 2026-09-24
 
 Measured on 2026-09-24 with a **shortened run** (1 fork, 3 × 1 s warm-up, 5 × 1 s
 measurement) on a shared cloud VM: 4 vCPUs of an Intel Xeon at 2.1 GHz, OpenJDK
@@ -54,12 +101,28 @@ second, about 0.1 ms of CPU time per second at this cost.
 **Interpreter.** Tight arithmetic loops run about 20–80 times slower than the same
 code compiled by the JIT, and script-to-script calls about 22 times slower
 (~27 ns per call). That is expected for an interpreter; typical scripts spend their
-time in the natives they call (Bukkit), not in arithmetic. The planned optimizer
-(superinstructions such as add-immediate and compare-and-branch) and the bytecode
-backend target this gap.
+time in the natives they call (Bukkit), not in arithmetic. The opt-in bytecode backend
+(below) closes most of this gap.
 
 **Compiler.** A 900-line script compiles in about 2 ms (with high variance on this
 machine). Reloads only recompile changed files.
+
+## Bytecode backend — 2026-10-07
+
+Same machine and harness, both backends in one run, 2 forks × 5 measurements
+(`validation/claude-jmh-bytecode-20261007.log`, raw JSON next to it):
+
+| Benchmark | interpreter | bytecode |
+|---|---|---|
+| `scriptIntegerLoop` (1,000 iterations) | 30.1 ± 2.5 µs | 2.75 ± 0.21 µs |
+| `scriptDoubleLoop` (1,000 iterations) | 29.8 ± 6.5 µs | 2.77 ± 0.14 µs |
+| `scriptRecursiveCalls` (fib 20) | 815 ± 40 µs | 292 ± 16 µs |
+| `scriptHandler` (one event handler) | 74 ± 19 ns | 45 ± 5 ns |
+
+Loading pays for it: for the 32 scripts of a real server archive (371 functions, none
+over HotSpot's 8,000-byte limit) generating and defining the classes adds 148–270 ms to a
+full load (`validation/perf/BytecodeSize.java`). A selected reload only generates the
+functions of the scripts it compiles.
 
 ## History
 

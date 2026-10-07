@@ -44,6 +44,7 @@ import java.util.ArrayList;
 import java.util.Locale;
 import java.util.UUID;
 import java.util.function.BooleanSupplier;
+import java.util.function.Function;
 import java.util.logging.Logger;
 
 /**
@@ -51,18 +52,20 @@ import java.util.logging.Logger;
  *
  * <p>Every binding is a small lambda over the Bukkit object passed in its arguments; there
  * is no reflection and no name lookup. Writes that must happen on the owner of an entity or
- * on the global region go through {@link Threading}, which makes the same bindings correct on
- * Paper and on Folia.
+ * on the global region go through {@link PaperContext}. Entity reads use its ownership checks
+ * too: an asynchronous caller may wait, but another region's tick thread must never block.
  */
 final class PaperBindings {
 
     private final Threading threads;
+    private final PaperContext context;
     private final Logger logger;
     private final BooleanSupplier debug;
     private final MiniMessage miniMessage = MiniMessage.miniMessage();
 
-    PaperBindings(Threading threads, Logger logger, BooleanSupplier debug) {
-        this.threads = threads;
+    PaperBindings(PaperContext context, Logger logger, BooleanSupplier debug) {
+        this.context = context;
+        this.threads = context.threads();
         this.logger = logger;
         this.debug = debug;
     }
@@ -118,8 +121,11 @@ final class PaperBindings {
                 });
     }
 
-    private static void senders(Bindings.Builder b) {
-        b.bindGetter(EntityApi.SENDER_NAME, (NativeFunction.OfRef) a -> ((CommandSender) a.getRef(0)).getName());
+    private void senders(Bindings.Builder b) {
+        b.bindGetter(EntityApi.SENDER_NAME, (NativeFunction.OfRef) a -> {
+            CommandSender sender = (CommandSender) a.getRef(0);
+            return sender instanceof Entity entity ? readEntity(entity, Entity::getName) : sender.getName();
+        });
         b.bind(EntityApi.SEND, (NativeFunction.OfVoid) a ->
                 ((CommandSender) a.getRef(0)).sendMessage((Component) a.getRef(1)));
         b.bind(EntityApi.HAS_PERMISSION, (NativeFunction.OfBool) a ->
@@ -128,21 +134,25 @@ final class PaperBindings {
     }
 
     private void entities(Bindings.Builder b) {
-        b.bindGetter(EntityApi.ENTITY_NAME, (NativeFunction.OfRef) a -> ((Entity) a.getRef(0)).getName());
+        b.bindGetter(EntityApi.ENTITY_NAME, (NativeFunction.OfRef) a -> readEntity((Entity) a.getRef(0), Entity::getName));
         b.bindGetter(EntityApi.ENTITY_UUID, (NativeFunction.OfRef) a -> ((Entity) a.getRef(0)).getUniqueId());
-        b.bindGetter(EntityApi.ENTITY_LOCATION, (NativeFunction.OfRef) a -> ((Entity) a.getRef(0)).getLocation());
-        b.bindGetter(EntityApi.ENTITY_WORLD, (NativeFunction.OfRef) a -> ((Entity) a.getRef(0)).getWorld());
-        b.bindGetter(EntityApi.ENTITY_VALID, (NativeFunction.OfBool) a -> ((Entity) a.getRef(0)).isValid());
+        b.bindGetter(EntityApi.ENTITY_LOCATION, (NativeFunction.OfRef) a -> readEntity((Entity) a.getRef(0), Entity::getLocation));
+        b.bindGetter(EntityApi.ENTITY_WORLD, (NativeFunction.OfRef) a -> readEntity((Entity) a.getRef(0), Entity::getWorld));
+        b.bindGetter(EntityApi.ENTITY_VALID, (NativeFunction.OfBool) a -> readEntity((Entity) a.getRef(0), Entity::isValid));
         b.bind(EntityApi.TELEPORT, (NativeFunction.OfVoid) a ->
                 teleport((Entity) a.getRef(0), (Location) a.getRef(1)));
         b.bind(EntityApi.TELEPORT_TO_ENTITY, (NativeFunction.OfVoid) a ->
-                teleport((Entity) a.getRef(0), ((Entity) a.getRef(1)).getLocation()));
-        b.bindGetter(EntityApi.HEALTH, (NativeFunction.OfDouble) a -> ((LivingEntity) a.getRef(0)).getHealth());
+                teleport((Entity) a.getRef(0), readEntity((Entity) a.getRef(1), Entity::getLocation)));
+        b.bindGetter(EntityApi.HEALTH, (NativeFunction.OfDouble) a -> readEntity((LivingEntity) a.getRef(0), LivingEntity::getHealth));
         b.bindSetter(EntityApi.HEALTH, a -> {
             LivingEntity entity = (LivingEntity) a.getRef(0);
             double value = a.getDouble(1);
-            threads.forEntity(entity, () -> entity.setHealth(Math.max(0, Math.min(maxHealth(entity), value))));
+            context.forEntity(entity, () -> entity.setHealth(Math.max(0, Math.min(maxHealth(entity), value))));
         });
+    }
+
+    private <E extends Entity, T> T readEntity(E entity, Function<E, T> read) {
+        return context.callEntity(entity, () -> read.apply(entity));
     }
 
     /**
@@ -151,13 +161,13 @@ final class PaperBindings {
      */
     private void teleport(Entity entity, Location destination) {
         if (destination.getWorld() == null) {
-            throw new ScriptError("Cannot teleport " + entity.getName() + ": the destination world is not loaded.");
+            throw new ScriptError("Cannot teleport the entity: the destination world is not loaded.");
         }
         Location target = destination.clone();
         if (threads.folia()) {
-            threads.forEntity(entity, () -> entity.teleportAsync(target));
+            context.forEntity(entity, () -> entity.teleportAsync(target));
         } else {
-            threads.forEntity(entity, () -> entity.teleport(target));
+            context.forEntity(entity, () -> entity.teleport(target));
         }
     }
 
@@ -167,31 +177,35 @@ final class PaperBindings {
     }
 
     private void players(Bindings.Builder b) {
-        b.bind(EntityApi.PLAYER_TO_STRING, (NativeFunction.OfRef) a -> ((Player) a.getRef(0)).getName());
-        b.bindGetter(EntityApi.FOOD, (NativeFunction.OfInt) a -> ((Player) a.getRef(0)).getFoodLevel());
+        b.bind(EntityApi.PLAYER_TO_STRING, (NativeFunction.OfRef) a -> readEntity((Player) a.getRef(0), Player::getName));
+        b.bindGetter(EntityApi.FOOD, (NativeFunction.OfInt) a -> readEntity((Player) a.getRef(0), Player::getFoodLevel));
         b.bindSetter(EntityApi.FOOD, a -> {
             Player player = (Player) a.getRef(0);
             int value = Math.max(0, Math.min(20, a.getInt(1)));
-            threads.forEntity(player, () -> player.setFoodLevel(value));
+            context.forEntity(player, () -> player.setFoodLevel(value));
         });
-        b.bindGetter(EntityApi.LEVEL, (NativeFunction.OfInt) a -> ((Player) a.getRef(0)).getLevel());
+        b.bindGetter(EntityApi.LEVEL, (NativeFunction.OfInt) a -> readEntity((Player) a.getRef(0), Player::getLevel));
         b.bindSetter(EntityApi.LEVEL, a -> {
             Player player = (Player) a.getRef(0);
             int value = Math.max(0, a.getInt(1));
-            threads.forEntity(player, () -> player.setLevel(value));
+            context.forEntity(player, () -> player.setLevel(value));
         });
-        b.bindGetter(EntityApi.GAME_MODE_PROPERTY, (NativeFunction.OfRef) a -> ((Player) a.getRef(0)).getGameMode());
+        b.bindGetter(EntityApi.GAME_MODE_PROPERTY, (NativeFunction.OfRef) a -> readEntity((Player) a.getRef(0), Player::getGameMode));
         b.bindSetter(EntityApi.GAME_MODE_PROPERTY, a -> {
             Player player = (Player) a.getRef(0);
             GameMode mode = (GameMode) a.getRef(1);
-            threads.forEntity(player, () -> player.setGameMode(mode));
+            context.forEntity(player, () -> player.setGameMode(mode));
         });
-        b.bindGetter(EntityApi.DISPLAY_NAME, (NativeFunction.OfRef) a -> ((Player) a.getRef(0)).displayName());
-        b.bindSetter(EntityApi.DISPLAY_NAME, a -> ((Player) a.getRef(0)).displayName((Component) a.getRef(1)));
+        b.bindGetter(EntityApi.DISPLAY_NAME, (NativeFunction.OfRef) a -> readEntity((Player) a.getRef(0), Player::displayName));
+        b.bindSetter(EntityApi.DISPLAY_NAME, a -> {
+            Player player = (Player) a.getRef(0);
+            Component name = (Component) a.getRef(1);
+            context.forEntity(player, () -> player.displayName(name));
+        });
         b.bind(EntityApi.KICK, (NativeFunction.OfVoid) a -> {
             Player player = (Player) a.getRef(0);
             Component reason = (Component) a.getRef(1);
-            threads.forEntity(player, () -> player.kick(reason));
+            context.forEntity(player, () -> player.kick(reason));
         });
     }
 
